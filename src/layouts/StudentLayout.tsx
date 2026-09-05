@@ -13,13 +13,7 @@ import { NavItem } from '../types/common';
 export default function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const handleLogout = () => {
-    authService.logout();
-    navigate('/');
-  };
 
   const navItems: NavItem[] = [
     { path: '/student/home', label: 'Home', icon: Home },
@@ -39,17 +33,6 @@ export default function StudentLayout() {
     { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
     { path: '/student/tests', label: 'Edu Game', icon: Gamepad2 },
     { path: '/student/bookmarks', label: 'Edu Shop', icon: ShoppingCart },
-  ];
-
-  const profilePills = [
-    'My Profile',
-    'Help & Tools',
-    'Feed Back',
-    'Quick Guide',
-    'Extension',
-    'Discord',
-    'Invited ERN',
-    'Settings',
   ];
 
   const isCustomHeaderPage =
@@ -167,9 +150,9 @@ export default function StudentLayout() {
 
               <div className="relative">
                 <button
-                  onClick={() => setShowProfileMenu((v) => !v)}
-                  className="flex items-center gap-2 focus:outline-none"
-                  title="Go to Profile"
+                  onClick={() => navigate('/student/profile')}
+                  className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
+                  title="Student Profile"
                 >
                   <img
                     src={userImg}
@@ -178,49 +161,6 @@ export default function StudentLayout() {
                   />
                 </button>
 
-                {showProfileMenu && (
-                  <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-3xl p-3 shadow-2xl space-y-1.5 z-50 animate-in fade-in duration-150">
-                    {profilePills.map((pill) => (
-                      <button
-                        key={pill}
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          if (pill === 'My Profile') navigate('/student/profile');
-                        }}
-                        className="w-full text-left px-3.5 py-2 bg-[#e3edf7] hover:bg-[#d5e6f5] text-[#1c3352] rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                      >
-                        {pill}
-                      </button>
-                    ))}
-
-                    <div className="border-t border-slate-100 my-1 pt-1 space-y-1">
-                      <button
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          navigate('/teacher');
-                        }}
-                        className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-semibold rounded-lg"
-                      >
-                        Teacher Portal
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowProfileMenu(false);
-                          navigate('/research');
-                        }}
-                        className="block w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 font-semibold rounded-lg"
-                      >
-                        Research Portal
-                      </button>
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-bold rounded-lg"
-                      >
-                        Log Out
-                      </button>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </header>

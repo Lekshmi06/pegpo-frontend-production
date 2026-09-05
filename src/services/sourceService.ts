@@ -67,4 +67,67 @@ export const sourceService = {
   getDownloadUrl: (sourceId: string): string => {
     return `${API_BASE_URL}/sources/${sourceId}/file`;
   },
+
+  // AI Integration Endpoints
+  chatWithSource: async (
+    sourceId: string,
+    query: string,
+    history: Array<{ role: string; text: string }> = []
+  ): Promise<{ reply: string; citations?: string[] }> => {
+    const res = await fetch(`${API_BASE_URL}/sources/${sourceId}/ai/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, history }),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Failed to chat with source');
+    }
+
+    return json.data;
+  },
+
+  triggerAIAction: async (
+    sourceId: string,
+    action: string,
+    options?: any
+  ): Promise<{ action: string; data: any; cached: boolean }> => {
+    const res = await fetch(`${API_BASE_URL}/sources/${sourceId}/ai/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action, options }),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || `Failed to generate ${action}`);
+    }
+
+    return json.data;
+  },
+
+  saveSourceNotes: async (
+    sourceId: string,
+    notes: string
+  ): Promise<{ success: boolean; notes: string }> => {
+    const res = await fetch(`${API_BASE_URL}/sources/${sourceId}/notes`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ notes }),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      throw new Error(json.message || 'Failed to save notes');
+    }
+
+    return json.data;
+  },
 };

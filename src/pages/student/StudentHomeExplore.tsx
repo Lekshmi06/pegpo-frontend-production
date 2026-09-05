@@ -12,7 +12,6 @@ export default function StudentHomeExplore() {
   const [board, setBoard] = useState('CBSE');
   const [cbseClass, setCbseClass] = useState('Class 9');
   const [activeCategory, setActiveCategory] = useState('For You');
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [activeSubTab, setActiveSubTab] = useState('Subject');
 
   const categories = [
@@ -134,8 +133,9 @@ export default function StudentHomeExplore() {
 
             <div className="relative">
               <button
-                onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="flex items-center gap-2 focus:outline-none"
+                onClick={() => navigate('/student/profile')}
+                className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
+                title="Student Profile"
               >
                 <img
                   src={userImg}
@@ -143,20 +143,6 @@ export default function StudentHomeExplore() {
                   className="w-9 h-9 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs cursor-pointer"
                 />
               </button>
-
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-52 bg-white border border-slate-200 rounded-3xl p-3 shadow-2xl space-y-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  {['Help & Tools', 'Feed Back', 'Quick Guide', 'Extension', 'Discord', 'Invited ERN', 'Settings'].map((pill) => (
-                    <button
-                      key={pill}
-                      onClick={() => setShowProfileMenu(false)}
-                      className="w-full text-left px-3.5 py-2 bg-[#e3edf7] hover:bg-[#d5e6f5] text-[#1c3352] rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      {pill}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </header>
