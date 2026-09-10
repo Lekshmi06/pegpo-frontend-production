@@ -116,7 +116,7 @@ export const SourceMediaView: React.FC<SourceMediaViewProps> = ({ source, mode }
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Generating AI {mode.toUpperCase()}...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is synthesizing content into engaging multi-modal format for "{source.originalName}".
+          Synthesizing content into engaging multi-modal format for "{source.originalName}".
         </p>
       </div>
     );

@@ -6,46 +6,56 @@ import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/authService';
 import { useToast } from '../../hooks/useToast';
 
-export default function SignUp() {
+export default function Login() {
   const navigate = useNavigate();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSignUp = async (e?: FormEvent) => {
+  const handleLogin = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     if (!email.trim()) {
-      toast.error('Please enter a valid email address');
+      toast.error('Please enter your email address');
       return;
     }
 
     setIsLoading(true);
     try {
-      await authService.signUp(email, password);
-      navigate('/personal-details');
+      const session = await authService.login(email, password);
+      toast.success(`Welcome back, ${session.name || 'Student'}!`);
+
+      if (session.role === 'teacher' || session.role === 'institution') {
+        navigate('/teacher');
+      } else if (session.role === 'researcher') {
+        navigate('/research');
+      } else {
+        navigate('/student/home');
+      }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      const msg = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
       toast.error(msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleSignUp = async () => {
+  const handleForgotPassword = () => {
+    toast.info('Password reset instructions have been sent to your email.', 'Forgot Password');
+  };
+
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await authService.signUp('student@edupye.com');
-      navigate('/personal-details');
+      const googleEmail = 'student@edupye.com';
+      const session = await authService.login(googleEmail);
+      toast.success(`Signed in as ${session.name || 'Student'}`);
+      navigate('/student/home');
     } catch {
-      toast.error('Google Sign Up failed. Please try again.');
+      toast.error('Google Sign In failed');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleForgotPassword = () => {
-    toast.info('Password reset link sent to your email.', 'Forgot Password');
   };
 
   return (
@@ -57,17 +67,17 @@ export default function SignUp() {
 
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">
-            Create Your Pegpo Account
+            Sign In to Edupye
           </h1>
           <p className="text-xs font-semibold text-slate-500">
-            Let's get your personalized learning journey started.
+            Welcome back! Continue your personalized learning journey.
           </p>
         </div>
 
         <div className="pt-2">
           <button
             type="button"
-            onClick={handleGoogleSignUp}
+            onClick={handleGoogleSignIn}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-slate-200 rounded-2xl bg-white hover:bg-slate-50 text-xs font-bold text-slate-700 transition-all shadow-2xs cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -76,25 +86,25 @@ export default function SignUp() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
             </svg>
-            <span>Sign Up with Google</span>
+            <span>Sign In with Google</span>
           </button>
         </div>
 
         <div className="relative flex items-center justify-center my-4">
           <div className="border-t border-slate-200 w-full" />
           <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 shrink-0">
-            or register with email
+            or continue with email
           </span>
           <div className="border-t border-slate-200 w-full" />
         </div>
 
-        <form onSubmit={handleSignUp} className="space-y-4 text-left">
+        <form onSubmit={handleLogin} className="space-y-4 text-left">
           <Input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
+            placeholder="Enter your email address"
             label="Email Address"
           />
 
@@ -103,11 +113,15 @@ export default function SignUp() {
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Create password"
+            placeholder="Enter your password"
             label="Password"
           />
 
-          <div className="text-right">
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-600">
+              <input type="checkbox" defaultChecked className="rounded border-slate-300 text-[#0091ff] focus:ring-[#0091ff]" />
+              <span>Remember me</span>
+            </label>
             <button
               type="button"
               onClick={handleForgotPassword}
@@ -123,18 +137,18 @@ export default function SignUp() {
               isLoading={isLoading}
               className="w-full py-3.5"
             >
-              Continue to Profile Setup
+              Sign In
             </Button>
           </div>
         </form>
 
         <div className="text-xs font-semibold text-slate-500 pt-2">
-          <span>Already have an account? </span>
+          <span>Don't have an account yet? </span>
           <Link
-            to="/login"
+            to="/signup"
             className="text-[#0091ff] font-bold hover:underline cursor-pointer"
           >
-            Sign In
+            Create Account
           </Link>
         </div>
       </div>

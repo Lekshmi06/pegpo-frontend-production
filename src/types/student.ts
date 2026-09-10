@@ -1,3 +1,5 @@
+import { SchoolAcademicInfo, LearningPath } from './auth';
+
 export interface DocumentItem {
   id: number | string;
   title: string;
@@ -63,8 +65,13 @@ export interface StudentProfile {
   userId: StudentUserRef;
   name: string;
   phone?: string;
+  dob?: string;
+  gender?: string;
+  avatar?: string;
   goal?: string;
   education?: StudentEducation;
+  learningPath?: LearningPath;
+  schoolDetails?: SchoolAcademicInfo;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -72,16 +79,25 @@ export interface StudentProfile {
 export interface UpdateStudentProfileDTO {
   name?: string;
   phone?: string;
+  dob?: string;
+  gender?: string;
+  avatar?: string;
   goal?: string;
+  learningPath?: LearningPath;
   language?: string;
   education?: StudentEducation;
+  schoolDetails?: SchoolAcademicInfo;
 }
 
 export interface CreateStudentProfileDTO {
   email: string;
   name: string;
   phone?: string;
+  dob?: string;
+  gender?: string;
+  avatar?: string;
   goal?: string;
   language?: string;
   education?: StudentEducation;
+  schoolDetails?: SchoolAcademicInfo;
 }

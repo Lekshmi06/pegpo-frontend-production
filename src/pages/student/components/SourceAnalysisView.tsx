@@ -52,7 +52,7 @@ export const SourceAnalysisView: React.FC<SourceAnalysisViewProps> = ({ source }
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Running Deep Pedagogical Analysis...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is computing reading metrics, Bloom's taxonomy levels, prerequisites, and learning outcomes.
+          Computing reading metrics, Bloom's taxonomy levels, prerequisites, and learning outcomes.
         </p>
       </div>
     );

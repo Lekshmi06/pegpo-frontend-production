@@ -73,7 +73,7 @@ export const SourceMindMapView: React.FC<SourceMindMapViewProps> = ({ source }) 
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Building Visual Concept Map...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is organizing topics, branches, and connections from "{source.originalName}".
+          Organizing topics, branches, and connections from "{source.originalName}".
         </p>
       </div>
     );
@@ -196,7 +196,7 @@ export const SourceMindMapView: React.FC<SourceMindMapViewProps> = ({ source }) 
       </div>
 
       <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <span>Structure extracted by Gemini 2.5 Flash</span>
+        <span>Interactive Concept Map</span>
         <span>{mindMap.children?.length || 0} primary branches</span>
       </div>
     </div>

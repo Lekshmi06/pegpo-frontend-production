@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Clock,
@@ -33,6 +34,7 @@ interface QuizState {
 }
 
 export default function Learn() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [activeSubTab, setActiveSubTab] = useState('Subject');
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<{ id: number; name: string; lessons: number; videos: number; img: string; tag: string } | null>(null);
@@ -225,6 +227,14 @@ export default function Learn() {
   };
 
   const handleCreateActionClick = (label: string) => {
+    if (label === 'Quiz') {
+      navigate('/student/quiz');
+      return;
+    }
+    if (label === 'Flash Card') {
+      navigate('/student/practice');
+      return;
+    }
     setModalTitle(`Create ${label}`);
     setSelectedActionLabel(label);
     setActiveModal('action');
@@ -423,6 +433,18 @@ export default function Learn() {
                 <button
                   key={item}
                   onClick={() => {
+                    if (item === 'Test') {
+                      navigate('/student/tests');
+                      return;
+                    }
+                    if (item === 'Practice') {
+                      navigate('/student/practice');
+                      return;
+                    }
+                    if (item === 'Quiz') {
+                      navigate('/student/quiz');
+                      return;
+                    }
                     setActiveSubTab(item);
                     if (item === 'Subject') setSelectedSubjectDetail(null);
                   }}

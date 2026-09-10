@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, Library, Upload, Calendar,
   Tv, Layers, LineChart, NotebookPen, FlaskConical, Gamepad2, ShoppingCart,
-  Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X
+  Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import userImg from '../assets/user.png';
@@ -31,7 +31,7 @@ export default function StudentLayout() {
     { path: '/student/bookshelf', label: 'Book shelf', icon: BookMarked },
     { path: '/student/explore', label: 'Tuition', icon: GraduationCap },
     { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
-    { path: '/student/tests', label: 'Edu Game', icon: Gamepad2 },
+    { path: '/student/tests', label: 'Tests', icon: CheckSquare },
     { path: '/student/bookmarks', label: 'Edu Shop', icon: ShoppingCart },
   ];
 
@@ -49,7 +49,13 @@ export default function StudentLayout() {
     location.pathname === '/student/calendar' ||
     location.pathname === '/student/projects' ||
     location.pathname === '/student/homework' ||
-    location.pathname === '/student/bookshelf';
+    location.pathname === '/student/bookshelf' ||
+    location.pathname === '/student/tests' ||
+    location.pathname.startsWith('/student/practice') ||
+    location.pathname.startsWith('/student/revision') ||
+    location.pathname.startsWith('/student/exercise') ||
+    location.pathname.startsWith('/student/workbook') ||
+    location.pathname.startsWith('/student/quiz');
 
   return (
     <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
@@ -166,7 +172,7 @@ export default function StudentLayout() {
           </header>
         )}
 
-        <main className="flex-1 overflow-hidden bg-white">
+        <main className="flex-1 min-h-0 overflow-hidden bg-white flex flex-col">
           <Outlet />
         </main>
       </div>

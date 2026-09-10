@@ -21,69 +21,87 @@ export function useStudentProfile() {
     setError(null);
 
     const storedId = localStorage.getItem(STORAGE_KEY);
+    const currentUser = authService.getCurrentUser();
+    const currentEmail = currentUser?.email || localStorage.getItem('userEmail');
 
     if (storedId) {
       try {
         const data = await studentService.getProfile(storedId);
-        setProfile(data);
-        setStatus('success');
-        return;
+        const profileEmail =
+          typeof data?.userId === 'object' && data.userId ? data.userId.email : undefined;
+
+        if (data && (!currentEmail || !profileEmail || profileEmail.toLowerCase() === currentEmail.toLowerCase())) {
+          setProfile(data);
+          setStatus('success');
+          return;
+        }
       } catch (err) {
-        console.warn('Could not load profile with stored ID, attempting fallback initialization:', err);
-        // If stored ID is invalid or deleted, clear it and fall through to bootstrap
-        localStorage.removeItem(STORAGE_KEY);
+        console.warn('Could not load profile with stored ID:', err);
+      }
+    }
+
+    if (currentEmail) {
+      try {
+        const data = await studentService.getProfileByEmail(currentEmail);
+        if (data && data._id && data.name) {
+          localStorage.setItem(STORAGE_KEY, data._id);
+          setProfile(data);
+          setStatus('success');
+          return;
+        }
+      } catch (err) {
+        console.warn('Could not load profile by email:', err);
       }
     }
 
     // Bootstrap initial student profile using current session or sensible defaults
     try {
-      const currentUser = authService.getCurrentUser();
       const email =
         currentUser?.email ||
         localStorage.getItem('userEmail') ||
         'student@edupye.com';
-      const goal = localStorage.getItem('userGoal') || 'Prepare for Exam';
-      const language = localStorage.getItem('userLanguage') || 'English';
+      const name =
+        currentUser?.name ||
+        email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const phone = currentUser?.phone || '';
+      const goal = currentUser?.goal || localStorage.getItem('userGoal') || 'School Curriculum Mastery';
+      const language = currentUser?.language || localStorage.getItem('userLanguage') || 'English';
+      const school = currentUser?.schoolDetails || {};
 
       const initialPayload: CreateStudentProfileDTO = {
         email,
-        name: 'Karthika',
-        phone: '+99 85 75 92 78',
+        name,
+        phone,
+        dob: currentUser?.dob,
+        avatar: currentUser?.avatar,
         goal,
         language: language === 'Select' ? 'English' : language,
+        schoolDetails: school,
         education: {
           level: 'school',
-          board: 'CBSE',
-          classLevel: '10',
+          institution: school.schoolName || 'Delhi Public School',
+          board: school.board || 'CBSE',
+          classLevel: school.classLevel || 'Class 10',
         },
       };
 
-      try {
-        const result = await studentService.createProfile(initialPayload);
-        if (result?.studentProfile?._id) {
+      const result = await studentService.createProfile(initialPayload);
+      if (result?.studentProfile) {
+        if (result.studentProfile._id) {
           localStorage.setItem(STORAGE_KEY, result.studentProfile._id);
-          setProfile(result.studentProfile);
-          setStatus('success');
-          return;
         }
-      } catch (createErr) {
-        const createMsg = createErr instanceof Error ? createErr.message : '';
-        if (createMsg.includes('already exists')) {
-          const existingProfile = await studentService.getProfileByEmail(email);
-          if (existingProfile?._id) {
-            localStorage.setItem(STORAGE_KEY, existingProfile._id);
-            setProfile(existingProfile);
-            setStatus('success');
-            return;
-          }
-        }
-        throw createErr;
+        setProfile(result.studentProfile);
+        setStatus('success');
+        return;
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to load student profile';
-      setError(msg);
-      setStatus('error');
+      console.warn('Backend createProfile encountered error, using local fallback:', err);
     }
+
+    // Always ensure the profile renders with the active user's session data
+    const fallback = studentService.getLocalFallbackProfile();
+    setProfile(fallback);
+    setStatus('success');
   }, []);
 
   useEffect(() => {
@@ -92,14 +110,20 @@ export function useStudentProfile() {
 
   const updateProfile = useCallback(
     async (data: UpdateStudentProfileDTO): Promise<StudentProfile> => {
-      if (!profile?._id) {
-        throw new Error('No active student profile to update');
-      }
-
       setIsSaving(true);
       try {
-        const updated = await studentService.updateProfile(profile._id, data);
+        const profileId = profile?._id || localStorage.getItem(STORAGE_KEY) || 'local_profile_id';
+        const updated = await studentService.updateProfile(profileId, data);
         setProfile(updated);
+
+        // Synchronize with authService
+        authService.updateCurrentUser({
+          name: updated.name,
+          phone: updated.phone,
+          dob: updated.dob,
+          avatar: updated.avatar,
+          schoolDetails: updated.schoolDetails,
+        });
         return updated;
       } finally {
         setIsSaving(false);
@@ -113,11 +137,21 @@ export function useStudentProfile() {
       setIsSaving(true);
       try {
         const res = await studentService.createProfile(data);
-        if (res?.studentProfile?._id) {
-          localStorage.setItem(STORAGE_KEY, res.studentProfile._id);
+        if (res?.studentProfile) {
+          if (res.studentProfile._id) {
+            localStorage.setItem(STORAGE_KEY, res.studentProfile._id);
+          }
           setProfile(res.studentProfile);
           setStatus('success');
           setError(null);
+          // Synchronize with authService
+          authService.updateCurrentUser({
+            name: res.studentProfile.name,
+            phone: res.studentProfile.phone,
+            dob: res.studentProfile.dob,
+            avatar: res.studentProfile.avatar,
+            schoolDetails: res.studentProfile.schoolDetails,
+          });
         }
         return res;
       } finally {

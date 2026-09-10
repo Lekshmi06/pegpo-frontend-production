@@ -88,7 +88,7 @@ export const SourceFlashcardsView: React.FC<SourceFlashcardsViewProps> = ({ sour
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Generating High-Yield Flashcards...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is synthesizing key terms, formulas, and definitions from "{source.originalName}".
+          Synthesizing key terms, formulas, and definitions from "{source.originalName}".
         </p>
       </div>
     );
@@ -100,7 +100,7 @@ export const SourceFlashcardsView: React.FC<SourceFlashcardsViewProps> = ({ sour
         <HelpCircle className="w-12 h-12 text-slate-300" />
         <h4 className="text-sm font-bold text-[#111827]">No Flashcards Available</h4>
         <p className="text-xs text-slate-400 max-w-sm">
-          Click below to have Gemini extract memory cards from this document.
+          Click below to generate memory revision cards from this document.
         </p>
         <Button onClick={() => fetchFlashcards(true)} className="py-2.5 px-6">
           <Sparkles className="w-4 h-4 mr-2" />

@@ -77,7 +77,7 @@ export const SourceQuizView: React.FC<SourceQuizViewProps> = ({ source }) => {
     return (
       <div className="bg-white rounded-3xl border border-[#e2ebf4] p-12 shadow-xs min-h-[460px] flex flex-col items-center justify-center space-y-3">
         <Loader size="lg" />
-        <h4 className="text-sm font-extrabold text-[#111827]">Gemini is Generating Quiz...</h4>
+        <h4 className="text-sm font-extrabold text-[#111827]">Generating Interactive Quiz...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
           Analyzing key concepts and creating multiple-choice questions with full explanations.
         </p>
@@ -91,7 +91,7 @@ export const SourceQuizView: React.FC<SourceQuizViewProps> = ({ source }) => {
         <HelpCircle className="w-12 h-12 text-slate-300" />
         <h4 className="text-sm font-bold text-[#111827]">No Quiz Available Yet</h4>
         <p className="text-xs text-slate-400 max-w-sm">
-          Click below to have Gemini generate an interactive quiz from "{source.originalName}".
+          Click below to generate an interactive quiz from "{source.originalName}".
         </p>
         <Button onClick={() => fetchQuiz(true)} className="py-2.5 px-6">
           <Sparkles className="w-4 h-4 mr-2" />

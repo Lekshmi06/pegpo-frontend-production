@@ -1,6 +1,5 @@
 import { SourceItem, SourceContent } from '../types/source';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+import { API_BASE_URL } from './apiClient';
 
 export const sourceService = {
   uploadSource: async (studentId: string, file: File): Promise<SourceItem> => {

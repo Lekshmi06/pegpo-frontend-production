@@ -75,7 +75,7 @@ export const SourceNotesView: React.FC<SourceNotesViewProps> = ({ source }) => {
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Generating High-Yield Revision Notes...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is synthesizing formulas, core principles, and study checklists from "{source.originalName}".
+          Synthesizing formulas, core principles, and study checklists from "{source.originalName}".
         </p>
       </div>
     );

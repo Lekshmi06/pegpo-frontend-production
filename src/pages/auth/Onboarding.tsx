@@ -2,12 +2,13 @@ import React, { useState, ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { Button } from '../../components/ui/Button';
+import { authService } from '../../services/authService';
 
 type UserRole = 'Institution' | 'Student' | 'Teacher' | 'Researcher' | 'Work' | 'Personal';
 
 const goalOptions: Record<UserRole, string[]> = {
   Institution: ['School', 'Collage', 'University', 'Skill Development', 'Department', 'Others'],
-  Student: ['Graduation', 'Post Graduation', 'Professional Course', 'Get a Coures', 'Prepare for Exam', 'Get a Certificate', 'Other Study'],
+  Student: ['School', 'Graduation', 'Post Graduation', 'Professional Course', 'Get a Coures', 'Prepare for Exam', 'Get a Certificate', 'Other Study'],
   Teacher: ['Lesson Planning', 'Improve Profession', 'Update Knowledge', 'Higher Study', 'Engage Students', 'Conduct a Class', 'Tuition', 'Other'],
   Researcher: ['A co pillot', 'PHD', 'Thisease prepation', 'Post Doctoral', 'Fellowship', 'Guide', 'Other'],
   Work: ['Explore Hobby', 'Improve My sell', 'Learn for curiosity', 'A mature learn', 'Research freelance', 'Other goals'],
@@ -31,10 +32,18 @@ export default function Onboarding() {
     localStorage.setItem('userGoal', goal);
     localStorage.setItem('userLanguage', language);
 
+    authService.updateCurrentUser({
+      role: role.toLowerCase() as any,
+      goal,
+      language: language === 'Select' ? 'English' : language,
+    });
+
     if (role === 'Teacher' || role === 'Institution') {
       navigate('/teacher');
     } else if (role === 'Researcher') {
       navigate('/research');
+    } else if (role === 'Student' && goal === 'School') {
+      navigate('/onboarding/school');
     } else {
       navigate('/student/home');
     }

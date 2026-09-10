@@ -38,8 +38,8 @@ export const PipelineStatusBanner: React.FC<PipelineStatusBannerProps> = ({
       status: isUploading ? 'active' : source ? 'completed' : 'pending',
     },
     {
-      id: 'gemini',
-      name: 'Gemini AI',
+      id: 'ai-analysis',
+      name: 'AI Analysis',
       desc: 'Document Intelligence',
       icon: Sparkles,
       status: isProcessing ? 'active' : isAiReady ? 'completed' : source ? 'active' : 'pending',
@@ -62,10 +62,10 @@ export const PipelineStatusBanner: React.FC<PipelineStatusBannerProps> = ({
           </div>
           <div>
             <h4 className="text-xs font-extrabold text-[#111827]">
-              Document Pipeline Architecture
+              Document Ingestion Pipeline
             </h4>
             <p className="text-[11px] text-slate-500">
-              Automated ingestion: Upload → Storage → Text Extraction → Gemini Processing → AI-Ready Source
+              Automated ingestion: Upload → Storage → Text Extraction → AI Analysis → Ready
             </p>
           </div>
         </div>

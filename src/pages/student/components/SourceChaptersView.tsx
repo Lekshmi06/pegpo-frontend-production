@@ -43,7 +43,7 @@ export const SourceChaptersView: React.FC<SourceChaptersViewProps> = ({ source }
         <Loader size="lg" />
         <h4 className="text-sm font-extrabold text-[#111827]">Generating Chapter Outlines...</h4>
         <p className="text-xs text-slate-400 max-w-sm text-center">
-          Gemini is partitioning "{source.originalName}" into study modules and key takeaway bullets.
+          Partitioning "{source.originalName}" into study modules and key takeaway bullets.
         </p>
       </div>
     );
@@ -158,7 +158,7 @@ export const SourceChaptersView: React.FC<SourceChaptersViewProps> = ({ source }
 
       <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400 font-semibold">
         <span>Ready for exam syllabus tracking</span>
-        <span className="text-[#0091ff]">Gemini Structured Modules</span>
+        <span className="text-[#0091ff]">AI Structured Modules</span>
       </div>
     </div>
   );

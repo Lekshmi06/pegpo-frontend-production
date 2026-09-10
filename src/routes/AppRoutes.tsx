@@ -4,7 +4,10 @@ import { Loader } from '../components/ui/Loader';
 
 // Auth Pages
 const SignUp = lazy(() => import('../pages/auth/SignUp'));
+const Login = lazy(() => import('../pages/auth/Login'));
+const PersonalDetails = lazy(() => import('../pages/auth/PersonalDetails'));
 const Onboarding = lazy(() => import('../pages/auth/Onboarding'));
+const SchoolOnboarding = lazy(() => import('../pages/auth/SchoolOnboarding'));
 
 // Student Layout & Pages
 const StudentLayout = lazy(() => import('../layouts/StudentLayout'));
@@ -25,6 +28,9 @@ const Bookshelf = lazy(() => import('../pages/student/Bookshelf'));
 
 // Student Other Pages
 const Learn = lazy(() => import('../pages/student/Learn'));
+const Tests = lazy(() => import('../pages/student/Tests'));
+const Practice = lazy(() => import('../pages/student/Practice'));
+const QuizHub = lazy(() => import('../pages/student/QuizHub'));
 const GenericStudentPage = lazy(() => import('../pages/student/GenericStudentPage'));
 
 // Teacher Layout & Pages
@@ -58,7 +64,10 @@ export default function AppRoutes() {
         {/* Auth Flows */}
         <Route path="/" element={<Navigate to="/signup" replace />} />
         <Route path="/signup" element={<SignUp />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/personal-details" element={<PersonalDetails />} />
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding/school" element={<SchoolOnboarding />} />
 
         {/* Student Portal */}
         <Route path="/student" element={<StudentLayout />}>
@@ -70,12 +79,13 @@ export default function AppRoutes() {
           <Route path="explore" element={<GenericStudentPage title="Explore Content" desc="Find courses from other schools and institutions." />} />
           <Route path="courses" element={<Courses />} />
           <Route path="exam-cracker" element={<ExamCrackerPage />} />
-          <Route path="practice" element={<GenericStudentPage title="Practice Mode" desc="Practice mock templates to prepare for school exams." />} />
-          <Route path="revision" element={<GenericStudentPage title="Revision Deck" desc="Interactive flashcards and AI study notes." />} />
-          <Route path="exercise" element={<GenericStudentPage title="Worksheets" desc="Worksheets and classroom exercises assigned by teachers." />} />
-          <Route path="workbook" element={<GenericStudentPage title="Workbooks" desc="Review online exercise solutions and formulas." />} />
-          <Route path="homework" element={<NewFolder />} />
-          <Route path="tests" element={<GenericStudentPage title="Online Tests" desc="Complete graded tests, timers, and assessment links." />} />
+          <Route path="practice" element={<Practice />} />
+          <Route path="revision" element={<Practice />} />
+          <Route path="exercise" element={<Practice />} />
+          <Route path="workbook" element={<Practice />} />
+          <Route path="homework" element={<Practice />} />
+          <Route path="quiz" element={<QuizHub />} />
+          <Route path="tests" element={<Tests />} />
           <Route path="history" element={<GenericStudentPage title="Performance History" desc="Graph your mock grade history and study sessions." />} />
           <Route path="ai-search" element={<GenericStudentPage title="AI Search Finder" desc="AI search indexer for referencing terms." />} />
           <Route path="upload" element={<Upload />} />

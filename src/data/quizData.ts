@@ -1,0 +1,178 @@
+import { QuickQuizItem } from '../types/testTypes';
+
+export const quickQuizData: QuickQuizItem[] = [
+  {
+    id: 'quiz-phys-motion',
+    title: 'Kinematics & Speed Drill',
+    subject: 'Physics',
+    chapter: 'Motion in a Straight Line',
+    durationMinutes: 5,
+    isLocked: false,
+    questions: [
+      {
+        id: 'q-p-1',
+        text: 'A car accelerates uniformly from 0 to 20 m/s in 5 seconds. What is its acceleration?',
+        options: [
+          { id: 'A', text: '2 m/s²' },
+          { id: 'B', text: '4 m/s²' },
+          { id: 'C', text: '5 m/s²' },
+          { id: 'D', text: '10 m/s²' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'a = (v - u) / t = (20 - 0) / 5 = 4 m/s².',
+      },
+      {
+        id: 'q-p-2',
+        text: 'What does the area under a Velocity-Time graph represent?',
+        options: [
+          { id: 'A', text: 'Acceleration' },
+          { id: 'B', text: 'Displacement' },
+          { id: 'C', text: 'Force' },
+          { id: 'D', text: 'Speed' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'The area under a velocity-time graph represents the displacement or total distance covered.',
+      },
+      {
+        id: 'q-p-3',
+        text: 'What is the acceleration due to gravity on the surface of Earth (standard value)?',
+        options: [
+          { id: 'A', text: '8.9 m/s²' },
+          { id: 'B', text: '9.8 m/s²' },
+          { id: 'C', text: '10.8 m/s²' },
+          { id: 'D', text: '6.67 m/s²' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'The standard gravitational acceleration near Earth’s surface is approximately 9.8 m/s².',
+      },
+      {
+        id: 'q-p-4',
+        text: 'Which physical quantity remains constant for a body executing uniform circular motion?',
+        options: [
+          { id: 'A', text: 'Velocity' },
+          { id: 'B', text: 'Acceleration' },
+          { id: 'C', text: 'Speed' },
+          { id: 'D', text: 'Momentum' },
+        ],
+        correctAnswer: 'C',
+        explanation: 'In uniform circular motion, speed is constant. Velocity, acceleration, and momentum change continuously because their directions change.',
+      },
+      {
+        id: 'q-p-5',
+        text: 'What is the SI unit of momentum?',
+        options: [
+          { id: 'A', text: 'kg·m/s' },
+          { id: 'B', text: 'kg·m/s²' },
+          { id: 'C', text: 'N·m' },
+          { id: 'D', text: 'Joule' },
+        ],
+        correctAnswer: 'A',
+        explanation: 'Momentum p = m · v, so its SI unit is kilogram meter per second (kg·m/s).',
+      },
+    ],
+  },
+  {
+    id: 'quiz-chem-bonding',
+    title: 'Atomic Structure & Bonding',
+    subject: 'Chemistry',
+    chapter: 'Chemical Bonding',
+    durationMinutes: 5,
+    isLocked: false,
+    questions: [
+      {
+        id: 'q-c-1',
+        text: 'Which bond is formed by the complete transfer of electrons between atoms?',
+        options: [
+          { id: 'A', text: 'Covalent bond' },
+          { id: 'B', text: 'Ionic (electrovalent) bond' },
+          { id: 'C', text: 'Coordinate bond' },
+          { id: 'D', text: 'Hydrogen bond' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'Ionic bonds are formed through the electrostatic attraction between oppositely charged ions formed by complete electron transfer.',
+      },
+      {
+        id: 'q-c-2',
+        text: 'What is the total number of electrons shared in a double covalent bond?',
+        options: [
+          { id: 'A', text: '2' },
+          { id: 'B', text: '4' },
+          { id: 'C', text: '6' },
+          { id: 'D', text: '8' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'A double bond involves sharing two electron pairs, for a total of 4 shared electrons (e.g. O=O).',
+      },
+      {
+        id: 'q-c-3',
+        text: 'What is the atomic number of Carbon?',
+        options: [
+          { id: 'A', text: '4' },
+          { id: 'B', text: '6' },
+          { id: 'C', text: '12' },
+          { id: 'D', text: '14' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'Carbon has an atomic number of 6 (6 protons, 6 electrons).',
+      },
+      {
+        id: 'q-c-4',
+        text: 'Which gas is known as "laughing gas"?',
+        options: [
+          { id: 'A', text: 'Nitric oxide (NO)' },
+          { id: 'B', text: 'Nitrous oxide (N₂O)' },
+          { id: 'C', text: 'Nitrogen dioxide (NO₂)' },
+          { id: 'D', text: 'Sulfur dioxide (SO₂)' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'Nitrous oxide (N₂O) is commonly known as laughing gas.',
+      },
+    ],
+  },
+  {
+    id: 'quiz-math-algebra',
+    title: 'Speed Maths & Number Magic',
+    subject: 'Maths',
+    chapter: 'Real Numbers & Polynomials',
+    durationMinutes: 5,
+    isLocked: false,
+    questions: [
+      {
+        id: 'q-m-1',
+        text: 'Which of the following is an irrational number?',
+        options: [
+          { id: 'A', text: '√9' },
+          { id: 'B', text: '22/7' },
+          { id: 'C', text: '√5' },
+          { id: 'D', text: '0.333...' },
+        ],
+        correctAnswer: 'C',
+        explanation: '√5 is non-terminating and non-repeating, making it an irrational number. 22/7 is rational (p/q form) and √9 = 3.',
+      },
+      {
+        id: 'q-m-2',
+        text: 'What is the degree of a non-zero constant polynomial (e.g. P(x) = 7)?',
+        options: [
+          { id: 'A', text: '0' },
+          { id: 'B', text: '1' },
+          { id: 'C', text: 'Undefined' },
+          { id: 'D', text: 'Infinity' },
+        ],
+        correctAnswer: 'A',
+        explanation: 'A non-zero constant polynomial has degree 0 since 7 can be written as 7·x⁰.',
+      },
+      {
+        id: 'q-m-3',
+        text: 'What is the sum of the angles in any triangle?',
+        options: [
+          { id: 'A', text: '90°' },
+          { id: 'B', text: '180°' },
+          { id: 'C', text: '360°' },
+          { id: 'D', text: '270°' },
+        ],
+        correctAnswer: 'B',
+        explanation: 'The interior angle sum of any triangle in Euclidean geometry is always 180° (π radians).',
+      },
+    ],
+  },
+];

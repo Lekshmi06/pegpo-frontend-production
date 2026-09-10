@@ -256,7 +256,7 @@ export default function Upload() {
             <div className="space-y-1">
               <h3 className="text-sm font-extrabold text-[#111827]">Processing Document Pipeline</h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Uploading file, extracting text, and invoking Gemini Document Intelligence...
+                Uploading file, extracting text, and analyzing document content...
               </p>
             </div>
             <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
@@ -397,7 +397,7 @@ export default function Upload() {
                     </h1>
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#e0f2fe] text-[#0284c7] border border-[#bae6fd]">
                       <Sparkles className="w-3 h-3" />
-                      <span>Gemini Powered</span>
+                      <span>AI Powered</span>
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 font-medium">
@@ -442,7 +442,7 @@ export default function Upload() {
                       </p>
                       <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#f0f6fc] border border-[#d8eaf8] text-[11px] font-bold text-[#1c3352]">
                         <FileCheck className="w-3.5 h-3.5 text-[#0091ff]" />
-                        <span>Max 20MB • Automatic Gemini Understanding</span>
+                        <span>Max 20MB • Automatic Document Intelligence</span>
                       </div>
                     </div>
                   </div>
@@ -626,7 +626,7 @@ export default function Upload() {
                           <div className="bg-white rounded-2xl p-2 border border-[#e2ebf4] shadow-xs flex items-center gap-1 overflow-x-auto text-xs">
                             {[
                               { id: 'overview' as AIStudioTab, label: 'Overview', icon: FileText },
-                              { id: 'chat' as AIStudioTab, label: 'Chat (Gemini)', icon: MessageSquare },
+                              { id: 'chat' as AIStudioTab, label: 'Chat Assistant', icon: MessageSquare },
                               { id: 'quiz' as AIStudioTab, label: 'Quiz', icon: CheckCircle2 },
                               { id: 'flashcards' as AIStudioTab, label: 'Flashcards', icon: Layers },
                               { id: 'mindmap' as AIStudioTab, label: 'Mind Map', icon: Brain },
@@ -707,7 +707,7 @@ export default function Upload() {
                                       <Sparkles className="w-3.5 h-3.5" />
                                     </div>
                                     <h4 className="text-xs font-extrabold text-[#1e3a8a] uppercase tracking-wider">
-                                      Gemini Executive Summary
+                                      Executive AI Summary
                                     </h4>
                                   </div>
 
@@ -921,7 +921,7 @@ export default function Upload() {
                             </h3>
                             <p className="text-xs text-slate-400 max-w-sm">
                               Select an uploaded document from the left list or upload a new file to
-                              start using Gemini AI features.
+                              start using interactive AI study features.
                             </p>
                           </div>
                           <Button

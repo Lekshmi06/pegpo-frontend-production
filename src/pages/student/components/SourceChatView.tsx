@@ -112,7 +112,7 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
     const greeting: ChatMessage = {
       id: 'greeting',
       role: 'model',
-      text: `Hello! I've processed **"${source.originalName}"** with Gemini. You can ask me to explain concepts, clarify formulas, find definitions, or test your comprehension!`,
+      text: `Hello! I've processed **"${source.originalName}"**. You can ask me to explain concepts, clarify formulas, find definitions, or test your comprehension!`,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages([greeting]);
@@ -154,7 +154,7 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
 
       setMessages((prev) => [...prev, botMessage]);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to query Gemini';
+      const msg = err instanceof Error ? err.message : 'Failed to get response';
       toast.error(msg);
     } finally {
       setIsSending(false);
@@ -245,7 +245,7 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
             <h3 className="text-xs font-bold text-[#111827] flex items-center gap-1.5">
               <span>Chat with Source</span>
               <span className="px-1.5 py-0.5 rounded-full text-[9px] font-extrabold bg-blue-100 text-blue-700">
-                Gemini
+                AI
               </span>
             </h3>
             <p className="text-[11px] text-slate-400 truncate max-w-sm">
@@ -371,7 +371,7 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
             </div>
             <div className="bg-[#f8fbfe] border border-[#e2ebf4] rounded-2xl p-3 px-4 shadow-2xs flex items-center gap-2 text-slate-500">
               <Loader size="sm" />
-              <span className="text-[11px] font-semibold">Gemini is reasoning through the document...</span>
+              <span className="text-[11px] font-semibold">AI is analyzing the document...</span>
             </div>
           </div>
         )}
@@ -390,7 +390,7 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleSendMessage();
             }}
-            placeholder={`Ask Gemini about "${source.originalName}"...`}
+            placeholder={`Ask anything about "${source.originalName}"...`}
             className="flex-1 bg-transparent text-xs font-semibold text-[#1c3352] outline-none placeholder:text-slate-400"
           />
 
