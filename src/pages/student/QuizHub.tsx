@@ -25,8 +25,6 @@ export default function QuizHub() {
   const toast = useToast();
   const { profile } = useStudentProfile();
 
-  const [board, setBoard] = useState('CBSE');
-  const [cbseClass, setCbseClass] = useState('CLASS 10');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('All');
 
@@ -136,16 +134,7 @@ export default function QuizHub() {
       {/* Main Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-6 md:px-8 z-10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="px-3.5 py-1.5 bg-[#f1f5f9] text-slate-700 text-xs font-extrabold rounded-xl border border-slate-200 shadow-2xs uppercase">
-              {board}
-            </span>
-            <span className="px-3.5 py-1.5 bg-[#f1f5f9] text-slate-700 text-xs font-extrabold rounded-xl border border-slate-200 shadow-2xs uppercase">
-              {cbseClass}
-            </span>
-          </div>
-
+        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-end px-6 md:px-8 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer hidden sm:block">
               EN

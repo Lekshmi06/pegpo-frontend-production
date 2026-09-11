@@ -9,6 +9,7 @@ import logoImg from '../assets/logo.png';
 import userImg from '../assets/user.png';
 import { authService } from '../services/authService';
 import { NavItem } from '../types/common';
+import EduPyeAIChat from '../components/student/EduPyeAIChat';
 
 export default function StudentLayout() {
   const location = useLocation();
@@ -176,6 +177,9 @@ export default function StudentLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating EduPye AI assistant button & context-aware chat popup */}
+      <EduPyeAIChat />
     </div>
   );
 }

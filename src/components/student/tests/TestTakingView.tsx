@@ -84,8 +84,10 @@ export default function TestTakingView({
     options: [],
   };
 
+  const isUntimedMode = !test.durationMinutes || test.durationMinutes === 0 || Boolean((test as any).isUntimed);
+
   const [timerMode, setTimerMode] = useState<'stopwatch' | 'countdown'>(
-    test.durationMinutes ? 'countdown' : 'stopwatch'
+    isUntimedMode ? 'stopwatch' : test.durationMinutes ? 'countdown' : 'stopwatch'
   );
 
   // Live timer
@@ -94,8 +96,8 @@ export default function TestTakingView({
     const timer = setInterval(() => {
       setTimeElapsed((prev) => {
         const next = prev + 1;
-        // Auto-finish if countdown expires
-        if (test.durationMinutes && next >= test.durationMinutes * 60) {
+        // Auto-finish only if in timed countdown mode and expires
+        if (!isUntimedMode && test.durationMinutes && next >= test.durationMinutes * 60) {
           clearInterval(timer);
           setShowFinishConfirm(true);
         }
@@ -103,7 +105,7 @@ export default function TestTakingView({
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isPaused, test.durationMinutes]);
+  }, [isPaused, test.durationMinutes, isUntimedMode]);
 
   // Persist answers, statuses, and time to sessionStorage for refresh tolerance
   useEffect(() => {
@@ -484,25 +486,40 @@ export default function TestTakingView({
           </div>
 
           {/* Live Timer with Countdown / Stopwatch mode */}
-          <div
-            onClick={() => setTimerMode((prev) => (prev === 'countdown' ? 'stopwatch' : 'countdown'))}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none shrink-0 ${
-              isCriticalTime
-                ? 'bg-rose-50 border-rose-300 text-rose-600 animate-pulse'
-                : isLowTime
-                ? 'bg-amber-50 border-amber-300 text-amber-700'
-                : 'bg-slate-50 border-slate-200 text-slate-700'
-            }`}
-            title={`Click to switch to ${timerMode === 'countdown' ? 'elapsed time (stopwatch)' : 'remaining time (countdown)'}`}
-          >
-            <Clock className={`w-3.5 h-3.5 stroke-[2] ${isLowTime ? 'text-amber-600' : isCriticalTime ? 'text-rose-600' : 'text-slate-500'}`} />
-            <span className="text-xs font-bold tracking-wider font-mono">
-              {formatTimer(timerMode === 'countdown' ? remainingSeconds : timeElapsed)}
-            </span>
-            <span className="text-[10px] font-extrabold uppercase tracking-tight text-slate-400">
-              {timerMode === 'countdown' ? 'Left' : 'Elapsed'}
-            </span>
-          </div>
+          {isUntimedMode ? (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-emerald-50/70 border-emerald-200 text-emerald-800 select-none shrink-0"
+              title="Untimed self-paced practice mode"
+            >
+              <Clock className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
+              <span className="text-xs font-bold tracking-wider font-mono text-emerald-900">
+                {formatTimer(timeElapsed)}
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-200/60 text-emerald-800 px-1.5 py-0.5 rounded-md">
+                Untimed Practice
+              </span>
+            </div>
+          ) : (
+            <div
+              onClick={() => setTimerMode((prev) => (prev === 'countdown' ? 'stopwatch' : 'countdown'))}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border transition-all cursor-pointer select-none shrink-0 ${
+                isCriticalTime
+                  ? 'bg-rose-50 border-rose-300 text-rose-600 animate-pulse'
+                  : isLowTime
+                  ? 'bg-amber-50 border-amber-300 text-amber-700'
+                  : 'bg-slate-50 border-slate-200 text-slate-700'
+              }`}
+              title={`Click to switch to ${timerMode === 'countdown' ? 'elapsed time (stopwatch)' : 'remaining time (countdown)'}`}
+            >
+              <Clock className={`w-3.5 h-3.5 stroke-[2] ${isLowTime ? 'text-amber-600' : isCriticalTime ? 'text-rose-600' : 'text-slate-500'}`} />
+              <span className="text-xs font-bold tracking-wider font-mono">
+                {formatTimer(timerMode === 'countdown' ? remainingSeconds : timeElapsed)}
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-tight text-slate-400">
+                {timerMode === 'countdown' ? 'Left' : 'Elapsed'}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Question View Body */}

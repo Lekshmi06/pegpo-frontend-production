@@ -101,10 +101,6 @@ export default function Profile() {
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
-  // Top header quick selectors
-  const [headerBoard, setHeaderBoard] = useState('CBSE');
-  const [headerClass, setHeaderClass] = useState('Class 10');
-
   // Personal Info Form State
   const [isEditingPersonal, setIsEditingPersonal] = useState(false);
   const [personalForm, setPersonalForm] = useState({
@@ -213,51 +209,7 @@ export default function Profile() {
     setTimeout(() => navigate('/login'), 600);
   };
 
-  const handleTopBoardChange = async (newBoard: string) => {
-    setHeaderBoard(newBoard);
-    setAcademicForm((prev) => ({ ...prev, board: newBoard }));
-    if (profile?._id) {
-      try {
-        await updateProfile({
-          education: {
-            ...profile.education,
-            level: 'school',
-            board: newBoard,
-          },
-          schoolDetails: {
-            ...profile.schoolDetails,
-            board: newBoard,
-          },
-        });
-        toast.success(`Board updated to ${newBoard}`);
-      } catch {
-        toast.error('Failed to update board selection');
-      }
-    }
-  };
 
-  const handleTopClassChange = async (newClass: string) => {
-    setHeaderClass(newClass);
-    setAcademicForm((prev) => ({ ...prev, classLevel: newClass }));
-    if (profile?._id) {
-      try {
-        await updateProfile({
-          education: {
-            ...profile.education,
-            level: 'school',
-            classLevel: newClass,
-          },
-          schoolDetails: {
-            ...profile.schoolDetails,
-            classLevel: newClass,
-          },
-        });
-        toast.success(`Class updated to ${newClass}`);
-      } catch {
-        toast.error('Failed to update class selection');
-      }
-    }
-  };
 
   // Save Personal Details
   const handleSavePersonal = async (e?: React.FormEvent) => {
@@ -532,39 +484,7 @@ export default function Profile() {
       {/* Main Container */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <select
-                value={headerBoard}
-                onChange={(e) => handleTopBoardChange(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                <option value="CBSE">CBSE</option>
-                <option value="ICSE">ICSE</option>
-                <option value="State Board">State</option>
-                <option value="Cambridge (IGCSE)">Cambridge</option>
-                <option value="IB (International Baccalaureate)">IB</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={headerClass}
-                onChange={(e) => handleTopClassChange(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                {CLASSES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
-          </div>
-
+        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-end px-4 md:px-8 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => toast.info('Language set to English')}

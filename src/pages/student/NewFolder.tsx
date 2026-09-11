@@ -24,8 +24,6 @@ export default function NewFolder() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [board, setBoard] = useState('CBSE');
-  const [cbseClass, setCbseClass] = useState('Class 9');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const [foldersList, setFoldersList] = useState<FolderItem[]>([
@@ -128,36 +126,7 @@ export default function NewFolder() {
       </Modal>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <select
-                value={board}
-                onChange={(e) => setBoard(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                <option value="CBSE">CBSE</option>
-                <option value="ICSE">ICSE</option>
-                <option value="State">State</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={cbseClass}
-                onChange={(e) => setCbseClass(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                <option value="Class 9">Class 9</option>
-                <option value="Class 10">Class 10</option>
-                <option value="Class 11">Class 11</option>
-                <option value="Class 12">Class 12</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
-          </div>
-
+        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-end px-4 md:px-8 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <button
               onClick={() => toast.info('Language switched to English')}

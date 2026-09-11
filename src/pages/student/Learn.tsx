@@ -39,8 +39,6 @@ export default function Learn() {
   const [activeSubTab, setActiveSubTab] = useState('Subject');
   const [selectedSubjectDetail, setSelectedSubjectDetail] = useState<{ id: number; name: string; lessons: number; videos: number; img: string; tag: string } | null>(null);
   const [activeQuiz, setActiveQuiz] = useState<QuizState | null>(null);
-  const [board, setBoard] = useState('CBSE');
-  const [cbseClass, setCbseClass] = useState('Class 9');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const [activeModal, setActiveModal] = useState<'upload' | 'chat' | 'action' | 'graphic' | null>(null);
@@ -474,32 +472,6 @@ export default function Learn() {
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>
             )}
-            <div className="relative">
-              <select
-                value={board}
-                onChange={(e) => setBoard(e.target.value)}
-                className="bg-[#d8eaf8] text-[#1c3352] text-xs font-extrabold px-3.5 py-2 rounded-xl border-none outline-none cursor-pointer appearance-none pr-7 shadow-2xs"
-              >
-                <option value="CBSE">CBSE</option>
-                <option value="ICSE">ICSE</option>
-                <option value="State">State Board</option>
-              </select>
-              <span className="absolute right-2.5 top-2.5 text-[10px] text-[#1c3352] pointer-events-none font-bold">∨</span>
-            </div>
-
-            <div className="relative">
-              <select
-                value={cbseClass}
-                onChange={(e) => setCbseClass(e.target.value)}
-                className="bg-[#d8eaf8] text-[#1c3352] text-xs font-extrabold px-3.5 py-2 rounded-xl border-none outline-none cursor-pointer appearance-none pr-7 shadow-2xs"
-              >
-                <option value="Class 9">Class 9</option>
-                <option value="Class 10">Class 10</option>
-                <option value="Class 11">Class 11</option>
-                <option value="Class 12">Class 12</option>
-              </select>
-              <span className="absolute right-2.5 top-2.5 text-[10px] text-[#1c3352] pointer-events-none font-bold">∨</span>
-            </div>
           </div>
 
           <div className="flex items-center gap-4 ml-auto">

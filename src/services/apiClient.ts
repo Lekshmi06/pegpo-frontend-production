@@ -21,7 +21,13 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+  let normalizedEndpoint = endpoint;
+  if (API_BASE_URL.endsWith('/api') && normalizedEndpoint.startsWith('/api')) {
+    normalizedEndpoint = normalizedEndpoint.replace(/^\/api/, '');
+  }
+  const url = endpoint.startsWith('http')
+    ? endpoint
+    : `${API_BASE_URL}${normalizedEndpoint.startsWith('/') ? '' : '/'}${normalizedEndpoint}`;
   
   const headers = new Headers(options.headers || {});
   if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -25,12 +25,12 @@ const ACTIVE_TEST_STORAGE_KEY = 'edupye_active_test_session';
 
 export default function Tests() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const urlTestId = searchParams.get('testId');
   const toast = useToast();
   const { profile } = useStudentProfile();
 
   const [activeSubTab, setActiveSubTab] = useState('Test');
-  const [board, setBoard] = useState('CBSE');
-  const [cbseClass, setCbseClass] = useState('CLASS 10');
 
   const [tests, setTests] = useState<TestItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -52,23 +52,6 @@ export default function Tests() {
     { label: 'Quiz', path: '/student/quiz' },
     { label: 'Combine Study', path: '/student/learn' },
   ];
-
-  // Synchronize board and class with the logged-in student's profile
-  useEffect(() => {
-    if (profile) {
-      const studentBoard =
-        profile.education?.board || profile.schoolDetails?.board;
-      const studentClass =
-        profile.education?.classLevel || profile.schoolDetails?.classLevel;
-
-      if (studentBoard) {
-        setBoard(studentBoard);
-      }
-      if (studentClass) {
-        setCbseClass(studentClass);
-      }
-    }
-  }, [profile]);
 
   // Restore active test session on page refresh if one exists
   useEffect(() => {
@@ -98,9 +81,12 @@ export default function Tests() {
     setIsLoading(true);
     setError(null);
     try {
+      const studentBoard = profile?.education?.board || profile?.schoolDetails?.board;
+      const studentClass = profile?.education?.classLevel || profile?.schoolDetails?.classLevel;
+
       const data = await testService.fetchTests({
-        board,
-        classLevel: cbseClass,
+        board: studentBoard,
+        classLevel: studentClass,
       });
 
       // If no tests match the student's exact board/class in dev, fetch all available tests
@@ -116,7 +102,7 @@ export default function Tests() {
     } finally {
       setIsLoading(false);
     }
-  }, [board, cbseClass]);
+  }, [profile]);
 
   useEffect(() => {
     loadTests();
@@ -150,8 +136,18 @@ export default function Tests() {
 
     const testId = testItem.id || testItem._id!;
     try {
-      // 1. Fetch complete questions with answer masking for student taking mode
-      const fullTest = await testService.fetchTestById(testId, 'take');
+      // 1. Fetch complete questions with answer masking for student taking mode (if not already full)
+      let fullTest = testItem;
+      if (!testItem.questions || testItem.questions.length === 0) {
+        fullTest = await testService.fetchTestById(testId, 'take');
+      }
+
+      // Check if untimed mode requested
+      const isUntimed = searchParams.get('untimed') === 'true' || fullTest.durationMinutes === 0;
+      if (isUntimed) {
+        fullTest.durationMinutes = 0;
+        fullTest.isUntimed = true;
+      }
 
       // 2. Start or resume attempt session in backend
       const session = await testService.startTest(testId).catch(() => ({
@@ -165,7 +161,7 @@ export default function Tests() {
       // Store in session storage for refresh recovery
       sessionStorage.setItem(
         ACTIVE_TEST_STORAGE_KEY,
-        JSON.stringify({ testId, attemptId: session.attemptId })
+        JSON.stringify({ testId, attemptId: session.attemptId, isUntimed, test: fullTest })
       );
 
       setActiveAttemptId(session.attemptId);
@@ -175,6 +171,13 @@ export default function Tests() {
       toast.error(err instanceof Error ? err.message : 'Failed to launch test session');
     }
   };
+
+  // Automatically start test if testId query param is present (e.g. from EduPye AI PYQ link)
+  useEffect(() => {
+    if (urlTestId && (!activeTest || (activeTest.id !== urlTestId && activeTest._id !== urlTestId))) {
+      handleStartTest({ _id: urlTestId, title: 'Previous Year Question Test', isLocked: false } as any);
+    }
+  }, [urlTestId, activeTest]);
 
   const handleFinishTest = async (results: {
     attemptId?: string;
@@ -371,17 +374,8 @@ export default function Tests() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Bar (Matching Image 2: CBSE, CLASS 10, EN, Search, Profile) */}
-        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-6 md:px-8 z-10 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <span className="px-3.5 py-1.5 bg-[#f1f5f9] text-slate-700 text-xs font-extrabold rounded-xl border border-slate-200 shadow-2xs uppercase">
-              {board}
-            </span>
-            <span className="px-3.5 py-1.5 bg-[#f1f5f9] text-slate-700 text-xs font-extrabold rounded-xl border border-slate-200 shadow-2xs uppercase">
-              {cbseClass}
-            </span>
-          </div>
-
+        {/* Top Header Bar (Matching Image 2: EN, Search, Profile) */}
+        <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-end px-6 md:px-8 z-10 flex-shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold text-slate-600 hover:text-slate-900 cursor-pointer hidden sm:block">
               EN
@@ -450,7 +444,7 @@ export default function Tests() {
               </div>
             ) : tests.length === 0 ? (
               <div className="py-16 text-center text-slate-400 font-medium text-xs">
-                No tests found for {board} {cbseClass}.
+                No tests found available at this time.
               </div>
             ) : (
               <>

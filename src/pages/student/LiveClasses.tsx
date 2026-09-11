@@ -24,8 +24,6 @@ export default function LiveClasses() {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [board, setBoard] = useState('CBSE');
-  const [cbseClass, setCbseClass] = useState('Class 9');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [activeLiveSession, setActiveLiveSession] = useState<LiveSession | null>(null);
 
@@ -145,35 +143,9 @@ export default function LiveClasses() {
                 <ArrowLeft className="w-5 h-5 stroke-[2.5]" />
               </button>
             )}
-            <div className="relative">
-              <select
-                value={board}
-                onChange={(e) => setBoard(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                <option value="CBSE">CBSE</option>
-                <option value="ICSE">ICSE</option>
-                <option value="State">State</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
-
-            <div className="relative">
-              <select
-                value={cbseClass}
-                onChange={(e) => setCbseClass(e.target.value)}
-                className="appearance-none bg-[#e3edf7] text-[#1c3352] pl-3.5 pr-8 py-1.5 rounded-xl text-xs font-bold border-none outline-none cursor-pointer hover:bg-[#d5e6f5] transition-colors"
-              >
-                <option value="Class 9">Class 9</option>
-                <option value="Class 10">Class 10</option>
-                <option value="Class 11">Class 11</option>
-                <option value="Class 12">Class 12</option>
-              </select>
-              <ChevronDown className="w-3.5 h-3.5 text-[#1c3352] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none stroke-[2.5]" />
-            </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 ml-auto">
             <button
               onClick={() => toast.info('Language switched to English')}
               className="p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer hidden sm:block"
