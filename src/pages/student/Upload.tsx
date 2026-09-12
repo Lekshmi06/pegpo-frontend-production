@@ -43,7 +43,6 @@ import { Loader } from '../../components/ui/Loader';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { useStudentSources } from '../../hooks/useStudentSources';
 import { sourceService } from '../../services/sourceService';
-import { PipelineStatusBanner } from './components/PipelineStatusBanner';
 import { SourceChatView } from './components/SourceChatView';
 import { SourceQuizView } from './components/SourceQuizView';
 import { SourceFlashcardsView } from './components/SourceFlashcardsView';
@@ -391,9 +390,6 @@ export default function Upload() {
               {viewMode === 'empty' ? (
                 /* Empty / Initial Upload Center */
                 <div className="bg-white rounded-3xl border border-[#e2ebf4] p-8 shadow-xs min-h-[520px] flex flex-col justify-between animate-in fade-in duration-150 space-y-6">
-                  {/* Pipeline banner showing full lifecycle */}
-                  <PipelineStatusBanner source={selectedSource} isUploading={isUploading} />
-
                   <div className="flex-1 flex items-center justify-center py-10">
                     <div
                       onClick={() => fileInputRef.current?.click()}
@@ -439,9 +435,6 @@ export default function Upload() {
               ) : (
                 /* Source Studio Workspace */
                 <div className="space-y-6 animate-in fade-in duration-150">
-                  {/* Pipeline Visualizer Banner */}
-                  <PipelineStatusBanner source={selectedSource} isUploading={isUploading} />
-
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
                     {/* Left Column: Sources Shelf */}
                     <div className="lg:col-span-4 bg-white rounded-3xl border border-[#e2ebf4] p-6 shadow-xs flex flex-col justify-between min-h-[560px]">
