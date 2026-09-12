@@ -14,10 +14,40 @@ export interface PYQQuestionData {
   marks: number;
 }
 
+export interface InteractiveOption {
+  id: 'A' | 'B' | 'C' | 'D';
+  text: string;
+}
+
+export interface InteractiveQuestionItem {
+  id: string | number;
+  question: string;
+  options: InteractiveOption[];
+  correctAnswer: 'A' | 'B' | 'C' | 'D';
+  explanation: string;
+  hint?: string;
+  difficulty?: 'Easy' | 'Medium' | 'Hard';
+  marks?: number;
+  topic?: string;
+}
+
+export interface QuestionSetData {
+  testId: string;
+  title: string;
+  topic: string;
+  subject: string;
+  board: string;
+  classLevel?: string;
+  questions: InteractiveQuestionItem[];
+}
+
 export interface AIChatResponseData {
   reply: string;
+  intent?: 'PYQ' | 'QUESTION_GENERATION' | 'CONCEPT_EXPLANATION' | 'CASUAL';
   isPyq?: boolean;
   pyq?: PYQQuestionData;
+  isQuestionSet?: boolean;
+  questionSet?: QuestionSetData;
 }
 
 interface AIChatApiResponse {
@@ -147,6 +177,125 @@ export async function sendAIChatMessage(
           marks: 1,
         },
       };
+    }
+
+    // Check for Question Generation (Priority 2)
+    const isQuestionGen =
+      /(?:give|provide|send|generate|create)\s+(?:me\s+)?(?:\d+\s+|some\s+)?(?:practice\s+)?questions?/i.test(lower) ||
+      /(?:quiz|test)\s+me/i.test(lower) ||
+      /practice\s+questions?/i.test(lower) ||
+      /want\s+to\s+practice/i.test(lower) ||
+      /ask\s+me\s+(?:some|\d+)?\s*questions/i.test(lower);
+
+    if (isQuestionGen) {
+      if (lower.includes('displacement') || lower.includes('reaction')) {
+        return {
+          reply:
+            'Here are **5 interactive practice questions** on **double displacement reaction** for **CBSE Class 10 Chemistry**. Select your answers below to test your understanding!',
+          intent: 'QUESTION_GENERATION',
+          isQuestionSet: true,
+          questionSet: {
+            testId: '6aa3dc10dfaa6924c7aaf1f9',
+            title: 'CBSE Class 10 Chemistry: Double Displacement Reaction Practice Quiz',
+            topic: 'Double Displacement Reaction',
+            subject: 'Chemistry',
+            board: 'CBSE',
+            classLevel: 'Class 10',
+            questions: [
+              {
+                id: 1,
+                question:
+                  'When aqueous solutions of sodium sulphate (Na₂SO₄) and barium chloride (BaCl₂) are mixed together, what white precipitate is formed?',
+                options: [
+                  { id: 'A', text: 'Sodium chloride (NaCl)' },
+                  { id: 'B', text: 'Barium sulphate (BaSO₄)' },
+                  { id: 'C', text: 'Barium sulphite (BaSO₃)' },
+                  { id: 'D', text: 'Sodium sulphide (Na₂S)' },
+                ],
+                correctAnswer: 'B',
+                explanation:
+                  'Mixing Na₂SO₄ and BaCl₂ causes mutual exchange of Ba²⁺ and SO₄²⁻ ions to form insoluble white precipitate of BaSO₄.',
+                hint: 'Recall which barium salt is insoluble in water.',
+                difficulty: 'Easy',
+                marks: 1,
+                topic: 'Double Displacement Reaction',
+              },
+              {
+                id: 2,
+                question:
+                  'What is the defining characteristic of a double displacement reaction?',
+                options: [
+                  { id: 'A', text: 'One more reactive element displaces a less reactive element' },
+                  { id: 'B', text: 'Two compounds exchange their constituent ions to form two new compounds' },
+                  { id: 'C', text: 'A single compound decomposes into two or more products' },
+                  { id: 'D', text: 'Two or more elements combine to form a single product' },
+                ],
+                correctAnswer: 'B',
+                explanation:
+                  'In double displacement reactions, the positive and negative ions of two ionic compounds exchange partners (AB + CD -> AD + CB).',
+                hint: 'Think about mutual exchange of ions between reactants.',
+                difficulty: 'Medium',
+                marks: 1,
+                topic: 'Double Displacement Reaction',
+              },
+              {
+                id: 3,
+                question:
+                  'When lead(II) nitrate solution is mixed with potassium iodide solution, what is the color and formula of the precipitate?',
+                options: [
+                  { id: 'A', text: 'White precipitate of KNO₃' },
+                  { id: 'B', text: 'Yellow precipitate of PbI₂' },
+                  { id: 'C', text: 'Blue precipitate of Pb(NO₃)₂' },
+                  { id: 'D', text: 'Black precipitate of PbO' },
+                ],
+                correctAnswer: 'B',
+                explanation:
+                  'Pb(NO₃)₂ + 2KI -> PbI₂↓ + 2KNO₃. Lead iodide (PbI₂) is a brilliant yellow insoluble solid.',
+                hint: 'It is a characteristic yellow precipitate test in Class 10 chemistry.',
+                difficulty: 'Medium',
+                marks: 1,
+                topic: 'Double Displacement Reaction',
+              },
+              {
+                id: 4,
+                question:
+                  'An acid-base neutralization reaction (e.g. HCl + NaOH -> NaCl + H₂O) can also be classified as:',
+                options: [
+                  { id: 'A', text: 'Double displacement reaction' },
+                  { id: 'B', text: 'Thermal decomposition reaction' },
+                  { id: 'C', text: 'Single displacement reaction' },
+                  { id: 'D', text: 'Combination reaction' },
+                ],
+                correctAnswer: 'A',
+                explanation:
+                  'Neutralization involves exchange of H⁺ and Na⁺ cations with Cl⁻ and OH⁻ anions, making it an ion-exchange double displacement.',
+                hint: 'The H⁺ and OH⁻ combine to form water while metal and non-metal form salt.',
+                difficulty: 'Easy',
+                marks: 1,
+                topic: 'Double Displacement Reaction',
+              },
+              {
+                id: 5,
+                question:
+                  'Which of the following pairs of aqueous solutions will NOT produce an insoluble precipitate upon mixing?',
+                options: [
+                  { id: 'A', text: 'AgNO₃(aq) + NaCl(aq)' },
+                  { id: 'B', text: 'BaCl₂(aq) + Na₂SO₄(aq)' },
+                  { id: 'C', text: 'KNO₃(aq) + NaCl(aq)' },
+                  { id: 'D', text: 'CuSO₄(aq) + 2NaOH(aq)' },
+                ],
+                correctAnswer: 'C',
+                explanation:
+                  'Both KCl and NaNO₃ are completely soluble in water; no insoluble precipitate forms, so no precipitation occurs.',
+                hint: 'All common sodium and potassium nitrate salts remain completely dissolved.',
+                difficulty: 'Hard',
+                marks: 1,
+                topic: 'Double Displacement Reaction',
+              },
+            ],
+          },
+        };
+      }
     }
 
     // Check for Resistance / Electricity questions
