@@ -32,6 +32,7 @@ export interface TestItem {
   classLevel?: string;
   subject?: string;
   questions?: TestQuestion[];
+  isUntimed?: boolean;
 }
 
 export type QuestionStatus = 'attempted' | 'revise' | 'skipped';

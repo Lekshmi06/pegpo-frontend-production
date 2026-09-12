@@ -70,7 +70,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
     if (activeQuestion && statusMap[activeQuestion.id] === 'not_visited') {
       setStatusMap((prev) => ({
         ...prev,
-        [activeQuestion.id]: 'not_answered',
+        [activeQuestion.id]: 'not_answered' as CbtQuestionStatus,
       }));
     }
     // Sync activeSectionId
@@ -90,7 +90,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
     const hasAnswer = !!answers[activeQuestion.id];
     setStatusMap((prev) => ({
       ...prev,
-      [activeQuestion.id]: hasAnswer ? 'answered' : 'not_answered',
+      [activeQuestion.id]: (hasAnswer ? 'answered' : 'not_answered') as CbtQuestionStatus,
     }));
 
     if (currentQuestionIndex < allQuestions.length - 1) {
@@ -104,7 +104,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
     const hasAnswer = !!answers[activeQuestion.id];
     setStatusMap((prev) => ({
       ...prev,
-      [activeQuestion.id]: hasAnswer ? 'answered_and_marked' : 'marked_for_review',
+      [activeQuestion.id]: (hasAnswer ? 'answered_and_marked' : 'marked_for_review') as CbtQuestionStatus,
     }));
 
     if (currentQuestionIndex < allQuestions.length - 1) {
@@ -122,7 +122,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
     });
     setStatusMap((prev) => ({
       ...prev,
-      [activeQuestion.id]: 'not_answered',
+      [activeQuestion.id]: 'not_answered' as CbtQuestionStatus,
     }));
     toast.info('Response cleared for this question');
   };
@@ -130,7 +130,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
   const handleJumpToQuestion = (idx: number) => {
     // preserve status of question we are leaving if unanswered
     if (!answers[activeQuestion.id] && statusMap[activeQuestion.id] === 'not_visited') {
-      setStatusMap((prev) => ({ ...prev, [activeQuestion.id]: 'not_answered' }));
+      setStatusMap((prev) => ({ ...prev, [activeQuestion.id]: 'not_answered' as CbtQuestionStatus }));
     }
     setCurrentQuestionIndex(idx);
   };

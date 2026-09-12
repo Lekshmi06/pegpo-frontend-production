@@ -174,9 +174,6 @@ export default function Profile() {
         selectedSubject: profile.schoolDetails?.selectedSubject || 'Mathematics',
         customSubject: profile.schoolDetails?.customSubject || '',
       });
-
-      setHeaderBoard(studentBoard);
-      setHeaderClass(formattedClass);
     }
   }, [profile]);
 
