@@ -23,6 +23,7 @@ import {
   Calendar as CalendarIcon,
   NotebookPen,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import { sendAIChatMessage, PYQQuestionData, QuestionSetData } from '../../services/aiService';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
@@ -35,6 +36,14 @@ import {
 } from '../../context/LearningModeContext';
 import { usePageContext } from '../../context/PageContext';
 import { resolveAIIntent } from '../../services/intentResolver';
+import {
+  speakText,
+  stopSpeaking,
+  startVoiceListening,
+  stopVoiceListening,
+  isSpeechSynthesisSupported,
+  isSpeechRecognitionSupported,
+} from '../../services/speechService';
 
 export interface PageContextInfo {
   title: string;
@@ -49,6 +58,8 @@ interface Message {
   timestamp: string;
   pyq?: PYQQuestionData;
   questionSet?: QuestionSetData;
+  isQuotaExhausted?: boolean;
+  quotaMessage?: string;
   manualAction?: {
     type: 'create_note' | 'delete_note' | 'open_quiz' | 'create_calendar_event';
     title: string;
@@ -491,65 +502,21 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
   // In-chat active question tab state: { [messageId]: activeQuestionIndex }
   const [activeQuizIndices, setActiveQuizIndices] = useState<Record<string, number>>({});
 
-  // Voice Command (Speech-to-Text) state
+  // Voice Command (Speech-to-Text) & Audio state
   const [isListening, setIsListening] = useState(false);
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const recognitionRef = useRef<any>(null);
+  const [speechSupported, setSpeechSupported] = useState(isSpeechRecognitionSupported());
+  const [autoSpeak, setAutoSpeak] = useState(false);
+  const recognitionControllerRef = useRef<{ stop: () => void } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const context = getPageContext(location.pathname, customContext);
 
-  // Initialize Speech Recognition API if supported by browser
+  // Initialize Speech capabilities & cleanup on unmount
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (SpeechRecognition) {
-      setSpeechSupported(true);
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-      };
-
-      recognition.onresult = (event: any) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript;
-        }
-        if (transcript) {
-          setInputValue(transcript);
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('Speech recognition error:', event.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognitionRef.current = recognition;
-    } else {
-      setSpeechSupported(false);
-    }
-
+    setSpeechSupported(isSpeechRecognitionSupported());
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch {
-          // ignore
-        }
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
+      stopSpeaking();
+      stopVoiceListening();
     };
   }, []);
 
@@ -570,60 +537,76 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
     }
   }, [messages, isOpen, isAiThinking]);
 
-  // Toggle Voice Recognition
+  // Toggle Voice Recognition (Speech-To-Text)
   const toggleVoiceListening = () => {
-    if (!speechSupported || !recognitionRef.current) {
-      alert('Voice recognition is not supported in this browser. Please use Chrome or Edge.');
+    if (!isSpeechRecognitionSupported()) {
+      toast.info('Voice recognition is not supported in this browser. Please use Chrome, Edge, or Safari.');
       return;
     }
 
     if (isListening) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
+      if (recognitionControllerRef.current) {
+        recognitionControllerRef.current.stop();
       }
+      stopVoiceListening();
       setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-      } catch (err) {
-        console.warn('Could not start speech recognition:', err);
-      }
+      return;
     }
+
+    // Stop speaking if speech synthesis is currently active to prevent audio loop
+    if (speakingMsgId) {
+      stopSpeaking();
+      setSpeakingMsgId(null);
+    }
+
+    const controller = startVoiceListening({
+      onStart: () => {
+        setIsListening(true);
+      },
+      onResult: (transcript) => {
+        if (transcript) {
+          setInputValue(transcript);
+        }
+      },
+      onError: (errMsg) => {
+        setIsListening(false);
+        toast.error(errMsg);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+    });
+
+    recognitionControllerRef.current = controller;
   };
 
   // Text to Speech (TTS) Read Aloud
   const handleSpeak = (id: string, text: string) => {
-    if (!('speechSynthesis' in window)) return;
+    if (!isSpeechSynthesisSupported()) {
+      toast.info('Text-to-speech audio is not supported in this browser.');
+      return;
+    }
 
     if (speakingMsgId === id) {
-      window.speechSynthesis.cancel();
+      stopSpeaking();
       setSpeakingMsgId(null);
       return;
     }
 
-    window.speechSynthesis.cancel();
-    // Clean markdown asterisks and hash tags for clean speech
-    const cleanText = text
-      .replace(/[*#_`>]/g, '')
-      .replace(/https?:\/\/\S+/g, '')
-      .trim();
-
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    utterance.onend = () => {
-      setSpeakingMsgId(null);
-    };
-
-    utterance.onerror = () => {
-      setSpeakingMsgId(null);
-    };
-
+    stopSpeaking();
     setSpeakingMsgId(id);
-    window.speechSynthesis.speak(utterance);
+
+    speakText(text, {
+      onStart: () => {
+        setSpeakingMsgId(id);
+      },
+      onEnd: () => {
+        setSpeakingMsgId(null);
+      },
+      onError: () => {
+        setSpeakingMsgId(null);
+      },
+    });
   };
 
   // Send message to backend AI assistant
@@ -632,12 +615,11 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
     if (!text) return;
 
     // Stop listening if active
-    if (isListening && recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
+    if (isListening) {
+      if (recognitionControllerRef.current) {
+        recognitionControllerRef.current.stop();
       }
+      stopVoiceListening();
       setIsListening(false);
     }
 
@@ -777,8 +759,15 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               pyq: aiResult.pyq,
               questionSet: aiResult.questionSet,
+              isQuotaExhausted: aiResult.isQuotaExhausted,
+              quotaMessage: aiResult.quotaMessage,
             },
           ]);
+
+          if (aiResult.isQuotaExhausted) {
+            toast.warning(aiResult.quotaMessage || 'AI daily quota reached. Showing offline curriculum explanation.');
+          }
+
           setIsAiThinking(false);
           return;
         }
@@ -968,8 +957,18 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           pyq: aiResult.pyq,
           questionSet: aiResult.questionSet,
+          isQuotaExhausted: aiResult.isQuotaExhausted,
+          quotaMessage: aiResult.quotaMessage,
         },
       ]);
+
+      if (aiResult.isQuotaExhausted) {
+        toast.warning(aiResult.quotaMessage || 'AI daily quota reached. Showing offline curriculum explanation.');
+      }
+
+      if (autoSpeak && aiResult.reply) {
+        handleSpeak(aiMessageId, aiResult.reply);
+      }
     } catch (err) {
       const aiMessageId = `ai-${Date.now()}`;
       setMessages((prev) => [
@@ -1008,10 +1007,10 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
   };
 
   const handleClearChat = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    stopSpeaking();
+    stopVoiceListening();
     setSpeakingMsgId(null);
+    setIsListening(false);
     setMessages([
       {
         id: `init-${Date.now()}`,
@@ -1080,6 +1079,27 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
               </div>
 
               <div className="flex items-center gap-1">
+                {/* Audio Auto-Play Toggle */}
+                <button
+                  onClick={() => {
+                    const next = !autoSpeak;
+                    setAutoSpeak(next);
+                    if (!next && speakingMsgId) {
+                      stopSpeaking();
+                      setSpeakingMsgId(null);
+                    }
+                    toast.info(next ? 'Audio Auto-Play ON: AI responses will be read aloud' : 'Audio Auto-Play OFF');
+                  }}
+                  className={`p-1.5 rounded-xl transition-all cursor-pointer ${
+                    autoSpeak
+                      ? 'bg-cyan-400 text-[#1c3352] font-bold shadow-xs scale-105'
+                      : 'text-white/70 hover:text-white hover:bg-white/10'
+                  }`}
+                  title={autoSpeak ? 'Audio Auto-Play is ON (Click to turn off)' : 'Audio Auto-Play is OFF (Click to read responses aloud)'}
+                >
+                  {autoSpeak ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                </button>
+
                 <button
                   onClick={handleClearChat}
                   className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
@@ -1088,7 +1108,13 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
                   <RotateCcw className="w-3.5 h-3.5" />
                 </button>
                 <button
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    stopSpeaking();
+                    stopVoiceListening();
+                    setSpeakingMsgId(null);
+                    setIsListening(false);
+                    setIsOpen(false);
+                  }}
                   className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                   title="Close chat"
                 >
@@ -1139,6 +1165,29 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
               </button>
             </div>
 
+            {/* Active Audio Playback Bar */}
+            {speakingMsgId && (
+              <div className="bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 px-3 py-1 rounded-xl flex items-center justify-between text-[10px] font-bold animate-pulse">
+                <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-0.5">
+                    <span className="w-0.5 h-2 bg-cyan-300 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-0.5 h-3.5 bg-cyan-300 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-0.5 h-2 bg-cyan-300 rounded-full animate-bounce"></span>
+                  </div>
+                  <span>Speaking response aloud...</span>
+                </div>
+                <button
+                  onClick={() => {
+                    stopSpeaking();
+                    setSpeakingMsgId(null);
+                  }}
+                  className="bg-white/20 hover:bg-white/30 text-white px-2 py-0.5 rounded-md cursor-pointer text-[9px] font-extrabold uppercase tracking-wider"
+                >
+                  Stop Audio
+                </button>
+              </div>
+            )}
+
             {/* Mode Status Caption */}
             <div className="text-[9.5px] text-slate-300 font-medium px-0.5 flex items-center justify-between">
               <span>
@@ -1171,6 +1220,21 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
                         : 'bg-white text-[#1c3352] border border-[#e2ebf4] rounded-bl-xs shadow-2xs'
                     }`}
                   >
+                    {/* AI Quota / Limit Exceeded Banner */}
+                    {!isUser && msg.isQuotaExhausted && (
+                      <div className="mb-2.5 p-2.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 flex items-start gap-2 shadow-2xs">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1 text-[11px] leading-snug">
+                          <span className="font-extrabold text-amber-900 flex items-center gap-1">
+                            <span>⚠️ AI Daily Quota / Rate Limit Reached</span>
+                          </span>
+                          <span className="text-amber-800 text-[10px] mt-0.5 block">
+                            {msg.quotaMessage || 'The live AI engine has reached its daily request quota. Showing a verified offline curriculum explanation below.'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <FormattedMessageText
                       text={msg.text}
                       isUser={isUser}
@@ -1552,15 +1616,20 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
                       <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-100">
                         <button
                           onClick={() => handleSpeak(msg.id, msg.text)}
-                          className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors cursor-pointer ${
+                          className={`flex items-center gap-1.5 text-[10px] font-semibold px-2 py-1 rounded-lg transition-colors cursor-pointer ${
                             isSpeaking
-                              ? 'bg-cyan-100 text-cyan-800 animate-pulse'
+                              ? 'bg-cyan-100 text-cyan-800 animate-pulse ring-1 ring-cyan-300'
                               : 'text-slate-400 hover:text-[#0091ff] hover:bg-slate-100'
                           }`}
                           title={isSpeaking ? 'Stop speaking' : 'Read aloud with voice'}
                         >
                           {isSpeaking ? (
                             <>
+                              <div className="flex items-center gap-0.5">
+                                <span className="w-0.5 h-2 bg-cyan-700 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                <span className="w-0.5 h-3 bg-cyan-700 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                <span className="w-0.5 h-2 bg-cyan-700 rounded-full animate-bounce"></span>
+                              </div>
                               <VolumeX className="w-3 h-3 text-cyan-700" />
                               <span>Stop</span>
                             </>

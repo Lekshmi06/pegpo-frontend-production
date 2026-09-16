@@ -12,11 +12,21 @@ import {
   Mic,
   MicOff,
   Lightbulb,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { SourceItem, ChatMessage } from '../../../types/source';
 import { sourceService } from '../../../services/sourceService';
 import { useToast } from '../../../hooks/useToast';
 import { Loader } from '../../../components/ui/Loader';
+import {
+  speakText,
+  stopSpeaking,
+  startVoiceListening,
+  stopVoiceListening,
+  isSpeechSynthesisSupported,
+  isSpeechRecognitionSupported,
+} from '../../../services/speechService';
 
 interface SourceChatViewProps {
   source: SourceItem;
@@ -103,6 +113,8 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [likedMap, setLikedMap] = useState<Record<string, boolean>>({});
   const [isListening, setIsListening] = useState(false);
+  const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
+  const recognitionControllerRef = useRef<{ stop: () => void } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +128,11 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
     setMessages([greeting]);
+
+    return () => {
+      stopSpeaking();
+      stopVoiceListening();
+    };
   }, [source._id, source.originalName]);
 
   useEffect(() => {
@@ -125,6 +142,12 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
   const handleSendMessage = async (customPrompt?: string) => {
     const textToSend = (customPrompt || inputQuery).trim();
     if (!textToSend || isSending) return;
+
+    if (isListening) {
+      recognitionControllerRef.current?.stop();
+      stopVoiceListening();
+      setIsListening(false);
+    }
 
     const userMessage: ChatMessage = {
       id: 'user-' + Date.now(),
@@ -177,51 +200,73 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
   };
 
   const toggleVoice = () => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
+    if (!isSpeechRecognitionSupported()) {
       toast.info('Speech recognition is not supported in this browser. Please type your query.');
       return;
     }
 
     if (isListening) {
+      recognitionControllerRef.current?.stop();
+      stopVoiceListening();
       setIsListening(false);
       return;
     }
 
-    try {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        toast.info('Listening... Speak your question.');
-      };
-
-      recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputQuery(transcript);
-        setIsListening(false);
-        handleSendMessage(transcript);
-      };
-
-      recognition.onerror = () => {
-        setIsListening(false);
-        toast.error('Voice input error. Please try again.');
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      recognition.start();
-    } catch {
-      setIsListening(false);
-      toast.info('Voice input could not start.');
+    if (speakingMsgId) {
+      stopSpeaking();
+      setSpeakingMsgId(null);
     }
+
+    const controller = startVoiceListening({
+      onStart: () => {
+        setIsListening(true);
+        toast.info('Listening... Speak your question now.');
+      },
+      onResult: (transcript, isFinal) => {
+        setInputQuery(transcript);
+        if (isFinal && transcript.trim().length > 3) {
+          setIsListening(false);
+          handleSendMessage(transcript);
+        }
+      },
+      onError: (errMsg) => {
+        setIsListening(false);
+        toast.error(errMsg);
+      },
+      onEnd: () => {
+        setIsListening(false);
+      },
+    });
+
+    recognitionControllerRef.current = controller;
+  };
+
+  const handleSpeak = (id: string, text: string) => {
+    if (!isSpeechSynthesisSupported()) {
+      toast.info('Text-to-speech audio is not supported in this browser.');
+      return;
+    }
+
+    if (speakingMsgId === id) {
+      stopSpeaking();
+      setSpeakingMsgId(null);
+      return;
+    }
+
+    stopSpeaking();
+    setSpeakingMsgId(id);
+
+    speakText(text, {
+      onStart: () => {
+        setSpeakingMsgId(id);
+      },
+      onEnd: () => {
+        setSpeakingMsgId(null);
+      },
+      onError: () => {
+        setSpeakingMsgId(null);
+      },
+    });
   };
 
   const suggestedQuestions =
@@ -332,6 +377,32 @@ export const SourceChatView: React.FC<SourceChatViewProps> = ({
 
                   {!isUser && (
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleSpeak(msg.id, msg.text)}
+                        className={`transition-colors px-1.5 py-0.5 rounded-md cursor-pointer flex items-center gap-1 ${
+                          speakingMsgId === msg.id
+                            ? 'bg-cyan-100 text-cyan-800 animate-pulse font-bold'
+                            : 'hover:text-[#0091ff]'
+                        }`}
+                        title={speakingMsgId === msg.id ? 'Stop audio' : 'Read aloud with voice'}
+                      >
+                        {speakingMsgId === msg.id ? (
+                          <>
+                            <div className="flex items-center gap-0.5">
+                              <span className="w-0.5 h-2 bg-cyan-700 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                              <span className="w-0.5 h-3 bg-cyan-700 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                              <span className="w-0.5 h-2 bg-cyan-700 rounded-full animate-bounce"></span>
+                            </div>
+                            <VolumeX className="w-3 h-3 text-cyan-700" />
+                            <span className="text-[10px]">Stop</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3 h-3" />
+                            <span className="text-[10px]">Listen</span>
+                          </>
+                        )}
+                      </button>
                       <button
                         onClick={() => copyMessage(msg.id, msg.text)}
                         className="hover:text-slate-700 transition-colors p-0.5 cursor-pointer"

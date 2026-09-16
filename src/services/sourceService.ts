@@ -2,9 +2,12 @@ import { SourceItem, SourceContent } from '../types/source';
 import { API_BASE_URL } from './apiClient';
 
 export const sourceService = {
-  uploadSource: async (studentId: string, file: File): Promise<SourceItem> => {
+  uploadSource: async (studentId: string, file: File, transcript?: string): Promise<SourceItem> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (transcript) {
+      formData.append('transcript', transcript);
+    }
 
     const res = await fetch(`${API_BASE_URL}/students/${studentId}/sources`, {
       method: 'POST',

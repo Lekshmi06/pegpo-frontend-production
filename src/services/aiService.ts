@@ -48,6 +48,8 @@ export interface AIChatResponseData {
   pyq?: PYQQuestionData;
   isQuestionSet?: boolean;
   questionSet?: QuestionSetData;
+  isQuotaExhausted?: boolean;
+  quotaMessage?: string;
 }
 
 interface AIChatApiResponse {
@@ -111,12 +113,38 @@ export async function sendAIChatMessage(
   } catch (error) {
     console.warn('Backend AI service call failed, providing offline academic response:', error);
 
-    const lower = message
-      .trim()
-      .toLowerCase()
-      .replace(/[’']/g, "'")
-      .replace(/[?!.,;:]+$/, "")
-      .trim();
+    const isQuota =
+      (error as any)?.status === 429 ||
+      String((error as any)?.message || '').includes('429') ||
+      String((error as any)?.message || '').includes('quota') ||
+      String((error as any)?.message || '').includes('RESOURCE_EXHAUSTED');
+
+    const quotaMessage = isQuota
+      ? 'The AI engine has temporarily reached its daily usage quota. Showing an offline verified curriculum response.'
+      : 'Live AI connection unavailable. Showing an offline verified curriculum response.';
+
+    const offlineData = getOfflineAcademicResponse(message, studentName);
+    return {
+      ...offlineData,
+      isQuotaExhausted: true,
+      quotaMessage,
+    };
+  }
+}
+
+/**
+ * Provides curriculum-verified academic responses when offline or when AI quota is exhausted.
+ */
+function getOfflineAcademicResponse(
+  message: string,
+  studentName?: string
+): AIChatResponseData {
+  const lower = message
+    .trim()
+    .toLowerCase()
+    .replace(/[’']/g, "'")
+    .replace(/[?!.,;:]+$/, "")
+    .trim();
 
     // 1. Identity
     if (
@@ -418,6 +446,37 @@ Would you like to practice a Previous Year Question (PYQ) on **Laws of Motion**?
       };
     }
 
+    if (
+      lower.includes('thermodynamics') ||
+      lower.includes('thermodynamic') ||
+      (lower.includes('heat') && lower.includes('work') && lower.includes('energy'))
+    ) {
+      return {
+        reply: `### 🌡️ Understanding Thermodynamics
+
+**Thermodynamics** is the branch of physics and physical chemistry that deals with **heat, work, temperature, and energy**, and how thermal energy transforms into other forms of energy.
+
+---
+
+### 🏛️ The Four Laws of Thermodynamics:
+
+1. **Zeroth Law (Thermal Equilibrium)**: If two systems are each in thermal equilibrium with a third system, they are in thermal equilibrium with each other. This defines **temperature**.
+2. **First Law (Conservation of Energy)**: Energy can neither be created nor destroyed:
+   $$\\Delta U = Q - W$$
+   *(where $\\Delta U$ is change in internal energy, $Q$ is heat added, and $W$ is work done).*
+3. **Second Law (Entropy & Heat Direction)**: In any spontaneous natural process, the total entropy ($S$, disorder) of an isolated system always increases ($\\Delta S \\ge 0$). Heat cannot spontaneously flow from cold to hot without external work.
+4. **Third Law (Absolute Zero)**: As temperature approaches Absolute Zero ($0\\text{ K}$ or $-273.15^\\circ\\text{C}$), the entropy of a pure crystalline substance approaches a constant minimum (zero).
+
+---
+
+### 🚀 Key Applications:
+- **Heat Engines**: Convert thermal energy into mechanical work (e.g. car engines, steam turbines).
+- **Refrigerators & ACs**: Use external work to pump heat out of a cold space into warmer surroundings.
+
+Would you like to solve a board practice question or explore the **First Law** in more detail?`,
+      };
+    }
+
     // Check if unrelated query
     const isAcademic =
       lower.includes('explain') ||
@@ -440,17 +499,21 @@ Would you like to practice a Previous Year Question (PYQ) on **Laws of Motion**?
       };
     }
 
-    // Comprehensive concept breakdown for any other academic query
+    // Dynamic concept breakdown for any other academic query
+    const cleanTopic = message
+      .replace(/\b(explain|what is|what are|define|definition of|how does|why does|tell me about|concept of)\b/gi, '')
+      .replace(/[?!.,;:]+$/, '')
+      .trim();
+
     return {
-      reply: `### 📚 Academic Explanation: "${message}"
+      reply: `### 📖 Academic Overview: "${cleanTopic || message}"
 
-Here is the direct concept breakdown aligned with standard board curriculum:
+Here is a focused study overview for **${cleanTopic || message}**:
 
-1. **Definition & Principle**: In your syllabus, this topic represents a foundational mechanism governing scientific interactions and problem-solving.
-2. **Core Formulation**: Focus on the relationship between key variables and their respective standard SI units.
-3. **Board Exam Application**: High-stakes board papers test both direct definitions and numerical applications of this concept.
+1. **Definition & Physical Meaning**: Focus on the core mechanism and theoretical principles governing this topic.
+2. **Key Formulations & SI Units**: Always identify the primary dependent and independent variables and use standard SI units in calculations.
+3. **Exam Strategy**: State definitions accurately, write down applicable formulas with standard symbols, and show clear step-by-step working.
 
-Would you like to solve an authentic board question on this? Ask me *"Give me 2023 Science PYQ"*!`,
+Would you like to practice questions on this topic? Ask me *"Give me 5 practice questions on ${cleanTopic || message}"*!`,
     };
   }
-}
