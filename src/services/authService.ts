@@ -4,6 +4,9 @@ import {
   LearningPath,
   PersonalDetails,
   SchoolAcademicInfo,
+  UndergraduateAcademicInfo,
+  PostgraduateAcademicInfo,
+  CompetitiveExamAcademicInfo,
 } from '../types/auth';
 import { API_BASE_URL } from './apiClient';
 
@@ -221,6 +224,113 @@ export const authService = {
       }
     }
 
+    return updated;
+  },
+
+  saveUndergraduateDetails: async (details: UndergraduateAcademicInfo): Promise<UserSession> => {
+    const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
+    const updated: UserSession = {
+      ...current,
+      learningPath: 'undergraduate',
+      undergraduateDetails: {
+        ...current.undergraduateDetails,
+        ...details,
+      },
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    const profileId = localStorage.getItem(PROFILE_ID_KEY);
+    if (profileId) {
+      try {
+        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            learningPath: 'undergraduate',
+            undergraduateDetails: details,
+            education: {
+              level: 'undergraduate',
+              institution: details.institution,
+              degree: details.degree,
+              specialization: details.specialization,
+            },
+          }),
+        });
+      } catch (err) {
+        console.warn('Could not sync UG details to backend:', err);
+      }
+    }
+    return updated;
+  },
+
+  savePostgraduateDetails: async (details: PostgraduateAcademicInfo): Promise<UserSession> => {
+    const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
+    const updated: UserSession = {
+      ...current,
+      learningPath: 'postgraduate',
+      postgraduateDetails: {
+        ...current.postgraduateDetails,
+        ...details,
+      },
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    const profileId = localStorage.getItem(PROFILE_ID_KEY);
+    if (profileId) {
+      try {
+        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            learningPath: 'postgraduate',
+            postgraduateDetails: details,
+            education: {
+              level: 'postgraduate',
+              institution: details.institution,
+              degree: details.degree,
+              specialization: details.specialization,
+            },
+          }),
+        });
+      } catch (err) {
+        console.warn('Could not sync PG details to backend:', err);
+      }
+    }
+    return updated;
+  },
+
+  saveCompetitiveExamDetails: async (details: CompetitiveExamAcademicInfo): Promise<UserSession> => {
+    const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
+    const updated: UserSession = {
+      ...current,
+      learningPath: 'competitive_exam',
+      competitiveExamDetails: {
+        ...current.competitiveExamDetails,
+        ...details,
+      },
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    const profileId = localStorage.getItem(PROFILE_ID_KEY);
+    if (profileId) {
+      try {
+        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            learningPath: 'competitive_exam',
+            competitiveExamDetails: details,
+            education: {
+              level: 'competitive_exam',
+              institution: details.targetExam,
+              specialization: details.category || details.targetExam,
+            },
+          }),
+        });
+      } catch (err) {
+        console.warn('Could not sync competitive exam details to backend:', err);
+      }
+    }
     return updated;
   },
 

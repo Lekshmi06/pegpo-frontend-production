@@ -9,6 +9,7 @@ import {
   Play,
   Sparkles,
   ShieldAlert,
+  Loader2,
 } from 'lucide-react';
 import userImg from '../../../assets/user.png';
 import {
@@ -21,6 +22,7 @@ import { TimerBadge } from '../common/TimerBadge';
 import { Modal } from '../../ui/Modal';
 import { Button } from '../../ui/Button';
 import { useToast } from '../../../hooks/useToast';
+import { testService } from '../../../services/testService';
 
 interface MockExamRunnerProps {
   exam: MockExamItem;
@@ -62,6 +64,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
   const [timeSpentSeconds, setTimeSpentSeconds] = useState<number>(0);
   const [showSubmitModal, setShowSubmitModal] = useState<boolean>(false);
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   const activeQuestion = allQuestions[currentQuestionIndex] || allQuestions[0];
 
@@ -144,9 +147,104 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
   };
 
   // Evaluation on Submit
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
+    setIsSubmitting(true);
     setShowSubmitModal(false);
 
+    // Requirement 5: Use existing backend TestAttempt submission infrastructure if test was generated
+    if (exam.generatedTestId) {
+      try {
+        const formattedStatus: Record<string, any> = {};
+        Object.entries(statusMap).forEach(([qId, s]) => {
+          formattedStatus[qId] =
+            s === 'answered' || s === 'answered_and_marked'
+              ? 'attempted'
+              : s === 'marked_for_review'
+              ? 'revise'
+              : 'skipped';
+        });
+
+        const submissionRes = await testService.submitTest(exam.generatedTestId, {
+          attemptId: exam.attemptId,
+          answers: answers as Record<string, string>,
+          statusByQuestion: formattedStatus,
+          timeSpentSeconds,
+        });
+
+        // Enrich all questions with evaluated results
+        const evaluatedMap = new Map((submissionRes.questions || []).map((q: any) => [q.questionId || String(q.id), q]));
+        const enrichedQuestions = allQuestions.map((q, idx) => {
+          const evalItem = evaluatedMap.get(String(q.id)) || (submissionRes.questions || [])[idx];
+          return {
+            ...q,
+            correctAnswer: evalItem?.correctAnswer || q.correctAnswer,
+            explanation: evalItem?.explanation || q.explanation,
+            numericalAnswer: evalItem?.numericalAnswer ?? q.numericalAnswer,
+            marks: evalItem?.marks || q.marks,
+          };
+        });
+
+        const result: MockExamSessionResult = {
+          examId: exam.id,
+          examTitle: exam.title,
+          category: exam.category,
+          totalMarks: submissionRes.maxScore || exam.totalMarks,
+          score: submissionRes.score,
+          percentage: submissionRes.percentage,
+          percentile: submissionRes.percentile ?? 50.0,
+          rankEstimate: submissionRes.allIndiaRank ?? 1,
+          totalCandidatesEstimate: submissionRes.totalCandidates ?? exam.markingScheme?.maxScore ?? 50000,
+          accuracy: submissionRes.accuracy ?? 0,
+          timeSpentSeconds: submissionRes.timeSpentSeconds || timeSpentSeconds,
+          totalQuestions: allQuestions.length,
+          answeredCount: submissionRes.attempted,
+          correctCount: submissionRes.correct,
+          incorrectCount: submissionRes.incorrect,
+          skippedCount: submissionRes.skipped,
+          markedReviewCount: submissionRes.reviseLater || 0,
+          answers,
+          statusByQuestion: statusMap,
+          sectionBreakdown: (submissionRes.sectionScores && submissionRes.sectionScores.length > 0)
+            ? submissionRes.sectionScores.map((sec: any) => ({
+                sectionId: sec.sectionId,
+                sectionName: sec.sectionName,
+                score: sec.score,
+                maxScore: sec.maxScore,
+                attempted: sec.attemptedCount,
+                correct: sec.correctCount,
+                incorrect: sec.incorrectCount,
+                accuracy: sec.accuracy,
+                timeSpentSeconds: Math.round(timeSpentSeconds / (submissionRes.sectionScores?.length || 1)),
+              }))
+            : exam.sections.map((sec) => ({
+                sectionId: sec.id,
+                sectionName: sec.name,
+                score: 0,
+                maxScore: sec.totalQuestions * sec.marksPerQuestion,
+                attempted: 0,
+                correct: 0,
+                incorrect: 0,
+                accuracy: 0,
+                timeSpentSeconds: Math.round(timeSpentSeconds / exam.sections.length),
+              })),
+          questions: enrichedQuestions,
+          isCompetitiveExam: true,
+          examCode: exam.examCode,
+          cutOffScore: exam.markingScheme?.cutOffScore,
+          isEstimatedRank: true,
+          isEstimatedPercentile: true,
+        };
+
+        setIsSubmitting(false);
+        onFinishExam(result);
+        return;
+      } catch (err) {
+        console.error('Failed to submit attempt to backend, using local evaluator:', err);
+        toast.error('Network delay while syncing submission. Evaluating results locally.');
+      }
+    }
+
+    // Fallback local evaluation
     let totalScore = 0;
     let correctCount = 0;
     let incorrectCount = 0;
@@ -177,7 +275,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
         correct: 0,
         incorrect: 0,
         accuracy: 0,
-        timeSpentSeconds: Math.round(timeSpentSeconds / exam.sections.length),
+        timeSpentSeconds: Math.round(timeSpentSeconds / (exam.sections.length || 1)),
       };
     });
 
@@ -187,11 +285,20 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
       const marks = q.marks || 2;
       const neg = q.negativeMarks || 0;
 
-      if (chosen) {
+      if (chosen !== undefined && chosen !== null && String(chosen).trim() !== '') {
         answeredCount += 1;
         if (secData) secData.attempted += 1;
 
-        if (chosen === q.correctAnswer) {
+        let isMatch = false;
+        if (q.questionType === 'nat') {
+          const numChosen = Number(chosen);
+          const target = q.numericalAnswer ?? Number(q.correctAnswer);
+          isMatch = !isNaN(numChosen) && !isNaN(target) && Math.abs(numChosen - target) <= (q.numericalTolerance || 0);
+        } else {
+          isMatch = String(chosen).trim().toUpperCase() === q.correctAnswer.trim().toUpperCase();
+        }
+
+        if (isMatch) {
           totalScore += marks;
           correctCount += 1;
           if (secData) {
@@ -214,20 +321,17 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
       (s) => s === 'marked_for_review' || s === 'answered_and_marked'
     ).length;
 
-    // Calculate percentages
     const finalScore = Math.max(0, Math.round(totalScore * 100) / 100);
     const percentage =
       exam.totalMarks > 0 ? Math.round((finalScore / exam.totalMarks) * 100) : 0;
     const accuracy =
       answeredCount > 0 ? Math.round((correctCount / answeredCount) * 100) : 0;
 
-    // Calculate section accuracies
     Object.values(sectionBreakdownMap).forEach((s) => {
       s.accuracy = s.attempted > 0 ? Math.round((s.correct / s.attempted) * 100) : 0;
       s.score = Math.max(0, Math.round(s.score * 100) / 100);
     });
 
-    // Simulated competitive percentile & rank
     const percentile = Math.min(
       99.8,
       Math.max(35.0, Math.round((percentage * 1.05 + 15) * 10) / 10)
@@ -260,8 +364,11 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
       statusByQuestion: statusMap,
       sectionBreakdown: Object.values(sectionBreakdownMap),
       questions: allQuestions,
+      isEstimatedRank: true,
+      isEstimatedPercentile: true,
     };
 
+    setIsSubmitting(false);
     onFinishExam(result);
   };
 
@@ -313,15 +420,23 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-            <Button variant="outline" size="sm" onClick={() => setShowSubmitModal(false)}>
+            <Button variant="outline" size="sm" onClick={() => setShowSubmitModal(false)} disabled={isSubmitting}>
               Resume Exam
             </Button>
             <Button
               size="sm"
               onClick={handleFinalSubmit}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+              disabled={isSubmitting}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center"
             >
-              Yes, Final Submit
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+                  Evaluating...
+                </>
+              ) : (
+                'Yes, Final Submit'
+              )}
             </Button>
           </div>
         </div>
@@ -447,32 +562,58 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
               {activeQuestion.text}
             </div>
 
-            {/* Options List */}
-            <div className="space-y-3 pt-2">
-              {activeQuestion.options.map((opt) => {
-                const isSelected = answers[activeQuestion.id] === opt.id;
-                return (
-                  <div
-                    key={opt.id}
-                    onClick={() => handleSelectOption(opt.id)}
-                    className={`p-4 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
-                      isSelected
-                        ? 'bg-blue-50/80 border-[#0091ff] text-[#0091ff] shadow-xs font-bold ring-2 ring-[#0091ff]/20'
-                        : 'bg-[#f8fafc] border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
-                    }`}
-                  >
-                    <span
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
-                        isSelected ? 'bg-[#0091ff] text-white' : 'bg-slate-200 text-slate-600'
+            {/* Options List or Numerical Answer Input */}
+            {activeQuestion.questionType === 'nat' ? (
+              <div className="space-y-4 pt-2">
+                <label className="block text-xs font-bold text-slate-700">
+                  Numerical Value Answer:
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="number"
+                    step="any"
+                    value={answers[activeQuestion.id] ?? ''}
+                    onChange={(e) => handleSelectOption(e.target.value)}
+                    placeholder="Enter numerical value..."
+                    className="w-full max-w-sm px-4 py-3 bg-[#f8fafc] border border-slate-300 rounded-2xl text-base font-bold text-slate-900 focus:outline-none focus:border-[#0091ff] focus:ring-2 focus:ring-[#0091ff]/20 shadow-xs"
+                  />
+                  {answers[activeQuestion.id] !== undefined && answers[activeQuestion.id] !== '' && (
+                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                      Saved: {answers[activeQuestion.id]}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Numerical Answer Type (NAT): Type your exact calculated numerical value (e.g. 72 or 1.5). No options required.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                {activeQuestion.options.map((opt) => {
+                  const isSelected = answers[activeQuestion.id] === opt.id;
+                  return (
+                    <div
+                      key={opt.id}
+                      onClick={() => handleSelectOption(opt.id)}
+                      className={`p-4 rounded-2xl border transition-all flex items-center gap-3 cursor-pointer ${
+                        isSelected
+                          ? 'bg-blue-50/80 border-[#0091ff] text-[#0091ff] shadow-xs font-bold ring-2 ring-[#0091ff]/20'
+                          : 'bg-[#f8fafc] border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
                       }`}
                     >
-                      {opt.id}
-                    </span>
-                    <span className="text-xs sm:text-sm">{opt.text}</span>
-                  </div>
-                );
-              })}
-            </div>
+                      <span
+                        className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                          isSelected ? 'bg-[#0091ff] text-white' : 'bg-slate-200 text-slate-600'
+                        }`}
+                      >
+                        {opt.id}
+                      </span>
+                      <span className="text-xs sm:text-sm">{opt.text}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Bottom Action Controls */}

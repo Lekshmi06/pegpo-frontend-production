@@ -8,6 +8,7 @@ import {
   HelpCircle,
   FileText,
   ShieldCheck,
+  Loader2,
 } from 'lucide-react';
 import { MockExamItem } from '../../../types/testTypes';
 import { Button } from '../../ui/Button';
@@ -16,12 +17,14 @@ interface MockExamInstructionsProps {
   exam: MockExamItem;
   onBack: () => void;
   onStartExam: () => void;
+  isLoading?: boolean;
 }
 
 export const MockExamInstructions: React.FC<MockExamInstructionsProps> = ({
   exam,
   onBack,
   onStartExam,
+  isLoading = false,
 }) => {
   const [hasAgreed, setHasAgreed] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<'English' | 'Hindi'>('English');
@@ -183,15 +186,22 @@ export const MockExamInstructions: React.FC<MockExamInstructionsProps> = ({
           </Button>
           <Button
             size="sm"
-            disabled={!hasAgreed}
+            disabled={!hasAgreed || isLoading}
             onClick={onStartExam}
-            className={`px-8 py-2.5 text-xs font-bold ${
-              hasAgreed
+            className={`px-8 py-2.5 text-xs font-bold flex items-center gap-2 ${
+              hasAgreed && !isLoading
                 ? 'bg-[#0091ff] hover:bg-[#007cdb] text-white shadow-xs'
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed'
             }`}
           >
-            I am Ready to Begin &rarr;
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Preparing Examination...
+              </>
+            ) : (
+              'I am Ready to Begin →'
+            )}
           </Button>
         </div>
       </div>

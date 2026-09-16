@@ -11,7 +11,7 @@ import {
   Zap,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
-import { PracticeMode } from '../../types/testTypes';
+import { PracticeMode, ExerciseProblem } from '../../types/testTypes';
 import {
   revisionFlashcards,
   exerciseProblems,
@@ -24,6 +24,8 @@ import { WorkbookView } from '../../components/student/practice/WorkbookView';
 import { HomeworkView } from '../../components/student/practice/HomeworkView';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { useToast } from '../../hooks/useToast';
+import { testService } from '../../services/testService';
+import { Loader } from '../../components/ui/Loader';
 
 export default function Practice() {
   const navigate = useNavigate();
@@ -45,6 +47,8 @@ export default function Practice() {
   const [activeMode, setActiveMode] = useState<PracticeMode>(initialMode);
   const [selectedSubject, setSelectedSubject] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [practiceProblems, setPracticeProblems] = useState<ExerciseProblem[]>([]);
+  const [isLoadingPractice, setIsLoadingPractice] = useState<boolean>(true);
 
   const subSidebarItems = [
     { label: 'Subject', path: '/student/learn' },
@@ -82,7 +86,37 @@ export default function Practice() {
     },
   ];
 
-  const subjects = ['All', 'Physics', 'Chemistry', 'Maths', 'Biology'];
+  const classLevel = profile?.education?.classLevel || profile?.schoolDetails?.classLevel || '';
+  const isMiddleSchool = /Class\s*[5-8]\b/i.test(classLevel);
+  const subjects = isMiddleSchool
+    ? ['All', 'Basic Science', 'Mathematics', 'Social Science', 'English', 'ICT']
+    : ['All', 'Physics', 'Chemistry', 'Maths', 'Biology'];
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingPractice(true);
+    testService
+      .fetchPracticeQuestions({
+        subject: selectedSubject !== 'All' ? selectedSubject : undefined,
+        count: 6,
+      })
+      .then((data) => {
+        if (isMounted) {
+          setPracticeProblems(data);
+          setIsLoadingPractice(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch practice questions:', err);
+        if (isMounted) {
+          setIsLoadingPractice(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSubject, profile]);
 
   return (
     <div className="flex h-full w-full bg-[#f8fbfe] overflow-hidden text-slate-800">
@@ -242,10 +276,22 @@ export default function Practice() {
               )}
 
               {activeMode === 'exercise' && (
-                <ExerciseView
-                  problems={exerciseProblems}
-                  selectedSubject={selectedSubject}
-                />
+                isLoadingPractice && practiceProblems.length === 0 ? (
+                  <div className="py-16 text-center space-y-3">
+                    <Loader label="Loading curriculum practice questions..." />
+                  </div>
+                ) : (
+                  <ExerciseView
+                    problems={
+                      practiceProblems.length > 0
+                        ? practiceProblems
+                        : isMiddleSchool
+                        ? []
+                        : exerciseProblems
+                    }
+                    selectedSubject={selectedSubject}
+                  />
+                )
               )}
 
               {activeMode === 'workbook' && (

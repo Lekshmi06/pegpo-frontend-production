@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Sparkles,
@@ -19,14 +19,21 @@ import { QuickQuizItem, BaseQuestion } from '../../types/testTypes';
 import { Button } from '../../components/ui/Button';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { useToast } from '../../hooks/useToast';
+import { testService } from '../../services/testService';
+import { Loader } from '../../components/ui/Loader';
 
 export default function QuizHub() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
   const { profile } = useStudentProfile();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('All');
+
+  // Backend curriculum quizzes
+  const [quizzes, setQuizzes] = useState<QuickQuizItem[]>([]);
+  const [isLoadingQuizzes, setIsLoadingQuizzes] = useState<boolean>(true);
 
   // Active quiz taking state
   const [activeQuiz, setActiveQuiz] = useState<QuickQuizItem | null>(null);
@@ -47,9 +54,49 @@ export default function QuizHub() {
     { label: 'Combine Study', path: '/student/learn' },
   ];
 
-  const subjects = ['All', 'Physics', 'Chemistry', 'Maths'];
+  const classLevel = profile?.education?.classLevel || profile?.schoolDetails?.classLevel || '';
+  const isMiddleSchool = /Class\s*[5-8]\b/i.test(classLevel);
+  const subjects = isMiddleSchool
+    ? ['All', 'Basic Science', 'Mathematics', 'Social Science', 'English', 'ICT']
+    : ['All', 'Physics', 'Chemistry', 'Maths'];
 
-  const filteredQuizzes = quickQuizData.filter((q) => {
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingQuizzes(true);
+    testService
+      .fetchQuizzes({
+        subject: selectedSubject !== 'All' ? selectedSubject : undefined,
+      })
+      .then((data) => {
+        if (isMounted) {
+          setQuizzes(data);
+          setIsLoadingQuizzes(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Failed to fetch curriculum quizzes:', err);
+        if (isMounted) {
+          setIsLoadingQuizzes(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSubject, profile]);
+
+  const isSchoolStudent = Boolean(
+    isMiddleSchool ||
+    profile?.schoolDetails?.board ||
+    profile?.education?.board ||
+    profile?.schoolDetails?.classLevel ||
+    profile?.education?.classLevel
+  );
+
+  const activeQuizzesList =
+    quizzes.length > 0 ? quizzes : isSchoolStudent ? [] : quickQuizData;
+
+  const filteredQuizzes = activeQuizzesList.filter((q) => {
     const matchSubj = selectedSubject === 'All' || q.subject === selectedSubject;
     const matchSearch =
       !searchQuery ||
@@ -58,8 +105,29 @@ export default function QuizHub() {
     return matchSubj && matchSearch;
   });
 
-  const handleStartQuiz = (quiz: QuickQuizItem) => {
-    setActiveQuiz(quiz);
+  const handleStartQuiz = async (quiz: QuickQuizItem) => {
+    let resolvedQuiz = quiz;
+    if (!quiz.questions || quiz.questions.length === 0) {
+      try {
+        const fullTest = await testService.fetchTestById(quiz.id, 'preview');
+        if (fullTest && fullTest.questions && fullTest.questions.length > 0) {
+          resolvedQuiz = {
+            ...quiz,
+            questions: fullTest.questions.map((q: any, qIdx: number) => ({
+              id: q.id || `q-${qIdx + 1}`,
+              text: q.question,
+              options: q.options,
+              correctAnswer: q.correctAnswer,
+              explanation: q.explanation,
+            })),
+          };
+        }
+      } catch (err) {
+        console.warn('Failed to load questions for quiz:', err);
+      }
+    }
+
+    setActiveQuiz(resolvedQuiz);
     setCurrentQIndex(0);
     setSelectedAnswer(null);
     setAnswersMap({});
@@ -68,6 +136,66 @@ export default function QuizHub() {
     setScore(0);
     setIsCompleted(false);
   };
+
+  // Auto-start drill when navigated from EduPye AI action
+  useEffect(() => {
+    const autoStart = searchParams.get('autoStart');
+    const topicParam = searchParams.get('topic');
+    const subjectParam = searchParams.get('subject');
+
+    if (autoStart === 'true') {
+      const isSpecificTopic = Boolean(
+        topicParam &&
+        topicParam.trim().length > 0 &&
+        topicParam.trim().toLowerCase() !== 'general practice'
+      );
+
+      // 1. Try to find a drill matching the specific topic / chapter
+      let matched: QuickQuizItem | undefined = undefined;
+
+      if (isSpecificTopic && topicParam) {
+        const lowerTopic = topicParam.trim().toLowerCase();
+        matched = activeQuizzesList.find(
+          (q) =>
+            q.title.toLowerCase().includes(lowerTopic) ||
+            q.chapter.toLowerCase().includes(lowerTopic)
+        );
+      }
+
+      // 2. If no topic match, but subject matched and no specific mismatched topic was requested
+      if (!matched && !isSpecificTopic && subjectParam) {
+        matched = activeQuizzesList.find(
+          (q) => q.subject.toLowerCase() === subjectParam.toLowerCase()
+        );
+      }
+
+      // 3. For generic navigation with no specific topic, fall back to first curriculum quiz
+      if (!matched && !isSpecificTopic && activeQuizzesList.length > 0) {
+        matched = activeQuizzesList[0];
+      }
+
+      if (matched) {
+        handleStartQuiz(matched);
+        toast.info(`Started drill: ${matched.title}`);
+      } else if (isSpecificTopic && topicParam) {
+        // Try on-demand generation for requested topic
+        testService
+          .generateQuiz({
+            topic: topicParam.trim(),
+            subject: subjectParam?.trim(),
+          })
+          .then((genQuiz) => {
+            if (genQuiz) {
+              handleStartQuiz(genQuiz);
+              toast.info(`Generated and started drill on "${topicParam}"!`);
+            }
+          })
+          .catch(() => {
+            toast.info(`Browse available curriculum quizzes below!`);
+          });
+      }
+    }
+  }, [searchParams, activeQuizzesList]);
 
   const handlePickOption = (optId: string) => {
     if (!activeQuiz || selectedAnswer) return; // Answered already for this question
@@ -388,8 +516,17 @@ export default function QuizHub() {
                 </div>
 
                 {/* Quizzes Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                  {filteredQuizzes.map((quiz) => (
+                {isLoadingQuizzes && quizzes.length === 0 ? (
+                  <div className="py-16 text-center space-y-3">
+                    <Loader label="Loading curriculum quizzes..." />
+                  </div>
+                ) : filteredQuizzes.length === 0 ? (
+                  <div className="py-16 text-center text-slate-400 font-medium text-xs">
+                    No quizzes found for {selectedSubject}.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                    {filteredQuizzes.map((quiz) => (
                     <div
                       key={quiz.id}
                       onClick={() => handleStartQuiz(quiz)}
@@ -418,7 +555,8 @@ export default function QuizHub() {
                     </div>
                   ))}
                 </div>
-              </>
+              )}
+            </>
             )}
           </div>
         </div>

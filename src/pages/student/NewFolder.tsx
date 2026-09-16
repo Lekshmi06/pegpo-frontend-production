@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Globe, Trophy, Search, ChevronDown, Plus,
-  MessageSquare, BookOpen, Mic, Video, Brain, FileText, CheckCircle2, Layers, TrendingUp, RotateCcw, NotebookPen, Bookmark
+  Globe, Trophy, Search, ChevronDown, Plus, Trash2, Folder as FolderIcon,
+  NotebookPen, MessageSquare, BookOpen, Mic, Video, Brain, FileText, CheckCircle2,
+  Layers, TrendingUp, RotateCcw, Bookmark, Edit3, ArrowRight
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import cardSmartboard from '../../assets/card-smartboard.png';
@@ -12,42 +13,134 @@ import cardInfographics from '../../assets/card-infographics.png';
 import { useToast } from '../../hooks/useToast';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
-
-interface FolderItem {
-  id: number;
-  name: string;
-  title: string;
-  desc: string;
-}
+import { workspaceService, FolderItem, NoteItem } from '../../services/workspaceService';
 
 export default function NewFolder() {
   const navigate = useNavigate();
   const toast = useToast();
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [foldersList, setFoldersList] = useState<FolderItem[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string>('');
+  const [folderNotes, setFolderNotes] = useState<NoteItem[]>([]);
 
-  const [foldersList, setFoldersList] = useState<FolderItem[]>([
-    { id: 1, name: 'Folder 1', title: 'Lorem Ipsum', desc: "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s," },
-    { id: 2, name: 'Folder 2', title: 'Lorem Ipsum', desc: "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s," },
-  ]);
-  const [selectedFolderId, setSelectedFolderId] = useState(1);
+  // Create folder modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newFolderDesc, setNewFolderDesc] = useState('');
 
+  // Edit folder mode
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+
+  // Right sidebar actions & graphic cards
   const [activeModal, setActiveModal] = useState<'action' | 'graphic' | null>(null);
   const [modalTitle, setModalTitle] = useState('');
   const [selectedActionLabel, setSelectedActionLabel] = useState('');
   const [selectedGraphicCard, setSelectedGraphicCard] = useState<{ title: string; img: string; desc: string } | null>(null);
 
-  const handleAddNewFolder = () => {
-    const newId = Date.now();
-    const newFold: FolderItem = {
-      id: newId,
-      name: `Folder ${foldersList.length + 1}`,
-      title: 'Lorem Ipsum',
-      desc: "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,",
+  // Fetch folders on mount
+  useEffect(() => {
+    let mounted = true;
+    const fetchFolders = async () => {
+      try {
+        const list = await workspaceService.getFolders();
+        if (mounted && list.length > 0) {
+          setFoldersList(list);
+          setSelectedFolderId(list[0]._id);
+          setEditTitle(list[0].title || list[0].name);
+          setEditDesc(list[0].desc || '');
+        }
+      } catch (err) {
+        console.error('Failed to load folders:', err);
+      }
     };
-    setFoldersList((prev) => [...prev, newFold]);
-    setSelectedFolderId(newId);
-    toast.success('Created new folder');
+    fetchFolders();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Fetch notes inside active folder
+  useEffect(() => {
+    if (!selectedFolderId) return;
+    const fetchNotes = async () => {
+      try {
+        const notes = await workspaceService.getNotes(selectedFolderId);
+        setFolderNotes(notes);
+      } catch {
+        setFolderNotes([]);
+      }
+    };
+    fetchNotes();
+  }, [selectedFolderId]);
+
+  const activeFolder = foldersList.find((f) => f._id === selectedFolderId) || foldersList[0];
+
+  const handleSelectFolder = (f: FolderItem) => {
+    setSelectedFolderId(f._id);
+    setEditTitle(f.title || f.name);
+    setEditDesc(f.desc || '');
+    setIsEditing(false);
+  };
+
+  const handleCreateFolderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newFolderName.trim()) {
+      toast.error('Please enter a folder name');
+      return;
+    }
+    try {
+      const created = await workspaceService.createFolder({
+        name: newFolderName.trim(),
+        title: newFolderName.trim(),
+        desc: newFolderDesc.trim(),
+      });
+      setFoldersList((prev) => [created, ...prev]);
+      setSelectedFolderId(created._id);
+      setEditTitle(created.title || created.name);
+      setEditDesc(created.desc || '');
+      setNewFolderName('');
+      setNewFolderDesc('');
+      setShowCreateModal(false);
+      toast.success('Created new folder');
+    } catch {
+      toast.error('Failed to create folder');
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedFolderId) return;
+    try {
+      const updated = await workspaceService.updateFolder(selectedFolderId, {
+        title: editTitle,
+        desc: editDesc,
+      });
+      setFoldersList((prev) =>
+        prev.map((f) => (f._id === selectedFolderId ? updated : f))
+      );
+      setIsEditing(false);
+      toast.success('Folder updated');
+    } catch {
+      toast.error('Failed to update folder');
+    }
+  };
+
+  const handleDeleteFolder = async (id: string) => {
+    try {
+      await workspaceService.deleteFolder(id);
+      const remaining = foldersList.filter((f) => f._id !== id);
+      setFoldersList(remaining);
+      if (selectedFolderId === id && remaining.length > 0) {
+        setSelectedFolderId(remaining[0]._id);
+        setEditTitle(remaining[0].title || remaining[0].name);
+        setEditDesc(remaining[0].desc || '');
+      }
+      toast.success('Folder deleted');
+    } catch {
+      toast.error('Failed to delete folder');
+    }
   };
 
   const createActions = [
@@ -84,10 +177,44 @@ export default function NewFolder() {
     setActiveModal('graphic');
   };
 
-  const activeFolder = foldersList.find((f) => f.id === selectedFolderId) || foldersList[0];
-
   return (
     <div className="flex h-full min-h-screen bg-[#f8fbfe] overflow-hidden">
+      {/* Create Folder Modal */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Folder">
+        <form onSubmit={handleCreateFolderSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">Folder Name</label>
+            <input
+              type="text"
+              required
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="e.g. Physics Formulas, Term 1 Math"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-[#111827] outline-none focus:border-[#0091ff]"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-700 block">Description (optional)</label>
+            <textarea
+              rows={3}
+              value={newFolderDesc}
+              onChange={(e) => setNewFolderDesc(e.target.value)}
+              placeholder="Brief description of materials in this folder"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-semibold text-[#111827] outline-none focus:border-[#0091ff] resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" size="sm" type="button" onClick={() => setShowCreateModal(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" type="submit">
+              Create Folder
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Action / Graphic Modals */}
       <Modal isOpen={!!activeModal} onClose={() => setActiveModal(null)} title={modalTitle}>
         {activeModal === 'action' && (
           <div className="space-y-4">
@@ -95,8 +222,19 @@ export default function NewFolder() {
               Generate an instant AI-powered <strong>{selectedActionLabel}</strong> inside your selected folder.
             </p>
             <Button
-              onClick={() => {
-                toast.success(`${selectedActionLabel} added to folder!`);
+              onClick={async () => {
+                try {
+                  await workspaceService.createNote({
+                    folderId: selectedFolderId,
+                    title: `AI ${selectedActionLabel}: ${activeFolder?.name || 'Study'}`,
+                    content: `Summary and key review points for ${activeFolder?.name || 'this folder'}.`,
+                  });
+                  toast.success(`${selectedActionLabel} note created in ${activeFolder?.name}!`);
+                  const updatedNotes = await workspaceService.getNotes(selectedFolderId);
+                  setFolderNotes(updatedNotes);
+                } catch {
+                  toast.error('Failed to create action');
+                }
                 setActiveModal(null);
               }}
               className="w-full py-2.5"
@@ -184,54 +322,187 @@ export default function NewFolder() {
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0 bg-[#f8fbfe] overflow-y-auto">
             <div className="p-4 sm:p-8 space-y-6 max-w-6xl mx-auto w-full">
-              <div>
-                <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">New Folder</h1>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">Workspace Folders</h1>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Organize your notes, worksheets, and study sets</p>
+                </div>
+                <Button onClick={() => setShowCreateModal(true)} size="sm" leftIcon={<Plus className="w-4 h-4 stroke-[2.5]" />}>
+                  New Folder
+                </Button>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[500px]">
+                {/* Left: Folders Sidebar Column */}
                 <div className="lg:col-span-4 bg-white border border-[#e2ebf4] rounded-3xl overflow-hidden shadow-xs flex flex-col">
-                  <div className="bg-[#1c3352] text-white px-4 py-3 flex items-center justify-between">
+                  <div className="bg-[#1c3352] text-white px-4 py-3.5 flex items-center justify-between">
                     <div className="flex items-center gap-2 text-xs font-bold">
                       <ChevronDown className="w-4 h-4 stroke-[2.5]" />
-                      <span>Folder Name</span>
+                      <span>All Folders ({foldersList.length})</span>
                     </div>
                     <button
-                      onClick={handleAddNewFolder}
-                      className="p-1 hover:bg-white/10 rounded transition-colors cursor-pointer"
+                      onClick={() => setShowCreateModal(true)}
+                      className="p-1 hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                       title="Add New Folder"
                     >
                       <Plus className="w-4 h-4 stroke-[2.5]" />
                     </button>
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                    {foldersList.map((f) => {
-                      const isSelected = selectedFolderId === f.id;
-                      return (
-                        <div
-                          key={f.id}
-                          onClick={() => setSelectedFolderId(f.id)}
-                          className={`p-3.5 text-xs font-extrabold rounded-xl cursor-pointer transition-colors ${
-                            isSelected
-                              ? 'bg-[#dbeafe] text-[#1c3352]'
-                              : 'bg-[#eef6fc] text-slate-700 hover:bg-[#e3edf7]'
-                          }`}
-                        >
-                          {f.name}
-                        </div>
-                      );
-                    })}
+                  <div className="flex-1 overflow-y-auto p-3 space-y-2 max-h-[580px]">
+                    {foldersList.length === 0 ? (
+                      <div className="text-center py-10 text-xs text-slate-400 font-medium">
+                        No folders yet. Click New Folder above to start.
+                      </div>
+                    ) : (
+                      foldersList.map((f) => {
+                        const isSelected = selectedFolderId === f._id;
+                        return (
+                          <div
+                            key={f._id}
+                            onClick={() => handleSelectFolder(f)}
+                            className={`p-3.5 text-xs font-extrabold rounded-2xl cursor-pointer transition-all flex items-center justify-between group ${
+                              isSelected
+                                ? 'bg-[#dbeafe] text-[#1c3352] shadow-2xs border border-[#93c5fd]'
+                                : 'bg-[#eef6fc] text-slate-700 hover:bg-[#e3edf7] border border-transparent'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 truncate">
+                              <FolderIcon className={`w-4 h-4 shrink-0 ${isSelected ? 'text-[#0091ff]' : 'text-slate-500'}`} />
+                              <span className="truncate">{f.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {f.notesCount !== undefined && (
+                                <span className="text-[10px] text-slate-400 font-bold bg-white/70 px-2 py-0.5 rounded-full">
+                                  {f.notesCount}
+                                </span>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFolder(f._id);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                title="Delete folder"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
 
-                <div className="lg:col-span-8 bg-white border border-[#e2ebf4] rounded-3xl p-8 shadow-xs flex flex-col space-y-3">
-                  <h2 className="text-xl font-extrabold text-[#111827] tracking-tight">
-                    {activeFolder?.title || 'Lorem Ipsum'}
-                  </h2>
+                {/* Right: Active Folder Detail Column */}
+                <div className="lg:col-span-8 bg-white border border-[#e2ebf4] rounded-3xl p-8 shadow-xs flex flex-col justify-between space-y-6">
+                  <div className="space-y-5">
+                    <div className="flex items-start justify-between gap-4">
+                      {isEditing ? (
+                        <div className="space-y-3 w-full">
+                          <input
+                            type="text"
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            className="text-xl font-extrabold text-[#111827] outline-none border-b border-[#0091ff] pb-1 w-full"
+                          />
+                          <textarea
+                            rows={3}
+                            value={editDesc}
+                            onChange={(e) => setEditDesc(e.target.value)}
+                            className="text-xs font-medium text-slate-600 outline-none border border-slate-200 rounded-xl p-2.5 w-full resize-none"
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={handleSaveEdit}>
+                              Save Changes
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>
+                              Cancel
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-extrabold text-[#111827] tracking-tight">
+                              {activeFolder?.title || activeFolder?.name || 'Folder Details'}
+                            </h2>
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 cursor-pointer transition-colors"
+                              title="Edit folder info"
+                            >
+                              <Edit3 className="w-4 h-4" />
+                            </button>
+                          </div>
+                          <p className="text-xs font-medium text-slate-500 max-w-lg leading-relaxed">
+                            {activeFolder?.desc || 'Organized folder for student notes and assignments.'}
+                          </p>
+                        </div>
+                      )}
 
-                  <p className="text-xs font-medium text-slate-500 max-w-lg leading-relaxed">
-                    {activeFolder?.desc || "Lorem Ipsum has been the industry's standard dummy text ever since the 1500s,"}
-                  </p>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => navigate('/student/notebook')}
+                        rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
+                      >
+                        Open in Notebook
+                      </Button>
+                    </div>
+
+                    {/* Files / Notes in this folder */}
+                    <div className="space-y-3 pt-4 border-t border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-extrabold text-[#111827] uppercase tracking-wider">
+                          Notes in this folder ({folderNotes.length})
+                        </h3>
+                        <button
+                          onClick={async () => {
+                            try {
+                              await workspaceService.createNote({
+                                folderId: selectedFolderId,
+                                title: `New Note in ${activeFolder?.name || 'Folder'}`,
+                                content: '',
+                              });
+                              toast.success('Note added to folder');
+                              const updatedNotes = await workspaceService.getNotes(selectedFolderId);
+                              setFolderNotes(updatedNotes);
+                            } catch {
+                              toast.error('Failed to create note');
+                            }
+                          }}
+                          className="text-xs font-bold text-[#0091ff] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Note Here</span>
+                        </button>
+                      </div>
+
+                      {folderNotes.length === 0 ? (
+                        <div className="p-8 border-2 border-dashed border-slate-100 rounded-2xl text-center space-y-2">
+                          <p className="text-xs text-slate-400 font-medium">No notes created in this folder yet.</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                          {folderNotes.map((note) => (
+                            <div
+                              key={note._id}
+                              onClick={() => navigate('/student/notebook')}
+                              className="p-4 bg-[#f8fbfe] hover:bg-[#eef6fc] border border-[#e2ebf4] rounded-2xl cursor-pointer transition-colors space-y-1"
+                            >
+                              <div className="flex items-center gap-2">
+                                <NotebookPen className="w-4 h-4 text-[#0091ff]" />
+                                <h4 className="text-xs font-extrabold text-[#111827] truncate">{note.title}</h4>
+                              </div>
+                              <p className="text-[11px] text-slate-500 line-clamp-2">{note.preview || 'No text yet'}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

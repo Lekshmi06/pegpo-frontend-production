@@ -90,11 +90,14 @@ export default function TestTakingView({
     isUntimedMode ? 'stopwatch' : test.durationMinutes ? 'countdown' : 'stopwatch'
   );
 
+  const isExitingRef = React.useRef(false);
+
   // Live timer
   useEffect(() => {
     if (isPaused) return;
     const timer = setInterval(() => {
       setTimeElapsed((prev) => {
+        if (isExitingRef.current) return prev;
         const next = prev + 1;
         // Auto-finish only if in timed countdown mode and expires
         if (!isUntimedMode && test.durationMinutes && next >= test.durationMinutes * 60) {
@@ -109,6 +112,7 @@ export default function TestTakingView({
 
   // Persist answers, statuses, and time to sessionStorage for refresh tolerance
   useEffect(() => {
+    if (isExitingRef.current) return;
     try {
       sessionStorage.setItem(answersStorageKey, JSON.stringify(answers));
       sessionStorage.setItem(statusStorageKey, JSON.stringify(statusByQuestion));
@@ -119,10 +123,12 @@ export default function TestTakingView({
   }, [answers, statusByQuestion, timeElapsed, answersStorageKey, statusStorageKey, timeStorageKey]);
 
   const clearSessionProgress = () => {
+    isExitingRef.current = true;
     try {
       sessionStorage.removeItem(answersStorageKey);
       sessionStorage.removeItem(statusStorageKey);
       sessionStorage.removeItem(timeStorageKey);
+      sessionStorage.removeItem('edupye_active_test_session');
     } catch {
       // ignore
     }

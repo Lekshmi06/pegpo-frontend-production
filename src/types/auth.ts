@@ -28,6 +28,9 @@ export interface UndergraduateAcademicInfo {
   degree?: string;
   specialization?: string;
   year?: string;
+  semester?: string;
+  university?: string;
+  syllabusFileName?: string;
 }
 
 export interface PostgraduateAcademicInfo {
@@ -35,11 +38,18 @@ export interface PostgraduateAcademicInfo {
   degree?: string;
   specialization?: string;
   thesisTopic?: string;
+  researchArea?: string;
+  year?: string;
+  syllabusFileName?: string;
+  proposalFileName?: string;
 }
 
 export interface CompetitiveExamAcademicInfo {
   targetExam?: string;
   targetYear?: string;
+  category?: string;
+  preparationMode?: string;
+  syllabusFileName?: string;
 }
 
 export interface PersonalDetails {
@@ -65,6 +75,9 @@ export interface UserSession {
   goal?: string;
   language?: string;
   schoolDetails?: SchoolAcademicInfo;
+  undergraduateDetails?: UndergraduateAcademicInfo;
+  postgraduateDetails?: PostgraduateAcademicInfo;
+  competitiveExamDetails?: CompetitiveExamAcademicInfo;
   token?: string;
   createdAt?: string;
 }

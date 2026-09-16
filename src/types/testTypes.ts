@@ -44,6 +44,15 @@ export interface BaseQuestion {
 export interface MockExamQuestion extends BaseQuestion {
   sectionId: string;
   sectionName: string;
+  questionType?: 'mcq' | 'nat' | 'descriptive';
+  numericalAnswer?: number;
+  numericalTolerance?: number;
+  sourceType?: string;
+  sourceYear?: number;
+  sourceExam?: string;
+  sourceShift?: string;
+  sourceReference?: string;
+  isVerifiedSource?: boolean;
 }
 
 export interface MockExamSection {
@@ -58,7 +67,7 @@ export interface MockExamSection {
 export interface MockExamItem {
   id: string;
   title: string;
-  category: MockExamGoal;
+  category: MockExamGoal | string;
   subtitle: string;
   description: string;
   durationMinutes: number;
@@ -68,12 +77,27 @@ export interface MockExamItem {
   isLocked?: boolean;
   passPercentage?: number;
   sections: MockExamSection[];
+  examCode?: string;
+  conductingBody?: string;
+  supportedSubjects?: string[];
+  markingScheme?: {
+    correctMarks: number;
+    negativeMarks: number;
+    numericalTolerance?: number;
+    maxScore: number;
+    cutOffScore?: number;
+    sectionalCutOff?: boolean;
+  };
+  questionTypes?: string[];
+  isRealCompetitiveExam?: boolean;
+  generatedTestId?: string;
+  attemptId?: string;
 }
 
 export interface MockExamSessionResult {
   examId: string;
   examTitle: string;
-  category: MockExamGoal;
+  category: MockExamGoal | string;
   totalMarks: number;
   score: number;
   percentage: number;
@@ -103,6 +127,11 @@ export interface MockExamSessionResult {
     timeSpentSeconds: number;
   }[];
   questions: MockExamQuestion[];
+  isCompetitiveExam?: boolean;
+  examCode?: string;
+  cutOffScore?: number;
+  isEstimatedRank?: boolean;
+  isEstimatedPercentile?: boolean;
 }
 
 // -----------------------------

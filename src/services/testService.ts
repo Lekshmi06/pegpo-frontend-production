@@ -179,4 +179,87 @@ export const testService = {
     const json = await res.json();
     return json.data || [];
   },
+
+  /**
+   * Fetch curriculum-grounded practice questions for the student.
+   */
+  fetchPracticeQuestions: async (params: { subject?: string; topic?: string; count?: number } = {}): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params.subject) query.set('subject', params.subject);
+    if (params.topic) query.set('topic', params.topic);
+    if (params.count) query.set('count', String(params.count));
+    const qs = query.toString();
+
+    const res = await fetch(`${API_BASE_URL}/tests/practice${qs ? `?${qs}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.message || `Failed to fetch practice questions (status ${res.status})`);
+    }
+
+    const json = await res.json();
+    return json.data || [];
+  },
+
+  /**
+   * Fetch curriculum-grounded quizzes for the student.
+   */
+  fetchQuizzes: async (params: { subject?: string; topic?: string } = {}): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params.subject) query.set('subject', params.subject);
+    if (params.topic) query.set('topic', params.topic);
+    const qs = query.toString();
+
+    const res = await fetch(`${API_BASE_URL}/tests/quizzes${qs ? `?${qs}` : ''}`, {
+      headers: getAuthHeaders(),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.message || `Failed to fetch quizzes (status ${res.status})`);
+    }
+
+    const json = await res.json();
+    return json.data || [];
+  },
+
+  /**
+   * Generate an on-demand quick quiz on a topic.
+   */
+  generateQuiz: async (payload: { subject?: string; topic?: string; questionCount?: number }): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/tests/quiz/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.message || `Failed to generate quiz (status ${res.status})`);
+    }
+
+    const json = await res.json();
+    return json.data;
+  },
+
+  /**
+   * Generate a curriculum-grounded Test and persist it in MongoDB.
+   */
+  generateTest: async (payload: { subject?: string; topic?: string; questionCount?: number; difficulty?: string }): Promise<any> => {
+    const res = await fetch(`${API_BASE_URL}/tests/generate`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+      throw new Error(errorData?.message || `Failed to generate test (status ${res.status})`);
+    }
+
+    const json = await res.json();
+    return json.data;
+  },
 };

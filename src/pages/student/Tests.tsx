@@ -40,6 +40,7 @@ export default function Tests() {
   const [activeAttemptId, setActiveAttemptId] = useState<string | undefined>();
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const autoStartedTestIdRef = React.useRef<string | null>(null);
 
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [selectedLockedTitle, setSelectedLockedTitle] = useState('');
@@ -89,13 +90,7 @@ export default function Tests() {
         classLevel: studentClass,
       });
 
-      // If no tests match the student's exact board/class in dev, fetch all available tests
-      if (data.length === 0) {
-        const allData = await testService.fetchTests();
-        setTests(allData);
-      } else {
-        setTests(data);
-      }
+      setTests(data);
     } catch (err) {
       console.error('Failed to load tests from backend:', err);
       setError(err instanceof Error ? err.message : 'Unable to connect to tests service');
@@ -174,7 +169,15 @@ export default function Tests() {
 
   // Automatically start test if testId query param is present (e.g. from EduPye AI PYQ link)
   useEffect(() => {
-    if (urlTestId && (!activeTest || (activeTest.id !== urlTestId && activeTest._id !== urlTestId))) {
+    if (!urlTestId) {
+      autoStartedTestIdRef.current = null;
+      return;
+    }
+    if (
+      autoStartedTestIdRef.current !== urlTestId &&
+      (!activeTest || (activeTest.id !== urlTestId && activeTest._id !== urlTestId))
+    ) {
+      autoStartedTestIdRef.current = urlTestId;
       handleStartTest({ _id: urlTestId, title: 'Previous Year Question Test', isLocked: false } as any);
     }
   }, [urlTestId, activeTest]);
@@ -267,9 +270,21 @@ export default function Tests() {
   };
 
   const handleBackToTests = () => {
+    sessionStorage.removeItem(ACTIVE_TEST_STORAGE_KEY);
+    if (activeTest) {
+      const testIdKey = activeTest.id || activeTest._id;
+      if (testIdKey) {
+        sessionStorage.removeItem(`edupye_answers_${testIdKey}`);
+        sessionStorage.removeItem(`edupye_status_${testIdKey}`);
+        sessionStorage.removeItem(`edupye_time_${testIdKey}`);
+      }
+    }
     setActiveTest(null);
     setTestResult(null);
     setActiveAttemptId(undefined);
+    if (searchParams.get('testId')) {
+      navigate('/student/tests', { replace: true });
+    }
     loadTests();
   };
 

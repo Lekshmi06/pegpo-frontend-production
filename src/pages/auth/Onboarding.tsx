@@ -44,6 +44,12 @@ export default function Onboarding() {
       navigate('/research');
     } else if (role === 'Student' && goal === 'School') {
       navigate('/onboarding/school');
+    } else if (role === 'Student' && (goal === 'Graduation' || goal === 'Get a Coures')) {
+      navigate('/onboarding/undergraduate');
+    } else if (role === 'Student' && (goal === 'Post Graduation' || goal === 'Professional Course')) {
+      navigate('/onboarding/postgraduate');
+    } else if ((role === 'Student' || role === 'Personal') && (goal === 'Prepare for Exam' || goal === 'Competitive exam')) {
+      navigate('/onboarding/competitive');
     } else {
       navigate('/student/home');
     }

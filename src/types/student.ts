@@ -1,4 +1,10 @@
-import { SchoolAcademicInfo, LearningPath } from './auth';
+import {
+  SchoolAcademicInfo,
+  UndergraduateAcademicInfo,
+  PostgraduateAcademicInfo,
+  CompetitiveExamAcademicInfo,
+  LearningPath,
+} from './auth';
 
 export interface DocumentItem {
   id: number | string;
@@ -41,6 +47,7 @@ export type EducationLevel =
   | 'school'
   | 'undergraduate'
   | 'postgraduate'
+  | 'competitive_exam'
   | 'professional'
   | 'other';
 
@@ -72,6 +79,9 @@ export interface StudentProfile {
   education?: StudentEducation;
   learningPath?: LearningPath;
   schoolDetails?: SchoolAcademicInfo;
+  undergraduateDetails?: UndergraduateAcademicInfo;
+  postgraduateDetails?: PostgraduateAcademicInfo;
+  competitiveExamDetails?: CompetitiveExamAcademicInfo;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -87,6 +97,9 @@ export interface UpdateStudentProfileDTO {
   language?: string;
   education?: StudentEducation;
   schoolDetails?: SchoolAcademicInfo;
+  undergraduateDetails?: UndergraduateAcademicInfo;
+  postgraduateDetails?: PostgraduateAcademicInfo;
+  competitiveExamDetails?: CompetitiveExamAcademicInfo;
 }
 
 export interface CreateStudentProfileDTO {
@@ -98,6 +111,10 @@ export interface CreateStudentProfileDTO {
   avatar?: string;
   goal?: string;
   language?: string;
+  learningPath?: LearningPath;
   education?: StudentEducation;
   schoolDetails?: SchoolAcademicInfo;
+  undergraduateDetails?: UndergraduateAcademicInfo;
+  postgraduateDetails?: PostgraduateAcademicInfo;
+  competitiveExamDetails?: CompetitiveExamAcademicInfo;
 }

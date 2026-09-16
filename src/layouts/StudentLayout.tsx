@@ -10,6 +10,8 @@ import userImg from '../assets/user.png';
 import { authService } from '../services/authService';
 import { NavItem } from '../types/common';
 import EduPyeAIChat from '../components/student/EduPyeAIChat';
+import { LearningModeProvider } from '../context/LearningModeContext';
+import { PageContextProvider } from '../context/PageContext';
 
 export default function StudentLayout() {
   const location = useLocation();
@@ -59,127 +61,130 @@ export default function StudentLayout() {
     location.pathname.startsWith('/student/quiz');
 
   return (
-    <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
-      {/* Mobile Backdrop Overlay */}
-      {mobileMenuOpen && (
-        <div
-          onClick={() => setMobileMenuOpen(false)}
-          className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
-        />
-      )}
-
-      {/* Sidebar */}
-      <aside
-        className={`fixed md:relative z-40 h-full w-14 bg-[#1c3352] text-white flex flex-col flex-shrink-0 select-none overflow-y-auto transition-transform duration-200 ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
-      >
-        <div className="h-14 flex items-center justify-center flex-shrink-0">
-          <Link
-            to="/student"
-            className="bg-white rounded-xl w-9 h-9 flex items-center justify-center p-1 shadow-xs hover:scale-105 transition-transform cursor-pointer"
-            title="Your Dashboard"
-          >
-            <img src={logoImg} alt="EDUPYE" className="w-full h-full object-contain" />
-          </Link>
-        </div>
-
-        <nav className="flex-1 w-full px-2 space-y-1.5 pb-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={`${item.label}-${item.path}`}
-                to={item.path}
-                title={item.label}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`h-9 w-full flex items-center justify-center rounded-xl transition-all ${
-                  isActive
-                    ? 'bg-[#2b4d7a] text-white shadow-xs'
-                    : 'text-white/80 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Icon className="w-4 h-4 stroke-[2.2]" />
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
-
-      {/* Main Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header Toggle */}
-        <div className="md:hidden flex items-center justify-between px-4 py-2 bg-[#1c3352] text-white">
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="p-1 rounded-lg hover:bg-white/10"
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-          <span className="text-xs font-extrabold tracking-wide">EDUPYE STUDENT</span>
-          <img
-            src={userImg}
-            alt="Profile"
-            onClick={() => navigate('/student/profile')}
-            className="w-7 h-7 rounded-full object-cover border border-white cursor-pointer"
+    <LearningModeProvider>
+      <PageContextProvider>
+        <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+        {/* Mobile Backdrop Overlay */}
+        {mobileMenuOpen && (
+          <div
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 bg-slate-900/50 z-30 md:hidden"
           />
-        </div>
-
-        {/* Top Header Bar ONLY on non-custom generic pages */}
-        {!isCustomHeaderPage && (
-          <header className="h-20 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0 gap-4">
-            <div className="space-y-0.5">
-              <h1 className="text-xl md:text-2xl font-extrabold text-[#111827] tracking-tight">Your Dashboard</h1>
-              <p className="text-xs text-slate-500 font-medium hidden sm:block">How can I help you study today?</p>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-4 ml-auto">
-              <button className="p-1 rounded-full hover:bg-slate-100 transition-colors" aria-label="Language">
-                <Globe className="w-5 h-5 md:w-6 md:h-6 text-[#1c3352] stroke-[2.2]" />
-              </button>
-
-              <div className="relative w-40 sm:w-64 md:w-72">
-                <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-                  <Search className="h-4 w-4 text-[#264973]" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border-none rounded-xl text-xs bg-[#e3edf7] text-[#264973] focus:outline-none focus:ring-2 focus:ring-[#264973]/30 font-medium"
-                />
-              </div>
-
-              <button className="p-1 rounded-full hover:bg-slate-100 transition-colors" aria-label="Trophy">
-                <Trophy className="w-5 h-5 md:w-6 md:h-6 text-[#1c3352] stroke-[2.2]" />
-              </button>
-
-              <div className="relative">
-                <button
-                  onClick={() => navigate('/student/profile')}
-                  className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
-                  title="Student Profile"
-                >
-                  <img
-                    src={userImg}
-                    alt="Profile"
-                    className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs cursor-pointer"
-                  />
-                </button>
-
-              </div>
-            </div>
-          </header>
         )}
 
-        <main className="flex-1 min-h-0 overflow-hidden bg-white flex flex-col">
-          <Outlet />
-        </main>
-      </div>
+        {/* Sidebar */}
+        <aside
+          className={`fixed md:relative z-40 h-full w-14 bg-[#1c3352] text-white flex flex-col flex-shrink-0 select-none overflow-y-auto transition-transform duration-200 ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
+        >
+          <div className="h-14 flex items-center justify-center flex-shrink-0">
+            <Link
+              to="/student"
+              className="bg-white rounded-xl w-9 h-9 flex items-center justify-center p-1 shadow-xs hover:scale-105 transition-transform cursor-pointer"
+              title="Your Dashboard"
+            >
+              <img src={logoImg} alt="EDUPYE" className="w-full h-full object-contain" />
+            </Link>
+          </div>
 
-      {/* Floating EduPye AI assistant button & context-aware chat popup */}
-      <EduPyeAIChat />
-    </div>
+          <nav className="flex-1 w-full px-2 space-y-1.5 pb-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={`${item.label}-${item.path}`}
+                  to={item.path}
+                  title={item.label}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`h-9 w-full flex items-center justify-center rounded-xl transition-all ${
+                    isActive
+                      ? 'bg-[#2b4d7a] text-white shadow-xs'
+                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <Icon className="w-4 h-4 stroke-[2.2]" />
+                </Link>
+              );
+            })}
+          </nav>
+        </aside>
+
+        {/* Main Area */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+          {/* Mobile Header Toggle */}
+          <div className="md:hidden flex items-center justify-between px-4 py-2 bg-[#1c3352] text-white">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-1 rounded-lg hover:bg-white/10"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+            <span className="text-xs font-extrabold tracking-wide">EDUPYE STUDENT</span>
+            <img
+              src={userImg}
+              alt="Profile"
+              onClick={() => navigate('/student/profile')}
+              className="w-7 h-7 rounded-full object-cover border border-white cursor-pointer"
+            />
+          </div>
+
+          {/* Top Header Bar ONLY on non-custom generic pages */}
+          {!isCustomHeaderPage && (
+            <header className="h-20 bg-white border-b border-[#e2ebf4] flex items-center justify-between px-4 md:px-8 z-10 flex-shrink-0 gap-4">
+              <div className="space-y-0.5">
+                <h1 className="text-xl md:text-2xl font-extrabold text-[#111827] tracking-tight">Your Dashboard</h1>
+                <p className="text-xs text-slate-500 font-medium hidden sm:block">How can I help you study today?</p>
+              </div>
+
+              <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+                <button className="p-1 rounded-full hover:bg-slate-100 transition-colors" aria-label="Language">
+                  <Globe className="w-5 h-5 md:w-6 md:h-6 text-[#1c3352] stroke-[2.2]" />
+                </button>
+
+                <div className="relative w-40 sm:w-64 md:w-72">
+                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                    <Search className="h-4 w-4 text-[#264973]" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Search..."
+                    className="w-full pl-10 pr-4 py-2 border-none rounded-xl text-xs bg-[#e3edf7] text-[#264973] focus:outline-none focus:ring-2 focus:ring-[#264973]/30 font-medium"
+                  />
+                </div>
+
+                <button className="p-1 rounded-full hover:bg-slate-100 transition-colors" aria-label="Trophy">
+                  <Trophy className="w-5 h-5 md:w-6 md:h-6 text-[#1c3352] stroke-[2.2]" />
+                </button>
+
+                <div className="relative">
+                  <button
+                    onClick={() => navigate('/student/profile')}
+                    className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
+                    title="Student Profile"
+                  >
+                    <img
+                      src={userImg}
+                      alt="Profile"
+                      className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs cursor-pointer"
+                    />
+                  </button>
+                </div>
+              </div>
+            </header>
+          )}
+
+          <main className="flex-1 min-h-0 overflow-hidden bg-white flex flex-col">
+            <Outlet />
+          </main>
+        </div>
+
+        {/* Floating EduPye AI assistant button & context-aware chat popup */}
+        <EduPyeAIChat />
+      </div>
+      </PageContextProvider>
+    </LearningModeProvider>
   );
 }

@@ -96,19 +96,19 @@ export const MockExamAnalysis: React.FC<MockExamAnalysisProps> = ({
           </div>
 
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-300 block">Percentile</span>
+            <span className="text-[10px] uppercase font-bold text-slate-300 block">Est. Percentile</span>
             <span className="text-2xl font-extrabold text-emerald-300">
               {result.percentile}%
             </span>
           </div>
 
           <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center">
-            <span className="text-[10px] uppercase font-bold text-slate-300 block">Est. Rank</span>
+            <span className="text-[10px] uppercase font-bold text-slate-300 block">Estimated AIR</span>
             <span className="text-2xl font-extrabold text-amber-300">
               #{result.rankEstimate}
             </span>
             <span className="text-[9px] text-slate-400 block font-medium">
-              out of {result.totalCandidatesEstimate.toLocaleString()}
+              out of {result.totalCandidatesEstimate?.toLocaleString() || '100,000'}
             </span>
           </div>
 
@@ -123,6 +123,19 @@ export const MockExamAnalysis: React.FC<MockExamAnalysisProps> = ({
               {formatTime(result.timeSpentSeconds)}
             </span>
           </div>
+        </div>
+
+        {/* Quick summary badges */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 text-xs">
+          <div className="flex items-center gap-4 text-slate-300 text-xs font-semibold">
+            <span>Attempted: <strong className="text-white">{result.answeredCount}</strong></span>
+            <span>Correct: <strong className="text-emerald-300">+{result.correctCount}</strong></span>
+            <span>Incorrect: <strong className="text-rose-300">-{result.incorrectCount}</strong></span>
+            <span>Skipped: <strong className="text-slate-300">{result.skippedCount}</strong></span>
+          </div>
+          <span className="text-[10px] text-slate-400 font-medium italic">
+            * Percentile and All India Rank are model-based statistical projections.
+          </span>
         </div>
       </div>
 
@@ -245,53 +258,78 @@ export const MockExamAnalysis: React.FC<MockExamAnalysisProps> = ({
                   {q.text}
                 </h4>
 
-                {/* Options Review */}
-                <div className="space-y-2">
-                  {q.options.map((opt) => {
-                    const isSelected = chosen === opt.id;
-                    const isRightOption = opt.id === q.correctAnswer;
-
-                    let optClass = 'bg-[#f8fafc] border-slate-200 text-slate-700';
-                    if (isRightOption) {
-                      optClass = 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold';
-                    } else if (isSelected && !isRightOption) {
-                      optClass = 'bg-rose-50 border-rose-400 text-rose-900 font-bold';
-                    }
-
-                    return (
-                      <div
-                        key={opt.id}
-                        className={`p-3 rounded-xl border text-xs flex items-center justify-between ${optClass}`}
+                {/* Options Review or NAT Review */}
+                {q.questionType === 'nat' ? (
+                  <div className="space-y-3 p-4 bg-[#f8fafc] rounded-2xl border border-slate-200 text-xs">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-slate-500 font-bold uppercase text-[10px]">Your Numerical Input:</span>
+                      <span
+                        className={`font-mono font-bold px-3 py-1 rounded-lg ${
+                          isCorrect
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : chosen
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-slate-200 text-slate-600'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[10px] ${
-                              isRightOption
-                                ? 'bg-emerald-600 text-white'
-                                : isSelected
-                                ? 'bg-rose-600 text-white'
-                                : 'bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            {opt.id}
-                          </span>
-                          <span>{opt.text}</span>
-                        </div>
+                        {chosen ? chosen : 'Not Attempted (Skipped)'}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200">
+                      <span className="text-slate-500 font-bold uppercase text-[10px]">Official Numerical Answer:</span>
+                      <span className="font-mono font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-300">
+                        {q.numericalAnswer ?? q.correctAnswer} {typeof q.numericalTolerance === 'number' && q.numericalTolerance > 0 ? `(±${q.numericalTolerance})` : ''}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {q.options.map((opt) => {
+                      const isSelected = chosen === opt.id;
+                      const isRightOption = opt.id === q.correctAnswer;
 
-                        {isRightOption && (
-                          <span className="text-[10px] font-extrabold uppercase text-emerald-700">
-                            Correct Answer
-                          </span>
-                        )}
-                        {isSelected && !isRightOption && (
-                          <span className="text-[10px] font-extrabold uppercase text-rose-600">
-                            Your Choice
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                      let optClass = 'bg-[#f8fafc] border-slate-200 text-slate-700';
+                      if (isRightOption) {
+                        optClass = 'bg-emerald-50 border-emerald-400 text-emerald-900 font-bold';
+                      } else if (isSelected && !isRightOption) {
+                        optClass = 'bg-rose-50 border-rose-400 text-rose-900 font-bold';
+                      }
+
+                      return (
+                        <div
+                          key={opt.id}
+                          className={`p-3 rounded-xl border text-xs flex items-center justify-between ${optClass}`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span
+                              className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[10px] ${
+                                isRightOption
+                                  ? 'bg-emerald-600 text-white'
+                                  : isSelected
+                                  ? 'bg-rose-600 text-white'
+                                  : 'bg-slate-200 text-slate-700'
+                              }`}
+                            >
+                              {opt.id}
+                            </span>
+                            <span>{opt.text}</span>
+                          </div>
+
+                          {isRightOption && (
+                            <span className="text-[10px] font-extrabold uppercase text-emerald-700">
+                              Correct Answer
+                            </span>
+                          )}
+                          {isSelected && !isRightOption && (
+                            <span className="text-[10px] font-extrabold uppercase text-rose-600">
+                              Your Choice
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Explanation */}
                 <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl p-4 text-xs space-y-1.5">

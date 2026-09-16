@@ -122,7 +122,11 @@ export function useStudentProfile() {
           phone: updated.phone,
           dob: updated.dob,
           avatar: updated.avatar,
+          learningPath: updated.learningPath,
           schoolDetails: updated.schoolDetails,
+          undergraduateDetails: updated.undergraduateDetails,
+          postgraduateDetails: updated.postgraduateDetails,
+          competitiveExamDetails: updated.competitiveExamDetails,
         });
         return updated;
       } finally {
@@ -150,7 +154,11 @@ export function useStudentProfile() {
             phone: res.studentProfile.phone,
             dob: res.studentProfile.dob,
             avatar: res.studentProfile.avatar,
+            learningPath: res.studentProfile.learningPath,
             schoolDetails: res.studentProfile.schoolDetails,
+            undergraduateDetails: res.studentProfile.undergraduateDetails,
+            postgraduateDetails: res.studentProfile.postgraduateDetails,
+            competitiveExamDetails: res.studentProfile.competitiveExamDetails,
           });
         }
         return res;

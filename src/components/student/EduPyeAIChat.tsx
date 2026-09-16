@@ -17,9 +17,24 @@ import {
   BookOpen,
   HelpCircle,
   ArrowRight,
+  Brain,
+  Layers,
+  CheckCircle2,
+  Calendar as CalendarIcon,
+  NotebookPen,
+  Trash2,
 } from 'lucide-react';
 import { sendAIChatMessage, PYQQuestionData, QuestionSetData } from '../../services/aiService';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
+import { useToast } from '../../hooks/useToast';
+import { workspaceService } from '../../services/workspaceService';
+import {
+  useLearningMode,
+  AIStructuredAction,
+  generateEducationalNoteContent,
+} from '../../context/LearningModeContext';
+import { usePageContext } from '../../context/PageContext';
+import { resolveAIIntent } from '../../services/intentResolver';
 
 export interface PageContextInfo {
   title: string;
@@ -34,6 +49,11 @@ interface Message {
   timestamp: string;
   pyq?: PYQQuestionData;
   questionSet?: QuestionSetData;
+  manualAction?: {
+    type: 'create_note' | 'delete_note' | 'open_quiz' | 'create_calendar_event';
+    title: string;
+    payload: any;
+  };
 }
 
 interface EduPyeAIChatProps {
@@ -368,11 +388,94 @@ function FormattedMessageText({ text, isUser, onLaunchTest, navigate }: Formatte
   );
 }
 
+// Note: Intent detection and action contract resolution is now handled
+// strictly by intentResolver.ts and actionRegistry.ts via usePageContext().
+
 export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAIChatProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const toast = useToast();
   const { profile } = useStudentProfile();
   const studentName = profile?.name ? profile.name.split(' ')[0] : '';
+
+  const {
+    currentMode,
+    setMode,
+    isAIMode,
+    isHybridMode,
+    isManualMode,
+    currentModuleLabel,
+    pendingConfirmation,
+    executeAction,
+    confirmAction,
+    rejectAction,
+  } = useLearningMode();
+
+  const { currentModule, entityContext } = usePageContext();
+
+  const handleConfirmPendingAction = async () => {
+    if (!pendingConfirmation) return;
+    const actionToRun = pendingConfirmation;
+    const result = await confirmAction();
+    if (result.success) {
+      if (actionToRun.action === 'CREATE_NOTE') {
+        const confMsgId = `ai-conf-${Date.now()}`;
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: confMsgId,
+            sender: 'ai',
+            text: `Done — Note on **${actionToRun.parameters.title}** created in your Notebook. 📝`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      } else if (actionToRun.action === 'CREATE_CALENDAR_EVENT') {
+        const confMsgId = `ai-conf-${Date.now()}`;
+        const title = actionToRun.parameters?.title || 'Study Event';
+        const dateFriendly = actionToRun.parameters?.dateFriendly || actionToRun.parameters?.date || 'tomorrow';
+        const timePart = actionToRun.parameters?.startTime ? ` at ${actionToRun.parameters.startTime}` : '';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: confMsgId,
+            sender: 'ai',
+            text: `Done — I added ${title} to your calendar for ${dateFriendly}${timePart}.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      } else if (actionToRun.action === 'DELETE_NOTE') {
+        const confMsgId = `ai-conf-${Date.now()}`;
+        const title = actionToRun.parameters?.title || 'the note';
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: confMsgId,
+            sender: 'ai',
+            text: `Done — I deleted "${title}" from your Notebook.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          },
+        ]);
+      }
+    }
+  };
+
+  const handleRejectPendingAction = () => {
+    if (!pendingConfirmation) return;
+    const actionToReject = pendingConfirmation;
+    rejectAction();
+    if (actionToReject.action === 'DELETE_NOTE') {
+      const cancelMsgId = `ai-cancel-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: cancelMsgId,
+          sender: 'ai',
+          text: 'No problem — I kept the note.',
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        },
+      ]);
+    }
+  };
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -551,9 +654,310 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
     setIsAiThinking(true);
 
     try {
-      // Connect directly to backend AI endpoint with student name
-      const aiResult = await sendAIChatMessage(text, context.title, studentName);
+      // 1. Resolve structured action using centralized Intent Resolver & Page Context
+      const lastAiMsg = [...messages].reverse().find((m) => m.sender === 'ai');
+      const lastUserMsg = [...messages].reverse().find((m) => m.sender === 'user');
 
+      const resolvedContract = resolveAIIntent({
+        text,
+        module: currentModule,
+        entityContext,
+        lastAiMessage: lastAiMsg?.text,
+        lastUserMessage: lastUserMsg?.text,
+      });
+
+      // 2. If an actionable intent is resolved:
+      if (resolvedContract) {
+        // A. Handle RESTRICTED actions (e.g. DELETE_ACCOUNT, PURCHASE, etc.)
+        if (resolvedContract.permission === 'RESTRICTED') {
+          const aiMsgId = `ai-${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: aiMsgId,
+              sender: 'ai',
+              text: `⚠️ **Action Restricted**: ${resolvedContract.description} cannot be performed via AI Assistant for security and safety. Please use your account settings directly.`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+          setIsAiThinking(false);
+          return;
+        }
+
+        // B. Handle SHOW_HINT query
+        if (resolvedContract.type === 'SHOW_HINT') {
+          const lastMsgWithQuestion = [...messages].reverse().find((m) => m.pyq || m.questionSet);
+
+          if (lastMsgWithQuestion?.pyq) {
+            const pyq = lastMsgWithQuestion.pyq;
+            let hintText = pyq.hint;
+            if (!hintText) {
+              const cleanExp = pyq.explanation
+                .replace(/option\s+[A-D]/gi, '')
+                .replace(/=\s*[0-9]+(\.[0-9]+)?\s*(W|Ω|V|units|ATP)/gi, '')
+                .split('.')[0];
+              hintText = `Focus on the underlying principle: ${cleanExp}. Consider how the primary formula relates the known values.`;
+            }
+
+            const aiMsgId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMsgId,
+                sender: 'ai',
+                text: `💡 **Conceptual Hint**:\n\n${hintText}\n\n*Take a moment to reason through the problem — you can do it!*`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+
+            const detectedHintAction: AIStructuredAction = {
+              id: `action-${Date.now()}`,
+              action: 'SHOW_HINT',
+              parameters: { hint: hintText },
+              description: 'Provide a conceptual hint',
+            };
+            await executeAction(detectedHintAction);
+            setIsAiThinking(false);
+            return;
+          } else if (lastMsgWithQuestion?.questionSet) {
+            const qSet = lastMsgWithQuestion.questionSet;
+            const activeIdx = activeQuizIndices[lastMsgWithQuestion.id] || 0;
+            const currentQ = qSet.questions[activeIdx] || qSet.questions[0];
+            let hintText = currentQ.hint;
+            if (!hintText) {
+              hintText = `Recall the fundamental concepts behind "${currentQ.question.slice(0, 50)}...". Analyze each variable step-by-step.`;
+            }
+
+            const aiMsgId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMsgId,
+                sender: 'ai',
+                text: `💡 **Conceptual Hint**:\n\n${hintText}\n\n*Think through the core concept before making your choice.*`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+
+            const detectedHintAction: AIStructuredAction = {
+              id: `action-${Date.now()}`,
+              action: 'SHOW_HINT',
+              parameters: { hint: hintText },
+              description: 'Provide a conceptual hint',
+            };
+            await executeAction(detectedHintAction);
+            setIsAiThinking(false);
+            return;
+          } else {
+            const aiMsgId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMsgId,
+                sender: 'ai',
+                text: `There is no active question right now. Ask me for a **Previous Year Question** (e.g. *"Give me a 2023 CBSE Science question"*) or start a quiz first, and I'll gladly provide conceptual hints!`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+            setIsAiThinking(false);
+            return;
+          }
+        }
+
+        // C. Handle EXPLAIN_TOPIC query
+        if (resolvedContract.type === 'EXPLAIN_TOPIC') {
+          const aiResult = await sendAIChatMessage(text, context.title, studentName);
+          const aiMessageId = `ai-${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: aiMessageId,
+              sender: 'ai',
+              text: aiResult.reply,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              pyq: aiResult.pyq,
+              questionSet: aiResult.questionSet,
+            },
+          ]);
+          setIsAiThinking(false);
+          return;
+        }
+
+        // D. Operational Actions (CREATE_CALENDAR_EVENT, CREATE_NOTE, DELETE_NOTE, START_QUIZ, GENERATE_QUIZ, etc.)
+        const detectedAction: AIStructuredAction = {
+          id: resolvedContract.id,
+          action: resolvedContract.type,
+          parameters: resolvedContract.payload,
+          description: resolvedContract.description,
+          permissionCategory: resolvedContract.permission,
+        };
+
+        // MANUAL MODE ADVISORY HANDLING
+        if (isManualMode) {
+          if (detectedAction.action === 'CREATE_NOTE') {
+            const title = detectedAction.parameters.title || 'AI Study Note';
+            const topic = detectedAction.parameters.topic || 'Study Revision';
+            const noteDraft = detectedAction.parameters.content || generateEducationalNoteContent(title, topic);
+
+            const aiMessageId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMessageId,
+                sender: 'ai',
+                text: `I can prepare this note for you, but **Manual Mode** keeps note creation under your manual control.\n\nHere is the prepared draft for **${title}**:\n\n${noteDraft}`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                manualAction: {
+                  type: 'create_note',
+                  title,
+                  payload: {
+                    title,
+                    content: noteDraft,
+                    tags: ['manual-note', topic],
+                  },
+                },
+              },
+            ]);
+            setIsAiThinking(false);
+            return;
+          }
+
+          if (detectedAction.action === 'DELETE_NOTE') {
+            const title = detectedAction.parameters.title || 'this note';
+            const aiMessageId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMessageId,
+                sender: 'ai',
+                text: `I can help you review your notes, but in **Manual Mode** deleting notes must be done directly by you in the Notebook.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                manualAction: {
+                  type: 'delete_note',
+                  title,
+                  payload: detectedAction.parameters,
+                },
+              },
+            ]);
+            setIsAiThinking(false);
+            return;
+          }
+
+          if (detectedAction.action === 'CREATE_CALENDAR_EVENT') {
+            const title = detectedAction.parameters.title || 'Study Session';
+            const aiMessageId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMessageId,
+                sender: 'ai',
+                text: `I can prepare this calendar event, but Manual Mode keeps calendar changes under your control.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                manualAction: {
+                  type: 'create_calendar_event',
+                  title,
+                  payload: detectedAction.parameters,
+                },
+              },
+            ]);
+            setIsAiThinking(false);
+            return;
+          }
+
+          if (detectedAction.action === 'START_QUIZ' || detectedAction.action === 'GENERATE_QUIZ') {
+            const topic = detectedAction.parameters.topic || 'Science';
+            const subject = detectedAction.parameters.subject || 'Science';
+            const count = detectedAction.parameters.count || 5;
+
+            const aiMessageId = `ai-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: aiMessageId,
+                sender: 'ai',
+                text: `I can suggest questions for **${topic}**, but in **Manual Mode** quiz launch is controlled manually by you. You can review the topic and start it whenever you're ready!`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                manualAction: {
+                  type: 'open_quiz',
+                  title: topic,
+                  payload: { topic, subject, count },
+                },
+              },
+            ]);
+            setIsAiThinking(false);
+            return;
+          }
+        }
+
+        // HYBRID or AI MODE:
+        // Execute according to mode policy (AI Mode: AUTO for note/calendar, CONFIRM for delete; Hybrid: CONFIRM for all)
+        const actionResult = await executeAction(detectedAction);
+
+        if (actionResult.requiresConfirmation) {
+          // Action queued for confirmation (pendingConfirmation is now set). Stop here!
+          setIsAiThinking(false);
+          return;
+        }
+
+        if (actionResult.success) {
+          // If automatically executed in AI Mode:
+          if (detectedAction.action === 'CREATE_NOTE') {
+            const confMsgId = `ai-conf-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: confMsgId,
+                sender: 'ai',
+                text: `Done — I created a note on **${detectedAction.parameters.title}** in your Notebook. 📝`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+          } else if (detectedAction.action === 'CREATE_CALENDAR_EVENT') {
+            const confMsgId = `ai-conf-${Date.now()}`;
+            const title = detectedAction.parameters.title || 'Maths Revision';
+            const dateFriendly = detectedAction.parameters.dateFriendly || detectedAction.parameters.date || 'tomorrow';
+            const timePart = detectedAction.parameters.startTime ? ` at ${detectedAction.parameters.startTime}` : '';
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: confMsgId,
+                sender: 'ai',
+                text: `Done — I added ${title} to your calendar for ${dateFriendly}${timePart}.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+          } else if (detectedAction.action === 'DELETE_NOTE') {
+            const confMsgId = `ai-conf-${Date.now()}`;
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: confMsgId,
+                sender: 'ai',
+                text: `Done — I deleted "${detectedAction.parameters.title || 'the note'}" from your Notebook.`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              },
+            ]);
+          }
+        } else if (actionResult.message) {
+          const errMsgId = `ai-err-${Date.now()}`;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: errMsgId,
+              sender: 'ai',
+              text: actionResult.message || 'Could not complete the requested action.',
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            },
+          ]);
+        }
+
+        // IMPORTANT: Stop here! Do not fall through to Gemini!
+        setIsAiThinking(false);
+        return;
+      }
+
+      // 3. ONLY if NO actionable intent exists: Continue to normal AI conversational/academic flow
+      const aiResult = await sendAIChatMessage(text, context.title, studentName);
       const aiMessageId = `ai-${Date.now()}`;
       setMessages((prev) => [
         ...prev,
@@ -638,8 +1042,17 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
             <span className="text-xs font-black tracking-wide">EduPye AI</span>
           </div>
 
-          <span className="hidden sm:inline-block bg-white/20 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-xs text-white/90">
-            Ask AI
+          {/* Mode Pill Badge */}
+          <span
+            className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              isAIMode
+                ? 'bg-cyan-400/20 text-cyan-200 border-cyan-400/40'
+                : isHybridMode
+                ? 'bg-blue-400/20 text-blue-200 border-blue-400/40'
+                : 'bg-amber-400/20 text-amber-200 border-amber-400/40'
+            }`}
+          >
+            {currentMode}
           </span>
         </button>
       )}
@@ -647,39 +1060,92 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
       {/* Chat Popup Window */}
       {isOpen && (
         <div className="w-[360px] sm:w-[420px] h-[580px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-[#cbd5e1]/60 flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-200">
-          {/* Sleek Header - Clean, without Active Page Context banner */}
-          <div className="bg-gradient-to-r from-[#1c3352] to-[#254b77] text-white px-4 py-3.5 flex items-center justify-between shadow-xs flex-shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-2xl bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
-                <Sparkles className="w-5 h-5 text-cyan-300" />
-              </div>
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs font-black tracking-wide text-white">EduPye AI</h3>
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                    Online
-                  </span>
+          {/* Sleek Header with 3-Mode Global Learning Switcher */}
+          <div className="bg-gradient-to-r from-[#1c3352] to-[#254b77] text-white px-4 py-3 flex flex-col gap-2.5 shadow-xs flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center border border-white/20 shadow-inner">
+                  <Sparkles className="w-4 h-4 text-cyan-300" />
                 </div>
-                <p className="text-[10px] text-slate-300 font-medium">Smart Academic Companion</p>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-xs font-black tracking-wide text-white">EduPye AI</h3>
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                      Online
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-slate-300 font-medium">{currentModuleLabel}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleClearChat}
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  title="Reset conversation"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setIsOpen(false)}
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
+                  title="Close chat"
+                >
+                  <X className="w-4 h-4 stroke-[2.5]" />
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            {/* Global 3-Mode Learning Selector Bar */}
+            <div className="flex items-center bg-black/25 p-1 rounded-xl border border-white/10">
               <button
-                onClick={handleClearChat}
-                className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                title="Reset conversation"
+                onClick={() => setMode('ai')}
+                className={`flex-1 py-1 rounded-lg text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  isAIMode
+                    ? 'bg-gradient-to-r from-[#00d2ff] to-[#0091ff] text-white shadow-xs'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+                title="AI Mode: AI has primary control and can execute approved learning actions automatically"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <Brain className="w-3 h-3" />
+                <span>AI Mode</span>
               </button>
+
               <button
-                onClick={() => setIsOpen(false)}
-                className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
-                title="Close chat"
+                onClick={() => setMode('hybrid')}
+                className={`flex-1 py-1 rounded-lg text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  isHybridMode
+                    ? 'bg-gradient-to-r from-[#00d2ff] to-[#0091ff] text-white shadow-xs'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+                title="Hybrid Mode: AI and student work together with approval confirmations"
               >
-                <X className="w-4 h-4 stroke-[2.5]" />
+                <Layers className="w-3 h-3" />
+                <span>Hybrid</span>
               </button>
+
+              <button
+                onClick={() => setMode('manual')}
+                className={`flex-1 py-1 rounded-lg text-[10px] font-extrabold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  isManualMode
+                    ? 'bg-amber-400 text-slate-900 shadow-xs'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+                title="Manual Mode: Full student control; AI automated actions are paused"
+              >
+                <BookOpen className="w-3 h-3" />
+                <span>Manual</span>
+              </button>
+            </div>
+
+            {/* Mode Status Caption */}
+            <div className="text-[9.5px] text-slate-300 font-medium px-0.5 flex items-center justify-between">
+              <span>
+                {isAIMode && '⚡ AI executes approved steps automatically'}
+                {isHybridMode && '🤝 AI collaborates with student confirmation'}
+                {isManualMode && '🛡️ Manual control: AI automation paused'}
+              </span>
             </div>
           </div>
 
@@ -1008,6 +1474,79 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
                       </div>
                     )}
 
+                    {/* Manual Mode Action Buttons */}
+                    {msg.manualAction && msg.manualAction.type === 'create_note' && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await workspaceService.createNote(msg.manualAction!.payload);
+                              window.dispatchEvent(new CustomEvent('edupye_note_created', { detail: res }));
+                              toast.success(`Note created manually: ${msg.manualAction!.title}`);
+                            } catch {
+                              toast.error('Could not create note manually');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0091ff] hover:bg-[#007acc] text-white text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        >
+                          <NotebookPen className="w-3.5 h-3.5" />
+                          <span>Create Note Manually</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {msg.manualAction && msg.manualAction.type === 'delete_note' && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            navigate('/student/notebook');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        >
+                          <NotebookPen className="w-3.5 h-3.5" />
+                          <span>Open Notebook to Manage</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {msg.manualAction && msg.manualAction.type === 'create_calendar_event' && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100">
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await workspaceService.createCalendarEvent(msg.manualAction!.payload);
+                              window.dispatchEvent(new CustomEvent('edupye_calendar_event_created', { detail: res }));
+                              toast.success(`Event scheduled manually: ${msg.manualAction!.title}`);
+                            } catch {
+                              toast.error('Could not schedule calendar event manually');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0091ff] hover:bg-[#007acc] text-white text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        >
+                          <CalendarIcon className="w-3.5 h-3.5" />
+                          <span>Add to Calendar Manually</span>
+                        </button>
+                      </div>
+                    )}
+
+                    {msg.manualAction && msg.manualAction.type === 'open_quiz' && (
+                      <div className="mt-2.5 pt-2 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            navigate(
+                              `/student/quiz?topic=${encodeURIComponent(msg.manualAction!.payload.topic)}&subject=${encodeURIComponent(
+                                msg.manualAction!.payload.subject || 'Science'
+                              )}`
+                            );
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0091ff] hover:bg-[#007acc] text-white text-xs font-bold transition-all active:scale-95 shadow-xs cursor-pointer"
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                          <span>Practice {msg.manualAction.title} Quiz</span>
+                        </button>
+                      </div>
+                    )}
+
                     {/* AI Message Action Buttons: Read Aloud & Copy */}
                     {!isUser && (
                       <div className="flex items-center gap-1.5 mt-2 pt-1.5 border-t border-slate-100">
@@ -1070,6 +1609,72 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
                     <span className="w-1.5 h-1.5 rounded-full bg-[#0091ff] animate-bounce"></span>
                   </div>
                   <span>EduPye AI is thinking...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Pending Action Confirmation Card */}
+            {pendingConfirmation && (
+              <div className="p-3.5 bg-gradient-to-r from-blue-50 to-indigo-50/80 rounded-2xl border-2 border-[#0091ff]/30 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="flex items-start gap-2.5">
+                  <div className={`w-8 h-8 rounded-xl ${pendingConfirmation.action === 'DELETE_NOTE' ? 'bg-red-500' : 'bg-[#0091ff]'} text-white flex items-center justify-center flex-shrink-0 shadow-xs`}>
+                    {pendingConfirmation.action === 'CREATE_NOTE' ? (
+                      <NotebookPen className="w-4 h-4" />
+                    ) : pendingConfirmation.action === 'DELETE_NOTE' ? (
+                      <Trash2 className="w-4 h-4" />
+                    ) : pendingConfirmation.action === 'CREATE_CALENDAR_EVENT' ? (
+                      <CalendarIcon className="w-4 h-4" />
+                    ) : (
+                      <Layers className="w-4 h-4" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-[10px] font-black text-[#1c3352] uppercase tracking-wider">
+                        Approval Required
+                      </span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${pendingConfirmation.action === 'DELETE_NOTE' ? 'bg-red-100 text-red-700' : 'bg-[#0091ff]/15 text-[#0070cc]'}`}>
+                        {currentMode.toUpperCase()} MODE
+                      </span>
+                    </div>
+                    <p className="text-xs font-bold text-[#1c3352] mt-0.5">
+                      {pendingConfirmation.action === 'DELETE_NOTE'
+                        ? `Delete "${pendingConfirmation.parameters?.title || 'this note'}" from your Notebook?`
+                        : pendingConfirmation.action === 'CREATE_CALENDAR_EVENT'
+                        ? `Add ${pendingConfirmation.parameters?.title || 'Event'} to your calendar for ${pendingConfirmation.parameters?.dateFriendly || pendingConfirmation.parameters?.date || 'tomorrow'}?`
+                        : pendingConfirmation.description}
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      EduPye AI will execute this action once confirmed.
+                    </p>
+
+                    <div className="flex items-center gap-2 mt-2.5">
+                      <button
+                        onClick={handleConfirmPendingAction}
+                        className={`flex-1 px-3 py-1.5 ${pendingConfirmation.action === 'DELETE_NOTE' ? 'bg-red-600 hover:bg-red-700' : 'bg-[#0091ff] hover:bg-[#007acc]'} text-white text-xs font-bold rounded-xl shadow-xs transition-all active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        <span>
+                          {pendingConfirmation.action === 'CREATE_NOTE'
+                            ? 'Confirm & Create'
+                            : pendingConfirmation.action === 'DELETE_NOTE'
+                            ? 'Delete Note'
+                            : pendingConfirmation.action === 'CREATE_CALENDAR_EVENT'
+                            ? 'Confirm & Add to Calendar'
+                            : pendingConfirmation.action === 'START_QUIZ' ||
+                              pendingConfirmation.action === 'GENERATE_QUIZ'
+                            ? 'Start Quiz'
+                            : 'Confirm & Execute'}
+                        </span>
+                      </button>
+                      <button
+                        onClick={handleRejectPendingAction}
+                        className="px-2.5 py-1.5 bg-white hover:bg-slate-100 text-slate-600 text-xs font-semibold rounded-xl border border-slate-200 transition-all active:scale-95 cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

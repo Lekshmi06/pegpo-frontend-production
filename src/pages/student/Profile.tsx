@@ -25,6 +25,7 @@ import {
   Layers,
   ArrowRight,
   AlertCircle,
+  Target,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import { authService } from '../../services/authService';
@@ -42,6 +43,7 @@ import {
   InvoiceItem,
   PlanPeriod,
 } from '../../types/subscription';
+import { LearningPath } from '../../types/auth';
 
 type ProfileTab = 'personal' | 'academic' | 'subscription' | 'security';
 
@@ -85,6 +87,162 @@ const CLASSES = [
   'Class 12',
 ];
 
+const UG_DEGREES = [
+  'B.Tech / B.E.',
+  'B.Sc',
+  'B.Com',
+  'B.A.',
+  'BBA',
+  'BCA',
+  'MBBS / Medical',
+  'B.Pharm',
+  'LLB / Law',
+  'Other',
+];
+
+const UG_BRANCHES = [
+  'Computer Science & Engineering',
+  'Information Technology',
+  'Electronics & Communication (ECE)',
+  'Electrical & Electronics (EEE)',
+  'Mechanical Engineering',
+  'Civil Engineering',
+  'Biotechnology',
+  'Commerce & Accounting',
+  'Economics & Finance',
+  'Business Administration',
+  'Life Sciences / Pre-Med',
+  'Physics / Chemistry / Mathematics',
+  'Humanities & Social Sciences',
+  'Other',
+];
+
+const UG_YEARS = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year / Dual Degree'];
+
+const UG_SEMESTERS = [
+  'Semester 1',
+  'Semester 2',
+  'Semester 3',
+  'Semester 4',
+  'Semester 5',
+  'Semester 6',
+  'Semester 7',
+  'Semester 8',
+];
+
+const PG_DEGREES = [
+  'M.Tech / M.E.',
+  'M.Sc',
+  'MBA',
+  'M.Com',
+  'M.A.',
+  'MCA',
+  'MS by Research',
+  'Ph.D. / Doctoral',
+  'Postdoctoral Fellow',
+  'Other',
+];
+
+const PG_DOMAINS = [
+  'Artificial Intelligence & Machine Learning',
+  'Data Science & Analytics',
+  'Cybersecurity & Cryptography',
+  'VLSI & Embedded Systems',
+  'Biotechnology & Healthcare Informatics',
+  'Finance & Quantitative Economics',
+  'Renewable Energy Systems',
+  'Structural & Materials Engineering',
+  'Theoretical Physics / Mathematics',
+  'Other',
+];
+
+const PG_YEARS = ['Year 1 (Coursework)', 'Year 2 (Thesis & Project)', 'Year 3+ (Advanced Research)'];
+
+const COMP_EXAMS = [
+  'JEE Main & Advanced',
+  'NEET UG',
+  'UPSC Civil Services (IAS/IPS)',
+  'GATE (Engineering)',
+  'CAT / Management',
+  'SSC CGL',
+  'Banking (IBPS / SBI PO)',
+  'UGC NET / CSIR NET',
+  'State PSC',
+  'NDA / CDS Defence',
+  'Other',
+];
+
+const COMP_YEARS = ['2026', '2027', '2028', '2029'];
+
+const COMP_MODES = [
+  'Full-Time Coaching',
+  'Self-Study with Digital Tools',
+  'College + Exam Preparation',
+  'Working Professional + Prep',
+  'Crash Course & Mock Intensive',
+];
+
+const COMP_CATEGORIES = [
+  'Engineering Entrance',
+  'Medical Entrance',
+  'Civil Services & Governance',
+  'Graduate Technical & PSU',
+  'Management & MBA Entrance',
+  'Banking & Public Sector',
+  'Defense & Armed Forces',
+  'General Competitive',
+];
+
+const TRACK_META: Record<
+  LearningPath,
+  {
+    label: string;
+    badge: string;
+    color: string;
+    bgColor: string;
+    borderColor: string;
+    textColor: string;
+    description: string;
+  }
+> = {
+  school: {
+    label: 'School (K-12)',
+    badge: 'School Track Active',
+    color: 'emerald',
+    bgColor: 'bg-emerald-50',
+    borderColor: 'border-emerald-200',
+    textColor: 'text-emerald-700',
+    description: 'Configured specifically for K-12 school curriculum and syllabus alignment.',
+  },
+  undergraduate: {
+    label: 'Undergraduate (College)',
+    badge: 'Undergraduate Track Active',
+    color: 'blue',
+    bgColor: 'bg-blue-50',
+    borderColor: 'border-blue-200',
+    textColor: 'text-blue-700',
+    description: 'Tailored for bachelor degrees, semester syllabus, engineering, and collegiate labs.',
+  },
+  postgraduate: {
+    label: 'Postgraduate & Research',
+    badge: 'Postgraduate Track Active',
+    color: 'purple',
+    bgColor: 'bg-purple-50',
+    borderColor: 'border-purple-200',
+    textColor: 'text-purple-700',
+    description: 'Optimized for master’s coursework, Ph.D. research papers, dissertations, and literature reviews.',
+  },
+  competitive_exam: {
+    label: 'Competitive Exam Cracker',
+    badge: 'Exam Cracker Track Active',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    textColor: 'text-amber-800',
+    description: 'Targeted preparation for national & state exams (JEE, NEET, GATE, UPSC, SSC, Banking).',
+  },
+};
+
 export default function Profile() {
   const navigate = useNavigate();
   const toast = useToast();
@@ -112,7 +270,11 @@ export default function Profile() {
     bio: '',
   });
 
-  // Academic Info Form State
+  // Track State
+  const [currentTrack, setCurrentTrack] = useState<LearningPath>('school');
+  const [isSwitchTrackModalOpen, setIsSwitchTrackModalOpen] = useState(false);
+
+  // Academic Info Form State (School)
   const [isEditingAcademic, setIsEditingAcademic] = useState(false);
   const [academicForm, setAcademicForm] = useState({
     schoolName: '',
@@ -121,6 +283,34 @@ export default function Profile() {
     studyMode: 'full_syllabus' as 'full_syllabus' | 'specific_subject',
     selectedSubject: 'Mathematics',
     customSubject: '',
+  });
+
+  // Undergraduate Form State
+  const [ugForm, setUgForm] = useState({
+    institution: '',
+    degree: 'B.Tech / B.E.',
+    specialization: 'Computer Science & Engineering',
+    year: '1st Year',
+    semester: 'Semester 1',
+    university: '',
+  });
+
+  // Postgraduate Form State
+  const [pgForm, setPgForm] = useState({
+    institution: '',
+    degree: 'M.Tech / M.E.',
+    specialization: 'Artificial Intelligence & Machine Learning',
+    thesisTopic: '',
+    researchArea: '',
+    year: 'Year 1 (Coursework)',
+  });
+
+  // Competitive Exam Form State
+  const [compForm, setCompForm] = useState({
+    targetExam: 'JEE Main & Advanced',
+    targetYear: '2026',
+    category: 'Engineering Entrance',
+    preparationMode: 'Self-Study with Digital Tools',
   });
 
   // Security Form State
@@ -148,6 +338,9 @@ export default function Profile() {
   useEffect(() => {
     if (profile) {
       const currentUser = authService.getCurrentUser();
+      const track = profile.learningPath || currentUser?.learningPath || 'school';
+      setCurrentTrack(track);
+
       const studentBoard = profile.education?.board || 'CBSE';
       const studentClass = profile.education?.classLevel || 'Class 10';
       const formattedClass = studentClass.startsWith('Class') ? studentClass : `Class ${studentClass}`;
@@ -173,6 +366,31 @@ export default function Profile() {
         studyMode: profile.schoolDetails?.studyMode || 'full_syllabus',
         selectedSubject: profile.schoolDetails?.selectedSubject || 'Mathematics',
         customSubject: profile.schoolDetails?.customSubject || '',
+      });
+
+      setUgForm({
+        institution: profile.undergraduateDetails?.institution || currentUser?.undergraduateDetails?.institution || profile.education?.institution || '',
+        degree: profile.undergraduateDetails?.degree || currentUser?.undergraduateDetails?.degree || 'B.Tech / B.E.',
+        specialization: profile.undergraduateDetails?.specialization || currentUser?.undergraduateDetails?.specialization || 'Computer Science & Engineering',
+        year: profile.undergraduateDetails?.year || currentUser?.undergraduateDetails?.year || '1st Year',
+        semester: profile.undergraduateDetails?.semester || currentUser?.undergraduateDetails?.semester || 'Semester 1',
+        university: profile.undergraduateDetails?.university || currentUser?.undergraduateDetails?.university || '',
+      });
+
+      setPgForm({
+        institution: profile.postgraduateDetails?.institution || currentUser?.postgraduateDetails?.institution || profile.education?.institution || '',
+        degree: profile.postgraduateDetails?.degree || currentUser?.postgraduateDetails?.degree || 'M.Tech / M.E.',
+        specialization: profile.postgraduateDetails?.specialization || currentUser?.postgraduateDetails?.specialization || 'Artificial Intelligence & Machine Learning',
+        thesisTopic: profile.postgraduateDetails?.thesisTopic || currentUser?.postgraduateDetails?.thesisTopic || '',
+        researchArea: profile.postgraduateDetails?.researchArea || currentUser?.postgraduateDetails?.researchArea || '',
+        year: profile.postgraduateDetails?.year || currentUser?.postgraduateDetails?.year || 'Year 1 (Coursework)',
+      });
+
+      setCompForm({
+        targetExam: profile.competitiveExamDetails?.targetExam || currentUser?.competitiveExamDetails?.targetExam || 'JEE Main & Advanced',
+        targetYear: profile.competitiveExamDetails?.targetYear || currentUser?.competitiveExamDetails?.targetYear || '2026',
+        category: profile.competitiveExamDetails?.category || currentUser?.competitiveExamDetails?.category || 'Engineering Entrance',
+        preparationMode: profile.competitiveExamDetails?.preparationMode || currentUser?.competitiveExamDetails?.preparationMode || 'Self-Study with Digital Tools',
       });
     }
   }, [profile]);
@@ -280,6 +498,133 @@ export default function Profile() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to update academic details';
       toast.error(msg);
+    }
+  };
+
+  // Save Undergraduate Details
+  const handleSaveUG = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!ugForm.institution.trim()) {
+      toast.error('College / Institution name cannot be empty');
+      return;
+    }
+
+    try {
+      const ugData = {
+        institution: ugForm.institution.trim(),
+        degree: ugForm.degree,
+        specialization: ugForm.specialization.trim(),
+        year: ugForm.year,
+        semester: ugForm.semester,
+        university: ugForm.university.trim() || undefined,
+      };
+
+      await updateProfile({
+        learningPath: 'undergraduate',
+        undergraduateDetails: ugData,
+        education: {
+          level: 'undergraduate',
+          institution: ugData.institution,
+          degree: ugData.degree,
+          specialization: ugData.specialization,
+        },
+      });
+
+      await authService.saveUndergraduateDetails(ugData);
+      toast.success('Undergraduate academic details updated!');
+      setIsEditingAcademic(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update undergraduate details';
+      toast.error(msg);
+    }
+  };
+
+  // Save Postgraduate Details
+  const handleSavePG = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!pgForm.institution.trim()) {
+      toast.error('University / Institution name cannot be empty');
+      return;
+    }
+
+    try {
+      const pgData = {
+        institution: pgForm.institution.trim(),
+        degree: pgForm.degree,
+        specialization: pgForm.specialization.trim(),
+        thesisTopic: pgForm.thesisTopic.trim() || undefined,
+        researchArea: pgForm.researchArea.trim() || undefined,
+        year: pgForm.year,
+      };
+
+      await updateProfile({
+        learningPath: 'postgraduate',
+        postgraduateDetails: pgData,
+        education: {
+          level: 'postgraduate',
+          institution: pgData.institution,
+          degree: pgData.degree,
+          specialization: pgData.specialization,
+        },
+      });
+
+      await authService.savePostgraduateDetails(pgData);
+      toast.success('Postgraduate & research details updated!');
+      setIsEditingAcademic(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update postgraduate details';
+      toast.error(msg);
+    }
+  };
+
+  // Save Competitive Exam Details
+  const handleSaveComp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!compForm.targetExam.trim()) {
+      toast.error('Target examination cannot be empty');
+      return;
+    }
+
+    try {
+      const compData = {
+        targetExam: compForm.targetExam.trim(),
+        targetYear: compForm.targetYear,
+        category: compForm.category,
+        preparationMode: compForm.preparationMode,
+      };
+
+      await updateProfile({
+        learningPath: 'competitive_exam',
+        competitiveExamDetails: compData,
+        education: {
+          level: 'competitive_exam',
+          institution: compData.targetExam,
+          specialization: compData.category,
+        },
+      });
+
+      await authService.saveCompetitiveExamDetails(compData);
+      toast.success('Competitive exam preparation details updated!');
+      setIsEditingAcademic(false);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to update competitive exam details';
+      toast.error(msg);
+    }
+  };
+
+  // Switch Track Handler
+  const handleSwitchTrack = async (newTrack: LearningPath) => {
+    try {
+      setCurrentTrack(newTrack);
+      await updateProfile({
+        learningPath: newTrack,
+      });
+      await authService.setLearningPath(newTrack);
+      toast.success(`Switched to ${TRACK_META[newTrack].label}!`);
+      setIsSwitchTrackModalOpen(false);
+      setIsEditingAcademic(false);
+    } catch {
+      toast.error('Failed to switch track');
     }
   };
 
@@ -434,6 +779,111 @@ export default function Profile() {
         </div>
       </Modal>
 
+      {/* Switch Learning Track Modal */}
+      <Modal
+        isOpen={isSwitchTrackModalOpen}
+        onClose={() => setIsSwitchTrackModalOpen(false)}
+        title="Switch Learning Track"
+        maxWidth="lg"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-600 font-medium">
+            Select the educational path that matches your current academic stage. Your workspace, AI prompts, and syllabus tools will adapt automatically.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
+            {(
+              [
+                {
+                  id: 'school' as LearningPath,
+                  title: 'School Track (K-12)',
+                  desc: 'Classes 1–12 with CBSE, ICSE, or State board curriculum alignment.',
+                  icon: SchoolIcon,
+                  badge: 'K-12 Syllabus',
+                },
+                {
+                  id: 'undergraduate' as LearningPath,
+                  title: 'Undergraduate Track',
+                  desc: 'College degrees (B.Tech, B.Sc, B.Com, MBBS) with semester exams & labs.',
+                  icon: GraduationCap,
+                  badge: 'University & Semesters',
+                },
+                {
+                  id: 'postgraduate' as LearningPath,
+                  title: 'Postgraduate & Research',
+                  desc: 'Master’s & Ph.D. degrees, thesis writing, and literature review assistance.',
+                  icon: BookOpen,
+                  badge: 'Thesis & Advanced',
+                },
+                {
+                  id: 'competitive_exam' as LearningPath,
+                  title: 'Competitive Exam Cracker',
+                  desc: 'Targeted preparation for JEE, NEET, GATE, UPSC, SSC, Banking, and PSU exams.',
+                  icon: Target,
+                  badge: 'CBT & PYQs',
+                },
+              ] as const
+            ).map((trackItem) => {
+              const TrackIcon = trackItem.icon;
+              const isCurrent = currentTrack === trackItem.id;
+              return (
+                <div
+                  key={trackItem.id}
+                  onClick={() => !isCurrent && handleSwitchTrack(trackItem.id)}
+                  className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                    isCurrent
+                      ? 'border-[#0091ff] bg-[#f0f7ff] ring-2 ring-[#0091ff]/20 cursor-default'
+                      : 'border-slate-200 bg-white hover:border-[#0091ff]/50 hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-[#1c3352] shadow-2xs">
+                        <TrackIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                        {trackItem.badge}
+                      </span>
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-extrabold text-[#111827]">
+                        {trackItem.title}
+                      </h4>
+                      <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed">
+                        {trackItem.desc}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    {isCurrent ? (
+                      <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        Active Track
+                      </span>
+                    ) : (
+                      <span className="text-xs font-extrabold text-[#0091ff] flex items-center gap-1">
+                        Switch Track <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsSwitchTrackModalOpen(false)}
+              className="px-5 py-2 text-xs font-bold"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       {/* Delete Account Modal */}
       <Modal
         isOpen={isDeleteModalOpen}
@@ -573,8 +1023,10 @@ export default function Profile() {
                     <span className="px-2.5 py-0.5 rounded-full bg-[#eef6fc] text-[#0091ff] text-xs font-extrabold border border-[#d2e8fb]">
                       Student
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-extrabold border border-emerald-200">
-                      School Track
+                    <span
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold border ${TRACK_META[currentTrack].bgColor} ${TRACK_META[currentTrack].textColor} ${TRACK_META[currentTrack].borderColor}`}
+                    >
+                      {TRACK_META[currentTrack].badge}
                     </span>
                   </div>
                   <p className="text-xs font-semibold text-slate-500 flex items-center gap-2">
@@ -582,7 +1034,14 @@ export default function Profile() {
                     <span>{userEmail}</span>
                   </p>
                   <p className="text-[11px] font-bold text-slate-400">
-                    {academicForm.schoolName} • {academicForm.board} • {academicForm.classLevel}
+                    {currentTrack === 'school' &&
+                      `${academicForm.schoolName || 'School'} • ${academicForm.board} • ${academicForm.classLevel}`}
+                    {currentTrack === 'undergraduate' &&
+                      `${ugForm.institution || 'College / University'} • ${ugForm.degree} • ${ugForm.specialization}`}
+                    {currentTrack === 'postgraduate' &&
+                      `${pgForm.institution || 'Research University'} • ${pgForm.degree} in ${pgForm.specialization}`}
+                    {currentTrack === 'competitive_exam' &&
+                      `Target: ${compForm.targetExam} (${compForm.targetYear}) • ${compForm.preparationMode}`}
                   </p>
                 </div>
               </div>
@@ -795,129 +1254,265 @@ export default function Profile() {
                 {/* ============================================================ */}
                 {activeTab === 'academic' && (
                   <div className="bg-white rounded-3xl border border-[#e2ebf4] p-6 sm:p-8 shadow-xs space-y-6">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <h2 className="text-lg font-extrabold text-[#111827]">
                             Academic & Learning Information
                           </h2>
-                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-extrabold border border-emerald-200">
-                            School Track Active
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-extrabold border ${TRACK_META[currentTrack].bgColor} ${TRACK_META[currentTrack].textColor} ${TRACK_META[currentTrack].borderColor}`}
+                          >
+                            {TRACK_META[currentTrack].badge}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 font-medium">
-                          Configured specifically for K-12 school curriculum and syllabus alignment.
+                          {TRACK_META[currentTrack].description}
                         </p>
                       </div>
 
-                      {!isEditingAcademic && (
+                      <div className="flex items-center gap-2.5">
                         <Button
-                          variant="secondary"
-                          onClick={() => setIsEditingAcademic(true)}
-                          leftIcon={<Edit3 className="w-3.5 h-3.5" />}
-                          className="px-4 py-2"
+                          variant="outline"
+                          onClick={() => setIsSwitchTrackModalOpen(true)}
+                          leftIcon={<Layers className="w-3.5 h-3.5" />}
+                          className="px-3.5 py-2 text-xs font-bold"
                         >
-                          Edit School Details
+                          Switch Track
                         </Button>
-                      )}
+                        {!isEditingAcademic && (
+                          <Button
+                            variant="secondary"
+                            onClick={() => setIsEditingAcademic(true)}
+                            leftIcon={<Edit3 className="w-3.5 h-3.5" />}
+                            className="px-4 py-2 text-xs font-bold"
+                          >
+                            Edit Details
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     {isEditingAcademic ? (
-                      <form onSubmit={handleSaveAcademic} className="space-y-5">
-                        <Input
-                          label="School / Institution Name *"
-                          required
-                          value={academicForm.schoolName}
-                          onChange={(e) => setAcademicForm({ ...academicForm, schoolName: e.target.value })}
-                          placeholder="e.g. Delhi Public School"
-                        />
+                      /* EDITING FORMS */
+                      <div>
+                        {/* 1. School Edit Form */}
+                        {currentTrack === 'school' && (
+                          <form onSubmit={handleSaveAcademic} className="space-y-5">
+                            <Input
+                              label="School / Institution Name *"
+                              required
+                              value={academicForm.schoolName}
+                              onChange={(e) => setAcademicForm({ ...academicForm, schoolName: e.target.value })}
+                              placeholder="e.g. Delhi Public School"
+                            />
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1.5 text-left">
-                            <label className="block text-xs font-bold text-slate-700">Class / Grade</label>
-                            <div className="relative">
-                              <select
-                                value={academicForm.classLevel}
-                                onChange={(e) => setAcademicForm({ ...academicForm, classLevel: e.target.value })}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
-                              >
-                                {CLASSES.map((c) => (
-                                  <option key={c} value={c}>
-                                    {c}
-                                  </option>
-                                ))}
-                              </select>
-                              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5 text-left">
-                            <label className="block text-xs font-bold text-slate-700">Curriculum / Board</label>
-                            <div className="relative">
-                              <select
-                                value={academicForm.board}
-                                onChange={(e) => setAcademicForm({ ...academicForm, board: e.target.value })}
-                                className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
-                              >
-                                {CURRICULUM_BOARDS.map((b) => (
-                                  <option key={b} value={b}>
-                                    {b}
-                                  </option>
-                                ))}
-                              </select>
-                              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Study Scope Toggle */}
-                        <div className="space-y-3 pt-2">
-                          <label className="block text-xs font-bold text-slate-700">Study Scope</label>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div
-                              onClick={() => setAcademicForm({ ...academicForm, studyMode: 'full_syllabus' })}
-                              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                                academicForm.studyMode === 'full_syllabus'
-                                  ? 'border-[#0091ff] bg-[#f0f7ff] ring-2 ring-[#0091ff]/20'
-                                  : 'border-slate-200 bg-white'
-                              }`}
-                            >
-                              <h4 className="text-xs font-extrabold text-[#111827]">
-                                Full Grade Syllabus
-                              </h4>
-                              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                Track complete grade subjects and exams.
-                              </p>
-                            </div>
-
-                            <div
-                              onClick={() => setAcademicForm({ ...academicForm, studyMode: 'specific_subject' })}
-                              className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                                academicForm.studyMode === 'specific_subject'
-                                  ? 'border-[#0091ff] bg-[#f0f7ff] ring-2 ring-[#0091ff]/20'
-                                  : 'border-slate-200 bg-white'
-                              }`}
-                            >
-                              <h4 className="text-xs font-extrabold text-[#111827]">
-                                Specific Focus Subject
-                              </h4>
-                              <p className="text-[11px] text-slate-500 font-medium mt-0.5">
-                                Focus on an individual textbook or topic.
-                              </p>
-                            </div>
-                          </div>
-
-                          {academicForm.studyMode === 'specific_subject' && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div className="space-y-1.5 text-left">
-                                <label className="block text-xs font-bold text-slate-700">Subject</label>
+                                <label className="block text-xs font-bold text-slate-700">Class / Grade</label>
                                 <div className="relative">
                                   <select
-                                    value={academicForm.selectedSubject}
-                                    onChange={(e) => setAcademicForm({ ...academicForm, selectedSubject: e.target.value })}
+                                    value={academicForm.classLevel}
+                                    onChange={(e) => setAcademicForm({ ...academicForm, classLevel: e.target.value })}
                                     className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
                                   >
-                                    {COMMON_SUBJECTS.map((s) => (
+                                    {CLASSES.map((c) => (
+                                      <option key={c} value={c}>
+                                        {c}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Curriculum / Board</label>
+                                <div className="relative">
+                                  <select
+                                    value={academicForm.board}
+                                    onChange={(e) => setAcademicForm({ ...academicForm, board: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {CURRICULUM_BOARDS.map((b) => (
+                                      <option key={b} value={b}>
+                                        {b}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Study Scope Toggle */}
+                            <div className="space-y-3 pt-2">
+                              <label className="block text-xs font-bold text-slate-700">Study Scope</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div
+                                  onClick={() => setAcademicForm({ ...academicForm, studyMode: 'full_syllabus' })}
+                                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                                    academicForm.studyMode === 'full_syllabus'
+                                      ? 'border-[#0091ff] bg-[#f0f7ff] ring-2 ring-[#0091ff]/20'
+                                      : 'border-slate-200 bg-white'
+                                  }`}
+                                >
+                                  <h4 className="text-xs font-extrabold text-[#111827]">
+                                    Full Grade Syllabus
+                                  </h4>
+                                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                    Track complete grade subjects and exams.
+                                  </p>
+                                </div>
+
+                                <div
+                                  onClick={() => setAcademicForm({ ...academicForm, studyMode: 'specific_subject' })}
+                                  className={`p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                                    academicForm.studyMode === 'specific_subject'
+                                      ? 'border-[#0091ff] bg-[#f0f7ff] ring-2 ring-[#0091ff]/20'
+                                      : 'border-slate-200 bg-white'
+                                  }`}
+                                >
+                                  <h4 className="text-xs font-extrabold text-[#111827]">
+                                    Specific Focus Subject
+                                  </h4>
+                                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                                    Focus on an individual textbook or topic.
+                                  </p>
+                                </div>
+                              </div>
+
+                              {academicForm.studyMode === 'specific_subject' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                  <div className="space-y-1.5 text-left">
+                                    <label className="block text-xs font-bold text-slate-700">Subject</label>
+                                    <div className="relative">
+                                      <select
+                                        value={academicForm.selectedSubject}
+                                        onChange={(e) => setAcademicForm({ ...academicForm, selectedSubject: e.target.value })}
+                                        className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                      >
+                                        {COMMON_SUBJECTS.map((s) => (
+                                          <option key={s} value={s}>
+                                            {s}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    </div>
+                                  </div>
+
+                                  {academicForm.selectedSubject === 'Custom' && (
+                                    <Input
+                                      label="Custom Subject Name"
+                                      value={academicForm.customSubject}
+                                      onChange={(e) => setAcademicForm({ ...academicForm, customSubject: e.target.value })}
+                                      placeholder="e.g. Advanced Robotics"
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsEditingAcademic(false)}
+                                disabled={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                variant="primary"
+                                isLoading={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Save School Details
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+
+                        {/* 2. Undergraduate Edit Form */}
+                        {currentTrack === 'undergraduate' && (
+                          <form onSubmit={handleSaveUG} className="space-y-5">
+                            <Input
+                              label="College / Institute / University *"
+                              required
+                              value={ugForm.institution}
+                              onChange={(e) => setUgForm({ ...ugForm, institution: e.target.value })}
+                              placeholder="e.g. Indian Institute of Technology Bombay"
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Degree Program</label>
+                                <div className="relative">
+                                  <select
+                                    value={ugForm.degree}
+                                    onChange={(e) => setUgForm({ ...ugForm, degree: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {UG_DEGREES.map((d) => (
+                                      <option key={d} value={d}>
+                                        {d}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Major / Branch / Department</label>
+                                <div className="relative">
+                                  <select
+                                    value={ugForm.specialization}
+                                    onChange={(e) => setUgForm({ ...ugForm, specialization: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {UG_BRANCHES.map((b) => (
+                                      <option key={b} value={b}>
+                                        {b}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Academic Year</label>
+                                <div className="relative">
+                                  <select
+                                    value={ugForm.year}
+                                    onChange={(e) => setUgForm({ ...ugForm, year: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {UG_YEARS.map((y) => (
+                                      <option key={y} value={y}>
+                                        {y}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Semester</label>
+                                <div className="relative">
+                                  <select
+                                    value={ugForm.semester}
+                                    onChange={(e) => setUgForm({ ...ugForm, semester: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {UG_SEMESTERS.map((s) => (
                                       <option key={s} value={s}>
                                         {s}
                                       </option>
@@ -927,82 +1522,407 @@ export default function Profile() {
                                 </div>
                               </div>
 
-                              {academicForm.selectedSubject === 'Custom' && (
-                                <Input
-                                  label="Custom Subject Name"
-                                  value={academicForm.customSubject}
-                                  onChange={(e) => setAcademicForm({ ...academicForm, customSubject: e.target.value })}
-                                  placeholder="e.g. Advanced Robotics"
-                                />
-                              )}
+                              <Input
+                                label="Affiliated University"
+                                value={ugForm.university}
+                                onChange={(e) => setUgForm({ ...ugForm, university: e.target.value })}
+                                placeholder="e.g. Mumbai University"
+                              />
                             </div>
-                          )}
-                        </div>
 
-                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => setIsEditingAcademic(false)}
-                            disabled={isSaving}
-                            className="px-6 py-2.5"
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="submit"
-                            variant="primary"
-                            isLoading={isSaving}
-                            className="px-6 py-2.5"
-                          >
-                            Save Academic Details
-                          </Button>
-                        </div>
-                      </form>
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsEditingAcademic(false)}
+                                disabled={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                variant="primary"
+                                isLoading={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Save Undergraduate Details
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+
+                        {/* 3. Postgraduate Edit Form */}
+                        {currentTrack === 'postgraduate' && (
+                          <form onSubmit={handleSavePG} className="space-y-5">
+                            <Input
+                              label="University / Research Institution *"
+                              required
+                              value={pgForm.institution}
+                              onChange={(e) => setPgForm({ ...pgForm, institution: e.target.value })}
+                              placeholder="e.g. Indian Institute of Science (IISc)"
+                            />
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Postgraduate Degree</label>
+                                <div className="relative">
+                                  <select
+                                    value={pgForm.degree}
+                                    onChange={(e) => setPgForm({ ...pgForm, degree: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {PG_DEGREES.map((d) => (
+                                      <option key={d} value={d}>
+                                        {d}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Department / Specialization</label>
+                                <div className="relative">
+                                  <select
+                                    value={pgForm.specialization}
+                                    onChange={(e) => setPgForm({ ...pgForm, specialization: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {PG_DOMAINS.map((dom) => (
+                                      <option key={dom} value={dom}>
+                                        {dom}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <Input
+                                label="Research Focus / Area"
+                                value={pgForm.researchArea}
+                                onChange={(e) => setPgForm({ ...pgForm, researchArea: e.target.value })}
+                                placeholder="e.g. Deep Learning & Natural Language Processing"
+                              />
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Current Stage</label>
+                                <div className="relative">
+                                  <select
+                                    value={pgForm.year}
+                                    onChange={(e) => setPgForm({ ...pgForm, year: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {PG_YEARS.map((y) => (
+                                      <option key={y} value={y}>
+                                        {y}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <Input
+                              label="Thesis / Dissertation Topic"
+                              value={pgForm.thesisTopic}
+                              onChange={(e) => setPgForm({ ...pgForm, thesisTopic: e.target.value })}
+                              placeholder="e.g. Multi-Modal Vision Language Modeling for Low-Resource Domains"
+                            />
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsEditingAcademic(false)}
+                                disabled={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                variant="primary"
+                                isLoading={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Save Postgraduate Details
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+
+                        {/* 4. Competitive Exam Edit Form */}
+                        {currentTrack === 'competitive_exam' && (
+                          <form onSubmit={handleSaveComp} className="space-y-5">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Target Examination *</label>
+                                <div className="relative">
+                                  <select
+                                    value={compForm.targetExam}
+                                    onChange={(e) => setCompForm({ ...compForm, targetExam: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {COMP_EXAMS.map((ex) => (
+                                      <option key={ex} value={ex}>
+                                        {ex}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Target Exam Year</label>
+                                <div className="relative">
+                                  <select
+                                    value={compForm.targetYear}
+                                    onChange={(e) => setCompForm({ ...compForm, targetYear: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {COMP_YEARS.map((yr) => (
+                                      <option key={yr} value={yr}>
+                                        {yr}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Examination Category</label>
+                                <div className="relative">
+                                  <select
+                                    value={compForm.category}
+                                    onChange={(e) => setCompForm({ ...compForm, category: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {COMP_CATEGORIES.map((cat) => (
+                                      <option key={cat} value={cat}>
+                                        {cat}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 text-left">
+                                <label className="block text-xs font-bold text-slate-700">Preparation Strategy</label>
+                                <div className="relative">
+                                  <select
+                                    value={compForm.preparationMode}
+                                    onChange={(e) => setCompForm({ ...compForm, preparationMode: e.target.value })}
+                                    className="w-full px-4 py-3 border border-slate-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff]"
+                                  >
+                                    {COMP_MODES.map((pm) => (
+                                      <option key={pm} value={pm}>
+                                        {pm}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <ChevronDown className="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setIsEditingAcademic(false)}
+                                disabled={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="submit"
+                                variant="primary"
+                                isLoading={isSaving}
+                                className="px-6 py-2.5"
+                              >
+                                Save Exam Prep Details
+                              </Button>
+                            </div>
+                          </form>
+                        )}
+                      </div>
                     ) : (
+                      /* VIEW CARDS */
                       <div className="space-y-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                          <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
-                            <span className="text-xs font-bold text-slate-400">School Name</span>
-                            <h3 className="text-sm font-extrabold text-[#111827]">
-                              {academicForm.schoolName}
-                            </h3>
-                          </div>
+                        {/* 1. School View Cards */}
+                        {currentTrack === 'school' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">School / Institution</span>
+                              <h3 className="text-sm font-extrabold text-[#111827]">
+                                {academicForm.schoolName || '—'}
+                              </h3>
+                            </div>
 
-                          <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
-                            <span className="text-xs font-bold text-slate-400">Class / Grade</span>
-                            <h3 className="text-sm font-extrabold text-[#111827]">
-                              {academicForm.classLevel}
-                            </h3>
-                          </div>
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Class / Grade</span>
+                              <h3 className="text-sm font-extrabold text-[#111827]">
+                                {academicForm.classLevel}
+                              </h3>
+                            </div>
 
-                          <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
-                            <span className="text-xs font-bold text-slate-400">Board / Curriculum</span>
-                            <h3 className="text-sm font-extrabold text-[#111827]">
-                              {academicForm.board}
-                            </h3>
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Board / Curriculum</span>
+                              <h3 className="text-sm font-extrabold text-[#111827]">
+                                {academicForm.board}
+                              </h3>
+                            </div>
                           </div>
-                        </div>
+                        )}
 
-                        {/* Study Scope Card */}
+                        {/* 2. Undergraduate View Cards */}
+                        {currentTrack === 'undergraduate' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">College / Institution</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {ugForm.institution || '—'}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Degree & Branch</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {ugForm.degree}
+                              </h3>
+                              <p className="text-[11px] text-slate-500 font-semibold truncate">{ugForm.specialization}</p>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Year & Semester</span>
+                              <h3 className="text-sm font-extrabold text-[#111827]">
+                                {ugForm.year} • {ugForm.semester}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Affiliated University</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {ugForm.university || 'Independent Campus'}
+                              </h3>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3. Postgraduate View Cards */}
+                        {currentTrack === 'postgraduate' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">University / Institute</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {pgForm.institution || '—'}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Degree & Dept</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {pgForm.degree}
+                              </h3>
+                              <p className="text-[11px] text-slate-500 font-semibold truncate">{pgForm.specialization}</p>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Research Focus</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {pgForm.researchArea || 'General Research'}
+                              </h3>
+                              <p className="text-[11px] text-slate-500 font-semibold">{pgForm.year}</p>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Thesis Topic</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate" title={pgForm.thesisTopic}>
+                                {pgForm.thesisTopic || 'Proposal in preparation'}
+                              </h3>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 4. Competitive Exam View Cards */}
+                        {currentTrack === 'competitive_exam' && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Target Examination</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {compForm.targetExam}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Target Year</span>
+                              <h3 className="text-sm font-extrabold text-[#111827]">
+                                {compForm.targetYear}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Stream / Category</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {compForm.category}
+                              </h3>
+                            </div>
+
+                            <div className="p-4 bg-[#f8fafc] rounded-2xl border border-slate-100 space-y-1">
+                              <span className="text-xs font-bold text-slate-400">Prep Strategy</span>
+                              <h3 className="text-sm font-extrabold text-[#111827] truncate">
+                                {compForm.preparationMode}
+                              </h3>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Study Scope & Materials Card */}
                         <div className="p-5 bg-[#f0f7ff] rounded-2xl border border-[#d2e8fb] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                           <div className="space-y-1">
                             <span className="text-[11px] font-extrabold text-[#0091ff] uppercase tracking-wide">
-                              Current Study Scope
+                              Active Track Learning Scope
                             </span>
                             <h4 className="text-sm font-extrabold text-[#1c3352]">
-                              {academicForm.studyMode === 'full_syllabus'
-                                ? `Full Curriculum (${academicForm.classLevel} ${academicForm.board})`
-                                : `Focused Subject: ${
-                                    academicForm.selectedSubject === 'Custom'
-                                      ? academicForm.customSubject || 'Custom Subject'
-                                      : academicForm.selectedSubject
-                                  }`}
+                              {currentTrack === 'school' &&
+                                (academicForm.studyMode === 'full_syllabus'
+                                  ? `Full Curriculum (${academicForm.classLevel} ${academicForm.board})`
+                                  : `Focused Subject: ${
+                                      academicForm.selectedSubject === 'Custom'
+                                        ? academicForm.customSubject || 'Custom Subject'
+                                        : academicForm.selectedSubject
+                                    }`)}
+                              {currentTrack === 'undergraduate' &&
+                                `${ugForm.degree} in ${ugForm.specialization} • ${ugForm.semester}`}
+                              {currentTrack === 'postgraduate' &&
+                                `${pgForm.degree} Advanced Track • ${pgForm.thesisTopic || pgForm.specialization}`}
+                              {currentTrack === 'competitive_exam' &&
+                                `${compForm.targetExam} (${compForm.targetYear}) Intensive Prep`}
                             </h4>
                             <p className="text-xs font-medium text-slate-500">
-                              {profile?.schoolDetails?.syllabusFileName
-                                ? `Active resource: ${profile.schoolDetails.syllabusFileName}`
-                                : 'Uploaded materials are parsed by AI for quizzes, summaries, and revision.'}
+                              {profile?.schoolDetails?.syllabusFileName ||
+                              profile?.undergraduateDetails?.syllabusFileName ||
+                              profile?.postgraduateDetails?.proposalFileName ||
+                              profile?.competitiveExamDetails?.syllabusFileName
+                                ? `Active syllabus resource: ${
+                                    profile.schoolDetails?.syllabusFileName ||
+                                    profile.undergraduateDetails?.syllabusFileName ||
+                                    profile.postgraduateDetails?.proposalFileName ||
+                                    profile.competitiveExamDetails?.syllabusFileName
+                                  }`
+                                : 'Uploaded syllabus materials and notes are analyzed by EduPye AI for quizzes, summaries, and exam practice.'}
                             </p>
                           </div>
 
@@ -1016,17 +1936,19 @@ export default function Profile() {
                           </Button>
                         </div>
 
-                        {/* Future Extensible Tracks Note */}
-                        <div className="p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-500 font-medium">
+                        {/* Track Switch Callout Banner */}
+                        <div className="p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 font-medium">
                           <span>
-                            Need to switch to Undergraduate, Postgraduate, or Competitive Exam mode?
+                            Need to switch between School (K-12), Undergraduate, Postgraduate, or Competitive Exam mode?
                           </span>
-                          <button
-                            onClick={() => navigate('/onboarding?step=path')}
-                            className="text-[#0091ff] font-bold hover:underline cursor-pointer ml-2"
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsSwitchTrackModalOpen(true)}
+                            leftIcon={<Layers className="w-3.5 h-3.5" />}
+                            className="text-xs font-bold py-1.5 px-3 whitespace-nowrap self-start sm:self-auto"
                           >
-                            Change Track
-                          </button>
+                            Switch Learning Track
+                          </Button>
                         </div>
                       </div>
                     )}

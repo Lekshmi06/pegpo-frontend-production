@@ -6,8 +6,20 @@ import {
   UpdateStudentProfileDTO,
   CreateStudentProfileDTO,
 } from '../types/student';
-import { SchoolAcademicInfo } from '../types/auth';
-import { studentDashboardData, coursesData } from '../data/mockData';
+import {
+  SchoolAcademicInfo,
+  UndergraduateAcademicInfo,
+  PostgraduateAcademicInfo,
+  CompetitiveExamAcademicInfo,
+  LearningPath,
+} from '../types/auth';
+import {
+  studentDashboardData,
+  coursesData,
+  undergraduateCoursesData,
+  postgraduateCoursesData,
+  competitiveExamCoursesData,
+} from '../data/mockData';
 import { authService } from './authService';
 import { API_BASE_URL } from './apiClient';
 
@@ -46,11 +58,16 @@ function buildFallbackProfile(id = 'local_profile_id'): StudentProfile {
   const avatar = currentUser?.avatar || extended?.avatar;
   const goal = currentUser?.goal || extended?.goal || 'School Curriculum Mastery';
   const language = currentUser?.language || 'English';
+  const learningPath = currentUser?.learningPath || extended?.learningPath || 'school';
 
   const school = currentUser?.schoolDetails || extended?.schoolDetails || {};
   const schoolName = school.schoolName || 'Delhi Public School';
   const board = school.board || 'CBSE';
   const classLevel = school.classLevel || 'Class 10';
+
+  const ug = currentUser?.undergraduateDetails || extended?.undergraduateDetails;
+  const pg = currentUser?.postgraduateDetails || extended?.postgraduateDetails;
+  const comp = currentUser?.competitiveExamDetails || extended?.competitiveExamDetails;
 
   return {
     _id: id,
@@ -67,10 +84,12 @@ function buildFallbackProfile(id = 'local_profile_id'): StudentProfile {
     avatar,
     goal,
     education: {
-      level: 'school',
-      institution: schoolName,
+      level: learningPath as any,
+      institution: ug?.institution || schoolName,
       board,
       classLevel,
+      degree: ug?.degree || pg?.degree,
+      specialization: ug?.specialization || pg?.specialization,
     },
     schoolDetails: {
       schoolName,
@@ -82,7 +101,10 @@ function buildFallbackProfile(id = 'local_profile_id'): StudentProfile {
       syllabusFileName: school.syllabusFileName,
       textbookFileName: school.textbookFileName,
     },
-    learningPath: currentUser?.learningPath || extended?.learningPath || 'school',
+    undergraduateDetails: ug,
+    postgraduateDetails: pg,
+    competitiveExamDetails: comp,
+    learningPath,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -92,6 +114,12 @@ function mergeProfileWithExtended(profile: StudentProfile): StudentProfile {
   const extended = getLocalExtended();
   const currentUser = authService.getCurrentUser();
 
+  const learningPath =
+    profile.learningPath ||
+    extended.learningPath ||
+    currentUser?.learningPath ||
+    'school';
+
   return {
     ...profile,
     name: profile.name || currentUser?.name || extended.name || 'Student',
@@ -99,41 +127,17 @@ function mergeProfileWithExtended(profile: StudentProfile): StudentProfile {
     dob: extended.dob || currentUser?.dob || profile.dob,
     gender: extended.gender || currentUser?.gender || profile.gender,
     avatar: extended.avatar || currentUser?.avatar || profile.avatar,
-    learningPath: extended.learningPath || currentUser?.learningPath || profile.learningPath || 'school',
-    schoolDetails: {
-      schoolName:
-        profile.education?.institution ||
-        currentUser?.schoolDetails?.schoolName ||
-        extended.schoolDetails?.schoolName ||
-        'Delhi Public School',
-      board:
-        profile.education?.board ||
-        currentUser?.schoolDetails?.board ||
-        extended.schoolDetails?.board ||
-        'CBSE',
-      classLevel:
-        profile.education?.classLevel ||
-        currentUser?.schoolDetails?.classLevel ||
-        extended.schoolDetails?.classLevel ||
-        'Class 10',
-      studyMode:
-        currentUser?.schoolDetails?.studyMode ||
-        extended.schoolDetails?.studyMode ||
-        'full_syllabus',
-      selectedSubject:
-        currentUser?.schoolDetails?.selectedSubject ||
-        extended.schoolDetails?.selectedSubject ||
-        'Mathematics',
-      customSubject:
-        currentUser?.schoolDetails?.customSubject ||
-        extended.schoolDetails?.customSubject,
-      syllabusFileName:
-        currentUser?.schoolDetails?.syllabusFileName ||
-        extended.schoolDetails?.syllabusFileName,
-      textbookFileName:
-        currentUser?.schoolDetails?.textbookFileName ||
-        extended.schoolDetails?.textbookFileName,
+    learningPath,
+    schoolDetails: profile.schoolDetails || currentUser?.schoolDetails || extended.schoolDetails || {
+      schoolName: profile.education?.institution || 'Delhi Public School',
+      board: profile.education?.board || 'CBSE',
+      classLevel: profile.education?.classLevel || 'Class 10',
+      studyMode: 'full_syllabus',
+      selectedSubject: 'Mathematics',
     },
+    undergraduateDetails: profile.undergraduateDetails || currentUser?.undergraduateDetails || extended.undergraduateDetails,
+    postgraduateDetails: profile.postgraduateDetails || currentUser?.postgraduateDetails || extended.postgraduateDetails,
+    competitiveExamDetails: profile.competitiveExamDetails || currentUser?.competitiveExamDetails || extended.competitiveExamDetails,
   };
 }
 
@@ -156,8 +160,17 @@ export const studentService = {
     return { ...studentDashboardData };
   },
 
-  getCourses: async (): Promise<Course[]> => {
+  getCourses: async (learningPath?: LearningPath): Promise<Course[]> => {
     await new Promise((resolve) => setTimeout(resolve, 150));
+    const path =
+      learningPath ||
+      getLocalExtended().learningPath ||
+      authService.getCurrentUser()?.learningPath ||
+      'school';
+
+    if (path === 'undergraduate') return [...undergraduateCoursesData];
+    if (path === 'postgraduate') return [...postgraduateCoursesData];
+    if (path === 'competitive_exam') return [...competitiveExamCoursesData];
     return [...coursesData];
   },
 
@@ -191,7 +204,6 @@ export const studentService = {
       console.warn('Backend getProfile unreachable, using local session profile:', err);
     }
 
-    // Graceful fallback to local session profile
     return buildFallbackProfile(id);
   },
 
@@ -203,13 +215,27 @@ export const studentService = {
       gender: data.gender,
       avatar: data.avatar,
       schoolDetails: data.schoolDetails,
+      undergraduateDetails: data.undergraduateDetails,
+      postgraduateDetails: data.postgraduateDetails,
+      competitiveExamDetails: data.competitiveExamDetails,
+      learningPath: data.learningPath,
     });
 
     const educationPayload = data.education || (data.schoolDetails ? {
-      level: 'school' as const,
+      level: (data.learningPath || 'school') as any,
       institution: data.schoolDetails.schoolName,
       board: data.schoolDetails.board,
       classLevel: data.schoolDetails.classLevel,
+    } : data.undergraduateDetails ? {
+      level: 'undergraduate' as const,
+      institution: data.undergraduateDetails.institution,
+      degree: data.undergraduateDetails.degree,
+      specialization: data.undergraduateDetails.specialization,
+    } : data.postgraduateDetails ? {
+      level: 'postgraduate' as const,
+      institution: data.postgraduateDetails.institution,
+      degree: data.postgraduateDetails.degree,
+      specialization: data.postgraduateDetails.specialization,
     } : undefined);
 
     const backendPayload: Record<string, unknown> = {};
@@ -222,6 +248,9 @@ export const studentService = {
     if (data.learningPath !== undefined) backendPayload.learningPath = data.learningPath;
     if (data.language !== undefined) backendPayload.language = data.language;
     if (data.schoolDetails !== undefined) backendPayload.schoolDetails = data.schoolDetails;
+    if (data.undergraduateDetails !== undefined) backendPayload.undergraduateDetails = data.undergraduateDetails;
+    if (data.postgraduateDetails !== undefined) backendPayload.postgraduateDetails = data.postgraduateDetails;
+    if (data.competitiveExamDetails !== undefined) backendPayload.competitiveExamDetails = data.competitiveExamDetails;
     if (educationPayload) backendPayload.education = educationPayload;
 
     try {
@@ -246,12 +275,59 @@ export const studentService = {
 
   updateSchoolProfile: async (id: string, schoolData: SchoolAcademicInfo): Promise<StudentProfile> => {
     return studentService.updateProfile(id, {
+      learningPath: 'school',
       schoolDetails: schoolData,
       education: {
         level: 'school',
         institution: schoolData.schoolName,
         board: schoolData.board,
         classLevel: schoolData.classLevel,
+      },
+    });
+  },
+
+  updateUndergraduateProfile: async (
+    id: string,
+    ugData: UndergraduateAcademicInfo
+  ): Promise<StudentProfile> => {
+    return studentService.updateProfile(id, {
+      learningPath: 'undergraduate',
+      undergraduateDetails: ugData,
+      education: {
+        level: 'undergraduate',
+        institution: ugData.institution,
+        degree: ugData.degree,
+        specialization: ugData.specialization,
+      },
+    });
+  },
+
+  updatePostgraduateProfile: async (
+    id: string,
+    pgData: PostgraduateAcademicInfo
+  ): Promise<StudentProfile> => {
+    return studentService.updateProfile(id, {
+      learningPath: 'postgraduate',
+      postgraduateDetails: pgData,
+      education: {
+        level: 'postgraduate',
+        institution: pgData.institution,
+        degree: pgData.degree,
+        specialization: pgData.specialization,
+      },
+    });
+  },
+
+  updateCompetitiveExamProfile: async (
+    id: string,
+    compData: CompetitiveExamAcademicInfo
+  ): Promise<StudentProfile> => {
+    return studentService.updateProfile(id, {
+      learningPath: 'competitive_exam',
+      competitiveExamDetails: compData,
+      education: {
+        level: 'competitive_exam',
+        specialization: compData.targetExam,
       },
     });
   },
@@ -266,13 +342,27 @@ export const studentService = {
       gender: data.gender,
       avatar: data.avatar,
       schoolDetails: data.schoolDetails,
+      undergraduateDetails: data.undergraduateDetails,
+      postgraduateDetails: data.postgraduateDetails,
+      competitiveExamDetails: data.competitiveExamDetails,
+      learningPath: data.learningPath,
     });
 
     const educationPayload = data.education || (data.schoolDetails ? {
-      level: 'school' as const,
+      level: (data.learningPath || 'school') as any,
       institution: data.schoolDetails.schoolName,
       board: data.schoolDetails.board,
       classLevel: data.schoolDetails.classLevel,
+    } : data.undergraduateDetails ? {
+      level: 'undergraduate' as const,
+      institution: data.undergraduateDetails.institution,
+      degree: data.undergraduateDetails.degree,
+      specialization: data.undergraduateDetails.specialization,
+    } : data.postgraduateDetails ? {
+      level: 'postgraduate' as const,
+      institution: data.postgraduateDetails.institution,
+      degree: data.postgraduateDetails.degree,
+      specialization: data.postgraduateDetails.specialization,
     } : undefined);
 
     const backendPayload = {
@@ -281,7 +371,12 @@ export const studentService = {
       phone: data.phone,
       goal: data.goal,
       language: data.language,
+      learningPath: data.learningPath || 'school',
       education: educationPayload,
+      schoolDetails: data.schoolDetails,
+      undergraduateDetails: data.undergraduateDetails,
+      postgraduateDetails: data.postgraduateDetails,
+      competitiveExamDetails: data.competitiveExamDetails,
     };
 
     try {

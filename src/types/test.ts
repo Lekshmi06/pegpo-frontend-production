@@ -10,6 +10,17 @@ export interface TestQuestion {
   sidebarTitle: string;
   options: TestOption[];
   correctAnswer?: string;
+  numericalAnswer?: number;
+  numericalTolerance?: number;
+  negativeMarks?: number;
+  questionType?: 'mcq' | 'nat' | 'descriptive';
+  sectionId?: string;
+  sectionName?: string;
+  sourceType?: string;
+  sourceYear?: number;
+  sourceExam?: string;
+  sourceShift?: string;
+  sourceReference?: string;
   explanation?: string;
   userAnswer?: string;
   isCorrect?: boolean;
@@ -33,9 +44,30 @@ export interface TestItem {
   subject?: string;
   questions?: TestQuestion[];
   isUntimed?: boolean;
+  isCompetitiveExam?: boolean;
+  examCategory?: string;
+  examCode?: string;
+  examTier?: string;
+  sections?: any[];
+  negativeMarkingRate?: number;
+  cutOffScore?: number;
+  totalCandidatesEstimate?: number;
 }
 
 export type QuestionStatus = 'attempted' | 'revise' | 'skipped';
+
+export interface TestSectionScore {
+  sectionId: string;
+  sectionName: string;
+  subject?: string;
+  attemptedCount: number;
+  correctCount: number;
+  incorrectCount: number;
+  skippedCount?: number;
+  score: number;
+  maxScore: number;
+  accuracy: number;
+}
 
 export interface TestResult {
   attemptId?: string;
@@ -55,4 +87,11 @@ export interface TestResult {
   answers: Record<number | string, string>;
   statusByQuestion: Record<number | string, QuestionStatus>;
   questions: TestQuestion[];
+  sectionScores?: TestSectionScore[];
+  percentile?: number;
+  allIndiaRank?: number;
+  totalCandidates?: number;
+  isCompetitiveExam?: boolean;
+  examCategory?: string;
+  cutOffScore?: number;
 }

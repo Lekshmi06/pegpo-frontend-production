@@ -8,6 +8,9 @@ const Login = lazy(() => import('../pages/auth/Login'));
 const PersonalDetails = lazy(() => import('../pages/auth/PersonalDetails'));
 const Onboarding = lazy(() => import('../pages/auth/Onboarding'));
 const SchoolOnboarding = lazy(() => import('../pages/auth/SchoolOnboarding'));
+const UndergraduateOnboarding = lazy(() => import('../pages/auth/UndergraduateOnboarding'));
+const PostgraduateOnboarding = lazy(() => import('../pages/auth/PostgraduateOnboarding'));
+const CompetitiveExamOnboarding = lazy(() => import('../pages/auth/CompetitiveExamOnboarding'));
 
 // Student Layout & Pages
 const StudentLayout = lazy(() => import('../layouts/StudentLayout'));
@@ -68,6 +71,9 @@ export default function AppRoutes() {
         <Route path="/personal-details" element={<PersonalDetails />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/onboarding/school" element={<SchoolOnboarding />} />
+        <Route path="/onboarding/undergraduate" element={<UndergraduateOnboarding />} />
+        <Route path="/onboarding/postgraduate" element={<PostgraduateOnboarding />} />
+        <Route path="/onboarding/competitive" element={<CompetitiveExamOnboarding />} />
 
         {/* Student Portal */}
         <Route path="/student" element={<StudentLayout />}>

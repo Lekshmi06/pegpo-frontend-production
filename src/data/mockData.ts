@@ -86,6 +86,127 @@ export const coursesData: Course[] = [
   },
 ];
 
+export const undergraduateCoursesData: Course[] = [
+  {
+    id: 101,
+    title: 'Data Structures & Algorithms (CS201)',
+    subject: 'Computer Science',
+    progress: 65,
+    instructor: 'Prof. Ramesh Sharma',
+    image: 'https://images.unsplash.com/photo-1516116211227-bbc719b02a28?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 1101, title: 'Asymptotic Analysis & Big-O Notation', duration: '2h 10m' },
+      { id: 1102, title: 'Balanced Trees (AVL & Red-Black Trees)', duration: '3h 30m' },
+      { id: 1103, title: 'Graph Algorithms: Dijkstra & Floyd-Warshall', duration: '4h 15m' },
+    ],
+  },
+  {
+    id: 102,
+    title: 'Operating Systems & Concurrency (CS302)',
+    subject: 'Computer Systems',
+    progress: 45,
+    instructor: 'Dr. Priya Nair',
+    image: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 1201, title: 'CPU Scheduling & Context Switching', duration: '2h 45m' },
+      { id: 1202, title: 'Deadlock Detection & Semaphores', duration: '3h 10m' },
+      { id: 1203, title: 'Virtual Memory & Page Replacement', duration: '3h 30m' },
+    ],
+  },
+  {
+    id: 103,
+    title: 'Database Management Systems & SQL (CS304)',
+    subject: 'Databases',
+    progress: 80,
+    instructor: 'Prof. Amit Verma',
+    image: 'https://images.unsplash.com/photo-1544383835-bda2bc66a55d?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 1301, title: 'Relational Algebra & Normalization (1NF-BCNF)', duration: '2h 30m' },
+      { id: 1302, title: 'ACID Properties & Transaction Isolation', duration: '2h 15m' },
+    ],
+  },
+];
+
+export const postgraduateCoursesData: Course[] = [
+  {
+    id: 201,
+    title: 'Deep Learning & Neural Architectures (AI701)',
+    subject: 'Artificial Intelligence',
+    progress: 70,
+    instructor: 'Dr. Elena Rostova',
+    image: 'https://images.unsplash.com/photo-1677442136019-21780efad99a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 2101, title: 'Self-Attention & Transformer Mechanics', duration: '3h 15m' },
+      { id: 2102, title: 'Diffusion Models & Latent Space Generative AI', duration: '4h 00m' },
+      { id: 2103, title: 'Contrastive Representation Learning', duration: '3h 45m' },
+    ],
+  },
+  {
+    id: 202,
+    title: 'Natural Language Processing & LLMs (AI704)',
+    subject: 'Machine Learning',
+    progress: 55,
+    instructor: 'Prof. David Chen',
+    image: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 2201, title: 'Tokenization, Embeddings & Vector Stores', duration: '2h 30m' },
+      { id: 2202, title: 'Retrieval Augmented Generation (RAG) Systems', duration: '3h 15m' },
+    ],
+  },
+  {
+    id: 203,
+    title: 'Research Methodology & Academic Publishing (RES801)',
+    subject: 'Doctoral Studies',
+    progress: 90,
+    instructor: 'Dean Arthur Pendelton',
+    image: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 2301, title: 'Systematic Literature Review Protocols', duration: '2h 00m' },
+      { id: 2302, title: 'Reproducibility & Statistical Power Testing', duration: '2h 45m' },
+    ],
+  },
+];
+
+export const competitiveExamCoursesData: Course[] = [
+  {
+    id: 301,
+    title: 'JEE / NEET: High-Yield Mechanics & Electrodynamics',
+    subject: 'Physics',
+    progress: 60,
+    instructor: 'Er. Sandeep Aggarwal',
+    image: 'https://images.unsplash.com/photo-1509228468518-180dd4864904?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 3101, title: 'Rotational Dynamics & Moment of Inertia', duration: '3h 10m' },
+      { id: 3102, title: 'Electromagnetic Induction & Lenz Law', duration: '3h 30m' },
+      { id: 3103, title: 'Modern Physics & Dual Nature Solved PYQs', duration: '4h 00m' },
+    ],
+  },
+  {
+    id: 302,
+    title: 'UPSC / SSC: Indian Polity, Constitution & Governance',
+    subject: 'General Studies',
+    progress: 50,
+    instructor: 'Dr. Vivek Saxena',
+    image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 3201, title: 'Fundamental Rights, DPSP & Judicial Review', duration: '3h 40m' },
+      { id: 3202, title: 'Federal Structure & Centre-State Relations', duration: '3h 15m' },
+    ],
+  },
+  {
+    id: 303,
+    title: 'Quantitative Aptitude & Logical Reasoning Mastery',
+    subject: 'CSAT / Banking',
+    progress: 85,
+    instructor: 'Prof. Rakesh Yadav',
+    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.0.3',
+    chapters: [
+      { id: 3301, title: 'Speed Math, Permutation & Probability', duration: '2h 30m' },
+      { id: 3302, title: 'Data Interpretation & Caselet Puzzles', duration: '3h 00m' },
+    ],
+  },
+];
+
 export const teacherKanbanData: KanbanTask[] = [
   {
     id: 'task-1',

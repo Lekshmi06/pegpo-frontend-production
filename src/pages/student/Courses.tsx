@@ -15,6 +15,7 @@ import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
 import { ErrorState } from '../../components/ui/StateViews';
+import { authService } from '../../services/authService';
 
 export default function Courses() {
   const navigate = useNavigate();
@@ -179,9 +180,37 @@ export default function Courses() {
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0 bg-[#f8fbfe] overflow-y-auto">
             <div className="p-4 sm:p-8 space-y-6 max-w-6xl mx-auto w-full">
-              <div>
-                <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">Courses</h1>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Enrolled Courses</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">Courses</h1>
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#eef6fc] text-[#0091ff] text-xs font-extrabold border border-[#d2e8fb]">
+                      {(() => {
+                        const path = authService.getCurrentUser()?.learningPath || 'school';
+                        if (path === 'undergraduate') return 'Undergraduate Curriculum';
+                        if (path === 'postgraduate') return 'Postgraduate & Research';
+                        if (path === 'competitive_exam') return 'Competitive Exam Prep';
+                        return 'School (K-12)';
+                      })()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {(() => {
+                      const path = authService.getCurrentUser()?.learningPath || 'school';
+                      if (path === 'undergraduate') return 'Enrolled college degree subjects, engineering modules, and lab topics.';
+                      if (path === 'postgraduate') return 'Advanced master’s & doctoral research topics, thesis study guides, and NLP/AI.';
+                      if (path === 'competitive_exam') return 'High-yield exam topics, solved 10-year PYQ series, and practice modules.';
+                      return 'Curriculum subjects aligned with your Class and Board syllabus.';
+                    })()}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/student/profile')}
+                  className="px-4 py-2 text-xs font-bold self-start sm:self-auto"
+                >
+                  Manage Learning Track
+                </Button>
               </div>
 
               {isLoading ? (
