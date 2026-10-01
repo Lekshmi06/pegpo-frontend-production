@@ -12,11 +12,16 @@ export default function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleSignUp = async (e?: FormEvent) => {
     if (e) e.preventDefault();
+    setErrorMessage(null);
+
     if (!email.trim()) {
-      toast.error('Please enter a valid email address');
+      const msg = 'Please enter a valid email address';
+      setErrorMessage(msg);
+      toast.error(msg);
       return;
     }
 
@@ -25,7 +30,9 @@ export default function SignUp() {
       await authService.signUp(email, password);
       navigate('/personal-details');
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      const msg =
+        err instanceof Error ? err.message : 'Sign up failed. Please try again.';
+      setErrorMessage(msg);
       toast.error(msg);
     } finally {
       setIsLoading(false);
@@ -88,12 +95,42 @@ export default function SignUp() {
           <div className="border-t border-slate-200 w-full" />
         </div>
 
+        {errorMessage && (
+          <div
+            role="alert"
+            className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex flex-col gap-1.5 text-left animate-in fade-in duration-150"
+          >
+            <div className="flex items-start gap-2 font-semibold text-rose-800">
+              <svg className="w-4 h-4 shrink-0 text-rose-600 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span>{errorMessage}</span>
+            </div>
+            {(errorMessage.includes('already has an account') ||
+              errorMessage.includes('already in use') ||
+              errorMessage.includes('already exists')) && (
+              <div className="pt-1 flex items-center justify-between text-[11px] border-t border-rose-200/60 mt-1">
+                <span className="text-rose-700">Already registered with this email?</span>
+                <Link
+                  to="/login"
+                  className="font-bold text-[#0091ff] hover:underline shrink-0 ml-2"
+                >
+                  Log In &rarr;
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
         <form onSubmit={handleSignUp} className="space-y-4 text-left">
           <Input
             type="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (errorMessage) setErrorMessage(null);
+            }}
             placeholder="Enter your email"
             label="Email Address"
           />

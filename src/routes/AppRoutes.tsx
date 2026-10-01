@@ -11,6 +11,8 @@ const SchoolOnboarding = lazy(() => import('../pages/auth/SchoolOnboarding'));
 const UndergraduateOnboarding = lazy(() => import('../pages/auth/UndergraduateOnboarding'));
 const PostgraduateOnboarding = lazy(() => import('../pages/auth/PostgraduateOnboarding'));
 const CompetitiveExamOnboarding = lazy(() => import('../pages/auth/CompetitiveExamOnboarding'));
+const TeacherOnboarding = lazy(() => import('../pages/auth/TeacherOnboarding'));
+const ResearcherOnboarding = lazy(() => import('../pages/auth/ResearcherOnboarding/ResearcherOnboarding'));
 
 // Student Layout & Pages
 const StudentLayout = lazy(() => import('../layouts/StudentLayout'));
@@ -42,13 +44,23 @@ const TeacherDashboard = lazy(() => import('../pages/teacher/Dashboard'));
 const KanbanBoard = lazy(() => import('../pages/teacher/KanbanBoard'));
 
 // Teacher Other Pages
+const TeacherProfile = lazy(() => import('../pages/teacher/TeacherProfile'));
+const LessonPlanner = lazy(() => import('../pages/teacher/LessonPlanner'));
 const TeacherCalendar = lazy(() => import('../pages/teacher/TeacherCalendar'));
 const TeacherBlankWorkspace = lazy(() => import('../pages/teacher/TeacherBlankWorkspace'));
 const GenericTeacherPage = lazy(() => import('../pages/teacher/GenericTeacherPage'));
+const SmartBoardHome = lazy(() => import('../pages/teacher/smartboard/SmartBoardHome'));
+const StandardSmartBoard = lazy(() => import('../pages/teacher/smartboard/StandardSmartBoard'));
+const IntegratedSmartBoard = lazy(() => import('../pages/teacher/smartboard/IntegratedSmartBoard'));
+const AssessmentStudio = lazy(() => import('../pages/teacher/assessment/AssessmentStudio'));
+const TeacherClasses = lazy(() => import('../pages/teacher/classes/TeacherClasses'));
+const TeacherUpload = lazy(() => import('../pages/teacher/Upload'));
 
 // Research Layout & Pages
 const ResearchLayout = lazy(() => import('../layouts/ResearchLayout'));
 const ResearchDashboard = lazy(() => import('../pages/research/Dashboard'));
+const Discover = lazy(() => import('../pages/research/Discover'));
+const ResearchLibrary = lazy(() => import('../pages/research/Library'));
 
 // Research Other Pages
 const Analyses = lazy(() => import('../pages/research/Analyses'));
@@ -57,8 +69,17 @@ const Ask = lazy(() => import('../pages/research/Ask'));
 const WritePaper = lazy(() => import('../pages/research/WritePaper'));
 const Bookmarks = lazy(() => import('../pages/research/Bookmarks'));
 const ProjectManagement = lazy(() => import('../pages/research/ProjectManagement'));
+const ProjectWorkspace = lazy(() => import('../pages/research/ProjectWorkspace'));
 const TaskManagement = lazy(() => import('../pages/research/TaskManagement'));
+const ResearchNotebook = lazy(() => import('../pages/research/Notebook'));
+const Citations = lazy(() => import('../pages/research/Citations'));
+const Collaboration = lazy(() => import('../pages/research/Collaboration'));
+const ResearchKanban = lazy(() => import('../pages/research/Kanban'));
+const ResearchCalendar = lazy(() => import('../pages/research/Calendar'));
+const ResearchUpload = lazy(() => import('../pages/research/Upload'));
+const ResearchNewFolder = lazy(() => import('../pages/research/NewFolder'));
 const GenericResearchPage = lazy(() => import('../pages/research/GenericResearchPage'));
+
 
 export default function AppRoutes() {
   return (
@@ -74,6 +95,8 @@ export default function AppRoutes() {
         <Route path="/onboarding/undergraduate" element={<UndergraduateOnboarding />} />
         <Route path="/onboarding/postgraduate" element={<PostgraduateOnboarding />} />
         <Route path="/onboarding/competitive" element={<CompetitiveExamOnboarding />} />
+        <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
+        <Route path="/onboarding/researcher" element={<ResearcherOnboarding />} />
 
         {/* Student Portal */}
         <Route path="/student" element={<StudentLayout />}>
@@ -107,49 +130,61 @@ export default function AppRoutes() {
         {/* Teacher Portal */}
         <Route path="/teacher" element={<TeacherLayout />}>
           <Route index element={<TeacherDashboard />} />
+          <Route path="profile" element={<TeacherProfile />} />
           <Route path="tasks" element={<KanbanBoard />} />
           <Route path="calendar" element={<TeacherCalendar />} />
-          <Route path="lesson-plan" element={<TeacherBlankWorkspace />} />
+          <Route path="lesson-plan" element={<LessonPlanner />} />
           <Route path="projects" element={<GenericTeacherPage title="Teacher Projects" desc="Track group tasks and assignments." />} />
           
           <Route path="library" element={<GenericTeacherPage title="Teacher Library" desc="Reference materials, textbook sources, and answer keys." />} />
           <Route path="notebook" element={<GenericTeacherPage title="Teacher Notebook" desc="Lesson drafts, planning templates, and sync logs." />} />
-          <Route path="upload" element={<GenericTeacherPage title="Content Uploads" desc="Upload slides, textbook documents, and syllabus PDFs." />} />
+          <Route path="upload" element={<TeacherUpload />} />
           <Route path="live-classes" element={<GenericTeacherPage title="Live Classes Workspace" desc="Launch live Zoom/Teams lectures and track attendee counts." />} />
           <Route path="ask" element={<GenericTeacherPage title="AI Teacher Help" desc="Chat with syllabus guidelines or generate quiz questions." />} />
-          <Route path="test" element={<GenericTeacherPage title="Test Creator" desc="Design custom quizzes, exam papers, and templates." />} />
+          <Route path="test" element={<AssessmentStudio />} />
           <Route path="examination" element={<GenericTeacherPage title="Term Examinations" desc="Manage midterm/final examination schedules." />} />
-          <Route path="assessment" element={<TeacherBlankWorkspace />} />
+          <Route path="assessment" element={<AssessmentStudio />} />
           <Route path="new-folder" element={<GenericTeacherPage title="New Folder" desc="Configure resource folders and sync pathways." />} />
           <Route path="bookshelf" element={<GenericTeacherPage title="Class Bookshelf" desc="Selected reading lists and textbooks for classes." />} />
           <Route path="collaboration" element={<TeacherBlankWorkspace />} />
-          <Route path="tuition" element={<GenericTeacherPage title="Tuition Programs" desc="Manage extracurricular tuition batches." />} />
-          <Route path="recorded" element={<GenericTeacherPage title="Recorded Classes Archive" desc="Manage lecture video recordings." />} />
-          <Route path="smartboard" element={<GenericTeacherPage title="Interactive Canvas" desc="Load chalkboard canvas diagrams." />} />
+          <Route path="classes" element={<TeacherClasses />} />
+          <Route path="tuition" element={<TeacherClasses />} />
+          <Route path="smartboard" element={<SmartBoardHome />} />
           <Route path="project" element={<GenericTeacherPage title="Class Projects" desc="Track group tasks and assignments." />} />
           <Route path="3d-lab" element={<GenericTeacherPage title="3D Interactive Lab" desc="Explore physics simulations." />} />
           <Route path="edu-game" element={<GenericTeacherPage title="Edu Games Shelf" desc="Manage educational puzzles." />} />
           <Route path="edu-shop" element={<GenericTeacherPage title="Edu Shop" desc="Syllabus materials and classroom supplies store." />} />
         </Route>
 
+        {/* Dedicated Full-Screen Teacher Smart Board Workspaces */}
+        <Route path="/teacher/smartboard/standard" element={<StandardSmartBoard />} />
+        <Route path="/teacher/smartboard/integrated" element={<IntegratedSmartBoard />} />
+
         {/* Research Portal */}
         <Route path="/research" element={<ResearchLayout />}>
           <Route index element={<ResearchDashboard />} />
-          <Route path="library" element={<GenericResearchPage title="Research Library" desc="Browse reference textbooks, journal archives, and indexes." />} />
-          <Route path="notebook" element={<GenericResearchPage title="Research Notebook" desc="Draft hypotheses, research methodology, and study logs." />} />
-          <Route path="ai-research" element={<GenericResearchPage title="AI Research Hub" desc="Leverage AI agents to synthesize documents." />} />
-          <Route path="search" element={<GenericResearchPage title="Literature Search" desc="Run searches against local and online vector indexes." />} />
+          <Route path="discover" element={<Discover />} />
+          <Route path="search" element={<Discover />} />
+          <Route path="library" element={<ResearchLibrary />} />
+          <Route path="projects" element={<ProjectManagement />} />
+          <Route path="projects/:id" element={<ProjectWorkspace />} />
+          <Route path="project-mgmt" element={<ProjectManagement />} />
+
+          <Route path="notebook" element={<ResearchNotebook />} />
+          <Route path="analysis" element={<Analyses />} />
           <Route path="analyses" element={<Analyses />} />
           <Route path="synthesize" element={<Synthesize />} />
           <Route path="write" element={<WritePaper />} />
-          <Route path="collaboration" element={<GenericResearchPage title="Collaboration Space" desc="Co-author articles and sync database changes." />} />
-          <Route path="upload" element={<GenericResearchPage title="Document Upload Center" desc="Upload PDFs, dataset files, or slide files." />} />
+          <Route path="writing" element={<WritePaper />} />
+          <Route path="citations" element={<Citations />} />
+          <Route path="collaboration" element={<Collaboration />} />
+          <Route path="ai-research" element={<GenericResearchPage title="AI Research Hub" desc="Leverage AI agents to synthesize documents." />} />
+          <Route path="upload" element={<ResearchUpload />} />
           <Route path="record" element={<GenericResearchPage title="Voice Recorder Notes" desc="Record discussions and get transcripts." />} />
-          <Route path="new-folder" element={<GenericResearchPage title="New Workspace Folder" desc="Organize goals and source maps." />} />
-          <Route path="calendar" element={<GenericResearchPage title="Research Calendar" desc="Sync publication milestones and deadlines." />} />
-          <Route path="project-mgmt" element={<ProjectManagement />} />
-          <Route path="task-mgmt" element={<TaskManagement />} />
-          <Route path="kanban" element={<GenericResearchPage title="Research Kanban Board" desc="Move cards between study, draft, and submit gates." />} />
+          <Route path="new-folder" element={<ResearchNewFolder />} />
+          <Route path="calendar" element={<ResearchCalendar />} />
+          <Route path="task-mgmt" element={<ResearchKanban />} />
+          <Route path="kanban" element={<ResearchKanban />} />
           <Route path="ask" element={<Ask />} />
           <Route path="bookshelf" element={<GenericResearchPage title="Research Bookshelf" desc="Manage textbooks and manuals." />} />
           <Route path="bookmarks" element={<Bookmarks />} />

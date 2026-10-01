@@ -36,6 +36,7 @@ export interface TestItem {
   title: string;
   description: string;
   totalQuestions: number;
+  totalMarks?: number;
   durationMinutes: number;
   isLocked?: boolean;
   category: string;
@@ -52,6 +53,46 @@ export interface TestItem {
   negativeMarkingRate?: number;
   cutOffScore?: number;
   totalCandidatesEstimate?: number;
+  usages?: {
+    studyMaterial: boolean;
+    practice: boolean;
+    scheduledTest: boolean;
+  };
+  schedule?: {
+    teachingContextId?: string;
+    scheduledDate?: string;
+    startTime?: string;
+    endTime?: string;
+    startDate?: string;
+    endDate?: string;
+    timezoneOffset?: number;
+    batchOrSection?: string;
+    targetGroups?: string[];
+    instructions?: string;
+  };
+  windowStatus?: 'upcoming' | 'active' | 'closed' | 'open';
+  scheduledStartTime?: string | Date;
+  scheduledEndTime?: string | Date;
+  targetClassSectionIds?: any[];
+  originalDocument?: {
+    storageType: 'local' | 's3' | 'gcs' | 'azure';
+    fileName: string;
+    fileKey: string;
+    fileUrl: string;
+    mimeType?: string;
+    fileSize?: number;
+    uploadedAt: string | Date;
+    extractedText?: string;
+  };
+  sourceFormat?: 'ai_generated' | 'pdf' | 'docx' | 'doc' | 'txt' | 'manual';
+  teachingContextId?: any;
+  teacherProfileId?: string;
+  resultsPublished?: boolean;
+  hasAttempted?: boolean;
+  attemptStatus?: 'in_progress' | 'completed' | 'abandoned';
+  studentAttemptId?: string;
+  isResultPublished?: boolean;
+  userScore?: number;
 }
 
 export type QuestionStatus = 'attempted' | 'revise' | 'skipped';
@@ -94,4 +135,6 @@ export interface TestResult {
   isCompetitiveExam?: boolean;
   examCategory?: string;
   cutOffScore?: number;
+  isResultPublished?: boolean;
+  message?: string;
 }

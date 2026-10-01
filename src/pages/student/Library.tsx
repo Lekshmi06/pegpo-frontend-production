@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, ChevronDown, ChevronLeft, ChevronRight, Globe, Trophy,
   MessageSquare, BookOpen, Mic, Video, Brain, FileText,
-  CheckCircle2, Layers, TrendingUp, RotateCcw, NotebookPen, Bookmark
+  CheckCircle2, Layers, TrendingUp, RotateCcw, NotebookPen, Bookmark,
+  ExternalLink, Sparkles, Presentation, GraduationCap, Download
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import bookVanGogh from '../../assets/book-van-gogh.jpg';
@@ -18,6 +19,12 @@ import cardInfographics from '../../assets/card-infographics.png';
 import { useToast } from '../../hooks/useToast';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { Loader } from '../../components/ui/Loader';
+import { testService } from '../../services/testService';
+import { materialService } from '../../services/materialService';
+import { resolveAssetUrl } from '../../services/apiClient';
+import { TestItem } from '../../types/test';
+import { TeacherMaterial } from '../../types/material';
 
 interface BookItem {
   id: number;
@@ -39,6 +46,38 @@ export default function Library() {
   const [modalTitle, setModalTitle] = useState('');
   const [selectedActionLabel, setSelectedActionLabel] = useState('');
   const [selectedGraphicCard, setSelectedGraphicCard] = useState<{ title: string; img: string; desc: string } | null>(null);
+  const [studyMaterials, setStudyMaterials] = useState<TestItem[]>([]);
+  const [teacherMaterials, setTeacherMaterials] = useState<TeacherMaterial[]>([]);
+  const [isImportingMaterial, setIsImportingMaterial] = useState<string | null>(null);
+
+  useEffect(() => {
+    testService.fetchTests({ usage: 'studyMaterial' })
+      .then((data) => setStudyMaterials(data))
+      .catch((err) => console.warn('Could not load study materials in library:', err));
+
+    materialService.getPublishedMaterialsForStudents()
+      .then((data) => setTeacherMaterials(data))
+      .catch((err) => console.warn('Could not load published teacher materials:', err));
+  }, []);
+
+  const handleStudyWithAI = async (mat: TeacherMaterial) => {
+    try {
+      setIsImportingMaterial(mat._id || mat.id!);
+      toast.info(`Preparing "${mat.title}" for your AI Study Studio...`);
+      await materialService.importToStudentSource(mat._id || mat.id!);
+      toast.success(`"${mat.title}" imported! Launching AI Studio...`);
+      navigate('/student/upload');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to import document into AI studio';
+      toast.error(msg);
+    } finally {
+      setIsImportingMaterial(null);
+    }
+  };
+
+  const handleDownloadMaterial = (mat: TeacherMaterial) => {
+    materialService.recordDownload(mat._id || mat.id!);
+  };
 
   const categories = ['All Categories', 'Art & Design', 'History & Culture', 'Science & Physics', 'Literature', 'Philosophy'];
 
@@ -302,6 +341,218 @@ export default function Library() {
                   </div>
                 ))}
               </div>
+
+              {/* Teacher Shared Slides, Textbooks & Handouts */}
+              {teacherMaterials.length > 0 && (
+                <div className="pt-8 border-t border-slate-200 mt-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-[#111827] tracking-tight flex items-center gap-2">
+                        <Presentation className="w-5 h-5 text-indigo-600" />
+                        Teacher Shared Slides & Learning Resources
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Access course presentations, textbook chapters, and lecture notes published directly by your teachers.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700">
+                      {teacherMaterials.length} Published Resources
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {teacherMaterials.map((mat) => {
+                      const isImporting = isImportingMaterial === (mat._id || mat.id);
+                      const classSectionName =
+                        typeof mat.classSectionId === 'object' && mat.classSectionId?.name
+                          ? mat.classSectionId.name
+                          : null;
+
+                      return (
+                        <div
+                          key={mat._id || mat.id}
+                          className="bg-white rounded-2xl border border-slate-200 hover:border-indigo-300 p-5 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between group"
+                        >
+                          <div className="space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                {mat.subject}
+                              </span>
+                              <span className="px-2 py-0.5 rounded text-[10px] font-semibold text-slate-500 bg-slate-100 capitalize">
+                                {mat.category}
+                              </span>
+                            </div>
+
+                            <div>
+                              <h3 className="text-sm font-bold text-slate-800 line-clamp-1 group-hover:text-indigo-600 transition-colors" title={mat.title}>
+                                {mat.title}
+                              </h3>
+                              <p className="text-xs text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                                {mat.description || 'No additional notes provided.'}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-600 flex items-center gap-1">
+                                  <GraduationCap className="w-3.5 h-3.5 text-purple-600" />
+                                  {mat.teacherName || 'Teacher'}
+                                </span>
+                                {classSectionName && (
+                                  <span className="text-purple-600 font-semibold">{classSectionName}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="truncate max-w-[150px]">{mat.originalName}</span>
+                                <span>{mat.fileSize ? `${Math.round(mat.fileSize / 1024)} KB` : ''}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                            {mat.allowStudentDownload !== false && (
+                              <a
+                                href={resolveAssetUrl(mat.fileUrl)}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={mat.originalName}
+                                onClick={() => handleDownloadMaterial(mat)}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors"
+                              >
+                                <Download className="w-3.5 h-3.5" />
+                                <span>Download</span>
+                              </a>
+                            )}
+
+                            {mat.allowAIChat !== false && (
+                              <button
+                                onClick={() => handleStudyWithAI(mat)}
+                                disabled={isImporting}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 transition-all cursor-pointer shadow-2xs active:scale-95 ml-auto"
+                                title="Import into your AI Study Studio for instant chat, mind map, and quizzes"
+                              >
+                                {isImporting ? (
+                                  <>
+                                    <Loader size="sm" />
+                                    <span>Importing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>Study with AI</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Teacher Assessment Reference Papers & Interactive Question Banks */}
+              {studyMaterials.length > 0 && (
+                <div className="pt-8 border-t border-slate-200 mt-8 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-[#111827] tracking-tight flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-[#0091ff]" />
+                        Teacher Reference Papers & Question Banks
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Access original reference examination papers and practice interactive question banks published by your teachers.
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 text-[#0091ff]">
+                      {studyMaterials.length} Available
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {studyMaterials.map((mat) => (
+                      <div
+                        key={mat.id || mat._id}
+                        className="bg-white rounded-2xl border border-slate-200 hover:border-blue-300 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2 mb-2">
+                            <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700">
+                              {mat.subject}
+                            </span>
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              📚 Study Material
+                            </span>
+                          </div>
+
+                          <h3 className="text-sm font-bold text-slate-800 line-clamp-1">
+                            {mat.title}
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                            {mat.description}
+                          </p>
+
+                          {/* Distinct Original Document vs Interactive Questions Banner */}
+                          <div className="my-3 space-y-2">
+                            {/* 1. Original Document Reference (if present) */}
+                            {mat.originalDocument?.fileName && (
+                              <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-200/80 flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <FileText className="w-4 h-4 text-[#0091ff] shrink-0" />
+                                  <div className="truncate">
+                                    <span className="text-xs font-semibold text-slate-800 block truncate">
+                                      Original Reference File: {mat.originalDocument.fileName}
+                                    </span>
+                                    <span className="text-[10px] text-slate-500">
+                                      {mat.originalDocument.fileSize ? `${Math.round(mat.originalDocument.fileSize / 1024)} KB` : 'Uploaded Document'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <a
+                                  href={resolveAssetUrl(mat.originalDocument.fileUrl)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  download={mat.originalDocument.fileName}
+                                  className="inline-flex items-center gap-1 text-[11px] font-bold text-[#0091ff] hover:underline shrink-0 bg-white px-2 py-1 rounded-md border border-blue-200 shadow-2xs"
+                                >
+                                  View / Download <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            )}
+
+                            {/* 2. Structured Interactive Questions Bank */}
+                            <div className="p-2.5 rounded-xl bg-amber-50/60 border border-amber-200/80 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+                                <div>
+                                  <span className="text-xs font-semibold text-slate-800 block">
+                                    Interactive Question Bank ({mat.totalQuestions} Questions)
+                                  </span>
+                                  <span className="text-[10px] text-slate-500">
+                                    Self-paced practice with instant step-by-step solutions
+                                  </span>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() => navigate(`/student/tests?testId=${mat.id || mat._id}`)}
+                                className="text-[11px] font-bold text-amber-800 hover:text-amber-900 bg-white px-2.5 py-1 rounded-md border border-amber-200 shadow-2xs hover:bg-amber-100 transition-colors"
+                              >
+                                Solve &rarr;
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-100 mt-2">
+                          <span>{mat.classLevel} &bull; {mat.board || 'CBSE'}</span>
+                          <span>{mat.totalMarks} Marks total</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -34,6 +34,25 @@ export async function apiRequest<T>(
     headers.set('Content-Type', 'application/json');
   }
 
+  // Automatically attach authentication & researcher identity headers if available in storage
+  const token = localStorage.getItem('token');
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const researcherId =
+    localStorage.getItem('researcherProfileId') ||
+    localStorage.getItem('userId') ||
+    token;
+  if (researcherId && !headers.has('x-researcher-id')) {
+    headers.set('x-researcher-id', researcherId);
+  }
+
+  const userEmail = localStorage.getItem('userEmail');
+  if (userEmail && !headers.has('x-user-email')) {
+    headers.set('x-user-email', userEmail);
+  }
+
   const res = await fetch(url, {
     ...options,
     headers,
@@ -54,3 +73,21 @@ export async function apiRequest<T>(
 
   return data;
 }
+
+/**
+ * Resolves static media and uploaded document URLs (e.g. /uploads/assessments/...)
+ * ensuring proper domain and protocol resolution across environments.
+ */
+export const resolveAssetUrl = (url?: string): string => {
+  if (!url) return '#';
+  if (/^https?:\/\//i.test(url)) {
+    return url;
+  }
+  const cleanPath = url.startsWith('/') ? url : `/${url}`;
+  const envUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  if (envUrl && /^https?:\/\//i.test(envUrl)) {
+    const origin = envUrl.replace(/\/api\/?$/, '');
+    return `${origin}${cleanPath}`;
+  }
+  return cleanPath;
+};

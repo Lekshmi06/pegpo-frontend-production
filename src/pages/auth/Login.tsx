@@ -28,7 +28,18 @@ export default function Login() {
       if (session.role === 'teacher' || session.role === 'institution') {
         navigate('/teacher');
       } else if (session.role === 'researcher') {
-        navigate('/research');
+        const cached = localStorage.getItem('researcherProfileData');
+        let isCompleted = false;
+        try {
+          if (cached) isCompleted = Boolean(JSON.parse(cached)?.onboardingCompleted);
+        } catch {
+          // ignore error
+        }
+        if (session.researcherDetails?.onboardingCompleted || isCompleted) {
+          navigate('/research');
+        } else {
+          navigate('/onboarding/researcher');
+        }
       } else {
         navigate('/student/home');
       }

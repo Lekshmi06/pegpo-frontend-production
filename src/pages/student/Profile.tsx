@@ -26,10 +26,13 @@ import {
   ArrowRight,
   AlertCircle,
   Target,
+  Award,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import { authService } from '../../services/authService';
 import { subscriptionService } from '../../services/subscriptionService';
+import { recognitionService } from '../../services/recognitionService';
+import { StudentRecognition } from '../../types/recognition';
 import { useToast } from '../../hooks/useToast';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { Modal } from '../../components/ui/Modal';
@@ -45,7 +48,7 @@ import {
 } from '../../types/subscription';
 import { LearningPath } from '../../types/auth';
 
-type ProfileTab = 'personal' | 'academic' | 'subscription' | 'security';
+type ProfileTab = 'personal' | 'academic' | 'recognition' | 'subscription' | 'security';
 
 const COMMON_SUBJECTS = [
   'Mathematics',
@@ -330,9 +333,25 @@ export default function Profile() {
   const [upgradeTargetPlan, setUpgradeTargetPlan] = useState<SubscriptionPlan | null>(null);
   const [isUpgrading, setIsUpgrading] = useState(false);
 
+  // Recognition & Achievements State
+  const [recognitions, setRecognitions] = useState<StudentRecognition[]>([]);
+  const [isLoadingRecognitions, setIsLoadingRecognitions] = useState<boolean>(false);
+
   // Modals
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCancelSubModalOpen, setIsCancelSubModalOpen] = useState(false);
+
+  // Sync recognitions when profile loads or recognition tab clicked
+  useEffect(() => {
+    if (profile?._id) {
+      setIsLoadingRecognitions(true);
+      recognitionService
+        .getStudentRecognitions(profile._id)
+        .then((data) => setRecognitions(data))
+        .catch((err) => console.warn('Failed to load recognitions:', err))
+        .finally(() => setIsLoadingRecognitions(false));
+    }
+  }, [profile?._id, activeTab]);
 
   // Sync profile data on load
   useEffect(() => {
@@ -1062,6 +1081,7 @@ export default function Profile() {
               {[
                 { id: 'personal' as ProfileTab, label: 'Personal Information', icon: UserIcon },
                 { id: 'academic' as ProfileTab, label: 'Academic & Learning', icon: GraduationCap },
+                { id: 'recognition' as ProfileTab, label: 'Recognition & Achievements', icon: Award },
                 { id: 'subscription' as ProfileTab, label: 'Payments & Subscription', icon: Sparkles },
                 { id: 'security' as ProfileTab, label: 'Account & Security', icon: Shield },
               ].map((tab) => {
@@ -1079,6 +1099,17 @@ export default function Profile() {
                   >
                     <Icon className="w-4 h-4 stroke-[2.2]" />
                     <span>{tab.label}</span>
+                    {tab.id === 'recognition' && recognitions.length > 0 && (
+                      <span
+                        className={`px-1.5 py-0.2 text-[10px] rounded-full font-black ${
+                          isActive
+                            ? 'bg-amber-400 text-slate-900'
+                            : 'bg-[#e3edf7] text-[#1c3352]'
+                        }`}
+                      >
+                        {recognitions.length}
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -1951,6 +1982,197 @@ export default function Profile() {
                           </Button>
                         </div>
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* ============================================================ */}
+                {/* TAB: RECOGNITION & ACHIEVEMENTS */}
+                {/* ============================================================ */}
+                {activeTab === 'recognition' && (
+                  <div className="bg-white rounded-3xl border border-[#e2ebf4] p-6 sm:p-8 shadow-xs space-y-8 animate-in fade-in">
+                    {/* Header Banner */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-extrabold text-[#111827]">
+                            Recognition & Achievements
+                          </h2>
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-extrabold border border-amber-200 flex items-center gap-1">
+                            <Award className="w-3.5 h-3.5" />
+                            <span>{recognitions.length} Stickers Earned</span>
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500 mt-1">
+                          Badges and stickers awarded by your teachers for dedication, teamwork, and academic growth.
+                        </p>
+                      </div>
+
+                      {/* Stat summary chips */}
+                      <div className="flex items-center gap-3">
+                        <div className="px-3.5 py-2 bg-[#f8fafc] border border-slate-200/80 rounded-2xl text-center">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Total Badges
+                          </span>
+                          <span className="text-lg font-black text-[#1c3352]">
+                            {recognitions.length}
+                          </span>
+                        </div>
+                        <div className="px-3.5 py-2 bg-[#f8fafc] border border-slate-200/80 rounded-2xl text-center">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                            Badge Types
+                          </span>
+                          <span className="text-lg font-black text-amber-600">
+                            {new Set(recognitions.map((r) => r.stickerId)).size}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {isLoadingRecognitions ? (
+                      <div className="py-12 flex justify-center">
+                        <Loader text="Loading your achievements..." />
+                      </div>
+                    ) : recognitions.length === 0 ? (
+                      <div className="py-12 text-center space-y-3 bg-[#f8fcff] border border-dashed border-[#254b73]/20 rounded-3xl p-8">
+                        <div className="w-14 h-14 mx-auto rounded-full bg-amber-100 flex items-center justify-center text-2xl shadow-inner">
+                          🏆
+                        </div>
+                        <h3 className="text-base font-extrabold text-[#1c3352]">
+                          No Recognition Stickers Yet
+                        </h3>
+                        <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                          Your teachers will award stickers here for your participation, consistent efforts, and classroom achievements. Keep learning and participating actively!
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Unique Badge Showcase */}
+                        <div className="space-y-3">
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                            Badge Collection
+                          </h3>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                            {(() => {
+                              const grouped = recognitions.reduce((acc, rec) => {
+                                acc[rec.stickerId] = acc[rec.stickerId] || {
+                                  title: rec.title,
+                                  icon: rec.icon,
+                                  count: 0,
+                                  color: rec.metadata?.color,
+                                  bgColor: rec.metadata?.bgColor,
+                                  borderColor: rec.metadata?.borderColor,
+                                  textColor: rec.metadata?.textColor,
+                                };
+                                acc[rec.stickerId].count += 1;
+                                return acc;
+                              }, {} as Record<string, any>);
+
+                              return Object.entries(grouped).map(([id, info]) => (
+                                <div
+                                  key={id}
+                                  className="p-3 rounded-2xl border flex items-center gap-2.5 transition-all shadow-2xs"
+                                  style={{
+                                    backgroundColor: info.bgColor || '#f0f6fc',
+                                    borderColor: info.borderColor || '#bfdbfe',
+                                  }}
+                                >
+                                  <span className="text-2xl leading-none shrink-0">{info.icon}</span>
+                                  <div className="min-w-0">
+                                    <h4
+                                      className="text-xs font-black truncate leading-tight"
+                                      style={{ color: info.textColor || '#1c3352' }}
+                                    >
+                                      {info.title}
+                                    </h4>
+                                    <span
+                                      className="text-[10px] font-bold opacity-80 block mt-0.5"
+                                      style={{ color: info.textColor || '#1c3352' }}
+                                    >
+                                      Earned &times;{info.count}
+                                    </span>
+                                  </div>
+                                </div>
+                              ));
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Chronological List of Recognitions matching prompt example */}
+                        <div className="space-y-4 pt-4 border-t border-slate-100">
+                          <h3 className="text-xs font-black uppercase tracking-wider text-slate-500">
+                            Awarded Stickers & Notes
+                          </h3>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {recognitions.map((rec) => {
+                              const dateStr = new Date(rec.awardedAt).toLocaleDateString('en-US', {
+                                month: 'short',
+                                day: 'numeric',
+                                year: 'numeric',
+                              });
+
+                              const teacherName =
+                                typeof rec.teacherId === 'object' && rec.teacherId?.name
+                                  ? rec.teacherId.name
+                                  : 'Teacher';
+
+                              const classDisplay =
+                                typeof rec.classSectionId === 'object' && rec.classSectionId?.name
+                                  ? rec.classSectionId.name
+                                  : typeof rec.classSectionId === 'object' && rec.classSectionId?.classLevel
+                                  ? `${rec.classSectionId.classLevel} - ${rec.classSectionId.section}`
+                                  : undefined;
+
+                              return (
+                                <div
+                                  key={rec._id}
+                                  className="p-4 rounded-3xl border border-slate-200/90 bg-white hover:border-[#254b73]/30 transition-all shadow-2xs space-y-3"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <div
+                                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0 border"
+                                        style={{
+                                          backgroundColor: rec.metadata?.bgColor || '#eff6ff',
+                                          borderColor: rec.metadata?.borderColor || '#bfdbfe',
+                                        }}
+                                      >
+                                        {rec.icon}
+                                      </div>
+                                      <div>
+                                        <h4 className="text-sm font-black text-[#111827]">
+                                          {rec.title}
+                                        </h4>
+                                        <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                                          Awarded by: <span className="text-[#1c3352] font-bold">{teacherName}</span>
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="text-right shrink-0">
+                                      <span className="text-[11px] font-bold text-slate-400 block">
+                                        Date: {dateStr}
+                                      </span>
+                                      {classDisplay && (
+                                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 mt-1 inline-block">
+                                          {classDisplay}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {rec.description && (
+                                    <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-700 italic">
+                                      &ldquo;{rec.description}&rdquo;
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}

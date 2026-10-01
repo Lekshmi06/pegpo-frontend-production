@@ -10,7 +10,7 @@ const goalOptions: Record<UserRole, string[]> = {
   Institution: ['School', 'Collage', 'University', 'Skill Development', 'Department', 'Others'],
   Student: ['School', 'Graduation', 'Post Graduation', 'Professional Course', 'Get a Coures', 'Prepare for Exam', 'Get a Certificate', 'Other Study'],
   Teacher: ['Lesson Planning', 'Improve Profession', 'Update Knowledge', 'Higher Study', 'Engage Students', 'Conduct a Class', 'Tuition', 'Other'],
-  Researcher: ['A co pillot', 'PHD', 'Thisease prepation', 'Post Doctoral', 'Fellowship', 'Guide', 'Other'],
+  Researcher: ['Literature Review', 'Finding Research Gaps', 'Thesis / Dissertation', 'Research Proposal', 'Paper Publication', 'Guide / Advisor', 'Other'],
   Work: ['Explore Hobby', 'Improve My sell', 'Learn for curiosity', 'A mature learn', 'Research freelance', 'Other goals'],
   Personal: ['Skill enhancement', 'Career development', 'Get a Course', 'Get a Certificate', 'Competitive exam', 'Other goals'],
 };
@@ -38,10 +38,12 @@ export default function Onboarding() {
       language: language === 'Select' ? 'English' : language,
     });
 
-    if (role === 'Teacher' || role === 'Institution') {
+    if (role === 'Teacher') {
+      navigate('/onboarding/teacher');
+    } else if (role === 'Institution') {
       navigate('/teacher');
     } else if (role === 'Researcher') {
-      navigate('/research');
+      navigate('/onboarding/researcher');
     } else if (role === 'Student' && goal === 'School') {
       navigate('/onboarding/school');
     } else if (role === 'Student' && (goal === 'Graduation' || goal === 'Get a Coures')) {

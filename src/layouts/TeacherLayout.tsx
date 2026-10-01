@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Home, Library, BookOpen, Upload, CalendarDays, HelpCircle, ClipboardList, FileText, FolderPlus,
   BookMarked, Users, GraduationCap, Tv, Presentation, Gamepad2, ShoppingCart, Search, Trophy,
   MessageSquare, BookCopy, Mic, Video, Brain, ListChecks, Layers, GitBranch, LineChart, NotebookPen,
-  Bookmark, ChevronDown, MonitorUp, LogOut, Globe, Menu, X
+  Bookmark, ChevronDown, MonitorUp, LogOut, Globe, Menu, X, User
 } from 'lucide-react';
 import teacherProfileImg from '../assets/user.png';
 import cardSmartboard from '../assets/card-smartboard.png';
@@ -13,8 +13,10 @@ import cardSlide from '../assets/card-slide.png';
 import cardInfographics from '../assets/card-infographics.png';
 import { EdupyeLogo } from '../components/common/EdupyeLogo';
 import { authService } from '../services/authService';
+import { teacherProfileService } from '../services/teacherProfileService';
 import { TeacherMenuGroup } from '../types/teacher';
 import { CreateAction, QuickLink } from '../types/common';
+import TeacherAIChatBot from '../components/teacher/TeacherAIChatBot';
 
 const menuGroups: TeacherMenuGroup[] = [
   {
@@ -102,6 +104,33 @@ export default function TeacherLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [department, setDepartment] = useState('Department');
   const [subject, setSubject] = useState('Subject');
+
+  useEffect(() => {
+    const syncProfile = () => {
+      const user = authService.getCurrentUser();
+      const cached = teacherProfileService.getCachedProfile();
+      const activeDept =
+        cached?.preferences?.activeDepartment ||
+        cached?.department ||
+        user?.teacherDetails?.department;
+      const activeSub =
+        cached?.preferences?.activeSubject ||
+        cached?.subjects?.[0] ||
+        user?.teacherDetails?.subjects?.[0];
+
+      if (activeDept) setDepartment(activeDept);
+      if (activeSub) setSubject(activeSub);
+    };
+
+    syncProfile();
+
+    window.addEventListener('teacher-profile-updated', syncProfile);
+    window.addEventListener('storage', syncProfile);
+    return () => {
+      window.removeEventListener('teacher-profile-updated', syncProfile);
+      window.removeEventListener('storage', syncProfile);
+    };
+  }, []);
 
   const logout = () => {
     authService.logout();
@@ -245,6 +274,16 @@ export default function TeacherLayout() {
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
+                      navigate('/teacher/profile');
+                    }}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[#1c3352] hover:bg-slate-50 rounded-xl"
+                  >
+                    <User className="w-3.5 h-3.5 text-[#254b73]" />
+                    <span>Teacher Profile</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
                       navigate('/student');
                     }}
                     className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded-xl"
@@ -301,6 +340,11 @@ export default function TeacherLayout() {
               {quickLinks.map((card) => (
                 <div
                   key={card.id}
+                  onClick={() => {
+                    if (card.id === 'smartboard') {
+                      navigate('/teacher/smartboard');
+                    }
+                  }}
                   className="flex items-center justify-between p-3 bg-[#d6e8f6] hover:bg-[#c5dff2] rounded-2xl cursor-pointer transition-all group shadow-2xs"
                 >
                   <span className="text-[11px] font-extrabold text-[#111827] max-w-[100px] leading-tight">{card.title}</span>
@@ -311,6 +355,9 @@ export default function TeacherLayout() {
           </aside>
         </div>
       </section>
+
+      {/* Floating Teacher AI Doubt-Clearing Assistant */}
+      <TeacherAIChatBot />
     </div>
   );
 }

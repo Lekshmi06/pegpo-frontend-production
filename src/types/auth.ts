@@ -78,6 +78,19 @@ export interface UserSession {
   undergraduateDetails?: UndergraduateAcademicInfo;
   postgraduateDetails?: PostgraduateAcademicInfo;
   competitiveExamDetails?: CompetitiveExamAcademicInfo;
+  teacherDetails?: {
+    teacherType?: 'institution' | 'tuition';
+    institution?: string;
+    tuitionCentre?: string;
+    department?: string;
+    designation?: string;
+    subjects?: string[];
+    classesTaught?: string[];
+    boards?: string[];
+    experienceYears?: number;
+  };
+  researcherProfileId?: string;
+  researcherDetails?: any;
   token?: string;
   createdAt?: string;
 }

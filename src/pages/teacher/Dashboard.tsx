@@ -1,61 +1,120 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Plus, X, CalendarDays, Settings, Bold, Italic, Underline, AlignLeft, AlignCenter, ListChecks, ListOrdered, List, PenLine, Eraser } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ChevronDown, ChevronLeft, ChevronRight, Plus, X, CalendarDays, Settings, Bold, Italic, Underline, AlignLeft, AlignCenter, ListChecks, ListOrdered, List, PenLine, Eraser, Trash2, Edit3, CheckCircle2, Circle } from 'lucide-react';
 import KanbanBoard from './KanbanBoard';
 import TeacherCalendar from './TeacherCalendar';
 import LessonPlanner from './LessonPlanner';
+import TeacherClasses from './classes/TeacherClasses';
+import TeacherUpload from './Upload';
+import { TeacherTask } from '../../types/teacherTask';
+import { teacherTaskService } from '../../services/teacherTaskService';
+import TeacherTaskModal from '../../components/teacher/TeacherTaskModal';
 
-const workspaceTabs = ['Calendars Planers', 'Task List', 'Kanban board', 'Lesson Planers', 'Projects'];
+const workspaceTabs = ['Calendars Planers', 'Task List', 'Kanban board', 'Lesson Planers', 'Projects', 'Uploads'];
 const subjectTabs = ['Subject', 'Classes', 'Lessons', 'Test', 'Quiz', 'Notes'];
-
-interface TaskItem {
-  id: string;
-  name: string;
-  status: string;
-  type: string;
-  dueDate: string;
-  priority: string;
-  assignee: string;
-}
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState('Calendars Planers');
   const [activeSubjectTab, setActiveSubjectTab] = useState('Subject');
-  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [tasks, setTasks] = useState<TeacherTask[]>([]);
   const [taskComposerOpen, setTaskComposerOpen] = useState(false);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TeacherTask | null>(null);
   const [taskName, setTaskName] = useState('');
 
-  const hideSubjectRail = ['Task List', 'Kanban board', 'Projects'].includes(activeTab);
+  const hideSubjectRail = ['Task List', 'Kanban board', 'Projects', 'Uploads'].includes(activeTab);
 
-  const addTask = () => {
-    if (!taskName.trim()) return;
-    setTasks((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        name: taskName,
-        status: 'Not started',
-        type: 'General',
-        dueDate: '—',
+  const loadTasks = useCallback(async () => {
+    try {
+      const fetched = await teacherTaskService.getTasks();
+      setTasks(fetched);
+    } catch (err) {
+      console.warn('Failed to load tasks in dashboard:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTasks();
+
+    const handleUpdated = () => {
+      loadTasks();
+    };
+    window.addEventListener('teacher-tasks-updated', handleUpdated);
+    return () => {
+      window.removeEventListener('teacher-tasks-updated', handleUpdated);
+    };
+  }, [loadTasks]);
+
+  const addQuickTask = async (name: string, dueDate?: Date | null, taskType?: string) => {
+    if (!name.trim()) return;
+    try {
+      const dateStr = dueDate ? dueDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      await teacherTaskService.createTask({
+        title: name.trim(),
+        date: dateStr,
+        taskType: (taskType as any) || 'General',
         priority: 'Normal',
-        assignee: '—',
-      },
-    ]);
-    setTaskName('');
-    setTaskComposerOpen(false);
+        status: 'pending',
+      });
+      setTaskName('');
+      setTaskComposerOpen(false);
+    } catch (err) {
+      console.error('Failed to create quick task:', err);
+    }
+  };
+
+  const handleToggleStatus = async (task: TeacherTask) => {
+    try {
+      const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+      await teacherTaskService.updateTask(task._id, { status: newStatus });
+    } catch (err) {
+      console.error('Failed to toggle status:', err);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await teacherTaskService.deleteTask(taskId);
+    } catch (err) {
+      console.error('Failed to delete task:', err);
+    }
+  };
+
+  const handleSaveModal = async (data: any) => {
+    if (editingTask?._id) {
+      await teacherTaskService.updateTask(editingTask._id, data);
+    } else {
+      await teacherTaskService.createTask(data);
+    }
   };
 
   const taskList = (
     <div className="bg-white p-4">
-      <div className="flex h-14 items-center justify-end border-b border-[#d5e4f2] px-3">
-        <button
-          onClick={() => setTaskComposerOpen(true)}
-          aria-label="Add task"
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-[#214d7d] text-white hover:bg-[#173c63] cursor-pointer"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
+      <div className="flex h-14 items-center justify-between border-b border-[#d5e4f2] px-3">
+        <span className="text-xs font-bold text-slate-500">
+          Showing {tasks.length} task{tasks.length === 1 ? '' : 's'}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setEditingTask(null);
+              setTaskModalOpen(true);
+            }}
+            className="flex items-center gap-1 px-3 py-1.5 bg-[#214d7d] text-white hover:bg-[#173c63] rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-2xs"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Task</span>
+          </button>
+          <button
+            onClick={() => setTaskComposerOpen((v) => !v)}
+            aria-label="Add task"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-[#214d7d] hover:bg-slate-200 cursor-pointer"
+            title="Toggle inline quick composer"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
       </div>
-      <div className="grid grid-cols-[1.7fr_repeat(5,1fr)] items-center border-b border-[#c8dced] px-3 py-3 text-[15px] text-[#4d596d] font-bold">
+      <div className="grid grid-cols-[1.7fr_repeat(5,1fr)_48px] items-center border-b border-[#c8dced] px-3 py-3 text-[14px] text-[#4d596d] font-bold">
         <span className="flex items-center gap-2 font-extrabold text-[#202938]">
           <ChevronDown className="h-4 w-4 text-[#214d7d]" />
           Task.active
@@ -65,44 +124,132 @@ export default function TeacherDashboard() {
         <span>Due date</span>
         <span>Priority</span>
         <span>Assignee</span>
+        <span></span>
       </div>
       {taskComposerOpen && (
         <TaskListComposer
           name={taskName}
           setName={setTaskName}
           close={() => setTaskComposerOpen(false)}
-          save={addTask}
+          save={addQuickTask}
         />
       )}
-      {tasks.map((task) => (
-        <div key={task.id} className="grid grid-cols-[1.7fr_repeat(5,1fr)] border-b border-[#edf3f8] px-6 py-3 text-sm text-[#526076]">
-          <input
-            aria-label="Task title"
-            value={task.name}
-            onChange={(e) =>
-              setTasks((current) => current.map((item) => (item.id === task.id ? { ...item, name: e.target.value } : item)))
-            }
-            className="bg-transparent outline-none font-semibold"
-          />
-          <span>{task.status}</span>
-          <span>{task.type}</span>
-          <span>{task.dueDate}</span>
-          <span>{task.priority}</span>
-          <span>{task.assignee}</span>
+      {tasks.length === 0 && !taskComposerOpen && (
+        <div className="p-8 text-center text-slate-400 text-xs font-medium">
+          No tasks found. Click &ldquo;Add Task&rdquo; to create your first task.
         </div>
-      ))}
+      )}
+      {tasks.map((task) => {
+        const classSectionName = typeof task.classSectionId === 'object' && task.classSectionId?.name
+          ? task.classSectionId.name
+          : '—';
+
+        return (
+          <div
+            key={task._id}
+            className="grid grid-cols-[1.7fr_repeat(5,1fr)_48px] items-center border-b border-[#edf3f8] px-3 py-3 text-xs text-[#526076] hover:bg-slate-50/60 transition-colors"
+          >
+            <div className="flex items-center gap-2 pr-2">
+              <button
+                onClick={() => handleToggleStatus(task)}
+                className="text-slate-400 hover:text-[#214d7d] transition-colors cursor-pointer shrink-0"
+                title={task.status === 'completed' ? 'Mark pending' : 'Mark completed'}
+              >
+                {task.status === 'completed' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                ) : (
+                  <Circle className="h-4 w-4 text-slate-300" />
+                )}
+              </button>
+              <span
+                onClick={() => {
+                  setEditingTask(task);
+                  setTaskModalOpen(true);
+                }}
+                className={`font-semibold cursor-pointer truncate hover:text-[#214d7d] ${
+                  task.status === 'completed' ? 'line-through text-slate-400' : 'text-slate-800'
+                }`}
+                title={task.title}
+              >
+                {task.title}
+              </span>
+            </div>
+            <div>
+              <span
+                onClick={() => handleToggleStatus(task)}
+                className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold cursor-pointer ${
+                  task.status === 'completed'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : task.status === 'in_progress'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {task.status === 'completed' ? 'Completed' : task.status === 'in_progress' ? 'In Progress' : 'Pending'}
+              </span>
+            </div>
+            <span>{task.taskType || 'General'}</span>
+            <span>{task.date || '—'}</span>
+            <div>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                task.priority === 'Urgent'
+                  ? 'bg-rose-100 text-rose-700 font-bold'
+                  : task.priority === 'High'
+                  ? 'bg-amber-100 text-amber-700'
+                  : 'text-slate-600'
+              }`}>
+                {task.priority || 'Normal'}
+              </span>
+            </div>
+            <span className="truncate" title={classSectionName}>{classSectionName}</span>
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => {
+                  setEditingTask(task);
+                  setTaskModalOpen(true);
+                }}
+                className="p-1 text-slate-400 hover:text-[#214d7d] hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                title="Edit task"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => handleDeleteTask(task._id)}
+                className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                title="Delete task"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
       <button
-        onClick={() => setTaskComposerOpen(true)}
-        className="flex items-center gap-2 px-8 py-6 text-sm text-[#536177] hover:text-[#214d7d] font-bold cursor-pointer"
+        onClick={() => {
+          setEditingTask(null);
+          setTaskModalOpen(true);
+        }}
+        className="flex items-center gap-2 px-6 py-5 text-sm text-[#536177] hover:text-[#214d7d] font-bold cursor-pointer"
       >
         <Plus className="h-4 w-4" />
         Create task
       </button>
+
+      {/* Task Creation & Edit Modal */}
+      <TeacherTaskModal
+        isOpen={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        onSave={handleSaveModal}
+        onDelete={handleDeleteTask}
+        task={editingTask}
+      />
     </div>
   );
 
   const content =
-    activeTab === 'Task List' ? (
+    activeSubjectTab === 'Classes' ? (
+      <TeacherClasses />
+    ) : activeTab === 'Task List' ? (
       taskList
     ) : activeTab === 'Kanban board' ? (
       <KanbanBoard />
@@ -112,6 +259,8 @@ export default function TeacherDashboard() {
       <LessonPlanner />
     ) : activeTab === 'Projects' ? (
       <ProjectWorkspace />
+    ) : activeTab === 'Uploads' ? (
+      <TeacherUpload />
     ) : null;
 
   return (
@@ -163,7 +312,7 @@ interface TaskListComposerProps {
   name: string;
   setName: (v: string) => void;
   close: () => void;
-  save: () => void;
+  save: (name: string, dueDate?: Date | null, taskType?: string) => void;
 }
 
 function TaskListComposer({ name, setName, close, save }: TaskListComposerProps) {
@@ -215,7 +364,7 @@ function TaskListComposer({ name, setName, close, save }: TaskListComposerProps)
         <CalendarDays className="h-4 w-4" />
       </button>
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#4383d5] text-sm text-white">K</span>
-      <button onClick={save} className="rounded-xl bg-[#214d7d] px-4 py-1.5 text-sm text-white font-bold cursor-pointer">
+      <button onClick={() => save(name, dueDate, type)} className="rounded-xl bg-[#214d7d] px-4 py-1.5 text-sm text-white font-bold cursor-pointer">
         Save
       </button>
       {typeMenuOpen && (

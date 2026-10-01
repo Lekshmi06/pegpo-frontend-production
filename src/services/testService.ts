@@ -30,6 +30,9 @@ function getAuthHeaders(): HeadersInit {
     headers['x-student-profile-id'] = profileId;
   }
 
+  // Provide client timezone offset in minutes so backend can accurately compute scheduled windows
+  headers['x-timezone-offset'] = String(new Date().getTimezoneOffset());
+
   return headers;
 }
 
@@ -39,6 +42,7 @@ export interface TestFilters {
   subject?: string;
   isLocked?: boolean;
   search?: string;
+  usage?: 'studyMaterial' | 'practice' | 'scheduledTest';
 }
 
 export interface SubmitTestPayload {
@@ -46,6 +50,7 @@ export interface SubmitTestPayload {
   answers: Record<number | string, string>;
   statusByQuestion?: Record<number | string, QuestionStatus>;
   timeSpentSeconds: number;
+  attemptMode?: 'practice' | 'scheduled_test';
 }
 
 export interface StartTestSessionResponse {
@@ -70,6 +75,7 @@ export const testService = {
     if (filters.subject) params.set('subject', filters.subject);
     if (typeof filters.isLocked === 'boolean') params.set('isLocked', String(filters.isLocked));
     if (filters.search) params.set('search', filters.search);
+    if (filters.usage) params.set('usage', filters.usage);
 
     const qs = params.toString();
     const url = `${API_BASE_URL}/tests${qs ? `?${qs}` : ''}`;
@@ -108,10 +114,14 @@ export const testService = {
   /**
    * Start or resume a test attempt session in the backend.
    */
-  startTest: async (testId: string): Promise<StartTestSessionResponse> => {
+  startTest: async (
+    testId: string,
+    attemptMode?: 'practice' | 'scheduled_test'
+  ): Promise<StartTestSessionResponse> => {
     const res = await fetch(`${API_BASE_URL}/tests/${testId}/start`, {
       method: 'POST',
       headers: getAuthHeaders(),
+      body: JSON.stringify({ attemptMode }),
     });
 
     if (!res.ok) {

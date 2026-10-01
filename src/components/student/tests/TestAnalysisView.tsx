@@ -19,6 +19,7 @@ import { Button } from '../../ui/Button';
 interface TestAnalysisViewProps {
   result: TestResult;
   studentProfile?: any;
+  canRetake?: boolean;
   onRetake: () => void;
   onBackToTests: () => void;
 }
@@ -26,6 +27,7 @@ interface TestAnalysisViewProps {
 export default function TestAnalysisView({
   result,
   studentProfile,
+  canRetake = true,
   onRetake,
   onBackToTests,
 }: TestAnalysisViewProps) {
@@ -93,15 +95,17 @@ export default function TestAnalysisView({
           </button>
 
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRetake}
-              className="border-slate-200 text-xs font-bold flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Retake Test</span>
-            </Button>
+            {canRetake && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRetake}
+                className="border-slate-200 text-xs font-bold flex items-center gap-1.5"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Retake Test</span>
+              </Button>
+            )}
 
             <Button
               variant="primary"

@@ -30,6 +30,7 @@ import {
   Clock,
   Compass,
   Check,
+  GraduationCap,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import cardSmartboard from '../../assets/card-smartboard.png';
@@ -43,6 +44,8 @@ import { Loader } from '../../components/ui/Loader';
 import { useStudentProfile } from '../../hooks/useStudentProfile';
 import { useStudentSources } from '../../hooks/useStudentSources';
 import { sourceService } from '../../services/sourceService';
+import { materialService } from '../../services/materialService';
+import { TeacherMaterial } from '../../types/material';
 import { SourceChatView } from './components/SourceChatView';
 import { SourceQuizView } from './components/SourceQuizView';
 import { SourceFlashcardsView } from './components/SourceFlashcardsView';
@@ -88,6 +91,7 @@ export default function Upload() {
     uploadFile,
     selectSource,
     deleteSource,
+    refetch: refetchSources,
   } = useStudentSources(profile?._id);
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -99,6 +103,45 @@ export default function Upload() {
   const [pendingChatQuery, setPendingChatQuery] = useState('');
   const [copiedText, setCopiedText] = useState(false);
   const [bookmarkedSet, setBookmarkedSet] = useState<Record<string, boolean>>({});
+
+  // Teacher materials integration
+  const [showTeacherMaterialsModal, setShowTeacherMaterialsModal] = useState(false);
+  const [teacherMaterials, setTeacherMaterials] = useState<TeacherMaterial[]>([]);
+  const [isLoadingTeacherMaterials, setIsLoadingTeacherMaterials] = useState(false);
+  const [importingMaterialId, setImportingMaterialId] = useState<string | null>(null);
+
+  const loadTeacherMaterials = async () => {
+    setIsLoadingTeacherMaterials(true);
+    try {
+      const data = await materialService.getPublishedMaterialsForStudents();
+      setTeacherMaterials(data);
+    } catch (err) {
+      console.warn('Failed to load published teacher materials:', err);
+    } finally {
+      setIsLoadingTeacherMaterials(false);
+    }
+  };
+
+  const handleImportTeacherMaterial = async (mat: TeacherMaterial) => {
+    try {
+      setImportingMaterialId(mat._id || mat.id!);
+      toast.info(`Importing "${mat.title}" into your AI Source Studio...`);
+      const newSource = await materialService.importToStudentSource(mat._id || mat.id!);
+      await refetchSources();
+      if (newSource?._id) {
+        selectSource(newSource._id);
+      }
+      setViewMode('chat');
+      setActiveTab('overview');
+      setShowTeacherMaterialsModal(false);
+      toast.success(`"${mat.title}" imported! AI insights are ready.`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Import failed';
+      toast.error(msg);
+    } finally {
+      setImportingMaterialId(null);
+    }
+  };
 
   // Graphic card modal
   const [selectedGraphicCard, setSelectedGraphicCard] = useState<{
@@ -293,6 +336,94 @@ export default function Upload() {
         )}
       </Modal>
 
+      {/* Teacher Published Materials Import Modal */}
+      <Modal
+        isOpen={showTeacherMaterialsModal}
+        onClose={() => setShowTeacherMaterialsModal(false)}
+        title="Import Teacher's Course Resources"
+      >
+        <div className="space-y-4 text-xs">
+          <p className="text-slate-500 leading-relaxed">
+            Select any lecture slides, textbook excerpts, or revision notes published by your teachers to import directly into your AI Study Studio.
+          </p>
+
+          {isLoadingTeacherMaterials ? (
+            <div className="flex flex-col items-center justify-center py-10 space-y-2">
+              <Loader size="md" />
+              <span className="text-slate-400 font-semibold">Loading published materials...</span>
+            </div>
+          ) : teacherMaterials.length === 0 ? (
+            <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+              <GraduationCap className="w-8 h-8 text-slate-400 mx-auto" />
+              <p className="font-bold text-slate-700">No published teacher resources found</p>
+              <p className="text-[11px] text-slate-400">
+                Your teachers haven&apos;t published any materials for your class yet. You can still upload your own documents above.
+              </p>
+            </div>
+          ) : (
+            <div className="max-h-[380px] overflow-y-auto space-y-2.5 pr-1">
+              {teacherMaterials.map((mat) => {
+                const isImporting = importingMaterialId === (mat._id || mat.id);
+                return (
+                  <div
+                    key={mat._id || mat.id}
+                    className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 hover:shadow-2xs transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                          {mat.subject}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium capitalize">
+                          {mat.category}
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1">
+                          • By {mat.teacherName || 'Teacher'}
+                        </span>
+                      </div>
+                      <p className="font-bold text-slate-800 text-xs truncate" title={mat.title}>
+                        {mat.title}
+                      </p>
+                      <p className="text-[10px] text-slate-400 truncate">
+                        {mat.originalName} ({mat.fileSize ? `${Math.round(mat.fileSize / 1024)} KB` : ''})
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => handleImportTeacherMaterial(mat)}
+                      disabled={isImporting}
+                      className="shrink-0 px-3 py-1.5 rounded-xl bg-[#214d7d] hover:bg-[#173a62] text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                    >
+                      {isImporting ? (
+                        <>
+                          <Loader size="sm" />
+                          <span>Importing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3 h-3 text-amber-300" />
+                          <span>Study with AI</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="pt-2 border-t border-slate-100 flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowTeacherMaterialsModal(false)}
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header Bar */}
         <header className="h-16 bg-white border-b border-[#e2ebf4] flex items-center justify-end px-4 md:px-8 z-10 flex-shrink-0">
@@ -373,6 +504,17 @@ export default function Upload() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      loadTeacherMaterials();
+                      setShowTeacherMaterialsModal(true);
+                    }}
+                    className="px-3.5 py-1.5 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Teacher Resources</span>
+                  </button>
+
                   <button
                     onClick={() => setViewMode(viewMode === 'empty' ? 'chat' : 'empty')}
                     className="px-3.5 py-1.5 bg-white border border-[#cbd5e1] hover:bg-slate-50 text-[#1c3352] rounded-xl text-xs font-bold transition-colors shadow-2xs cursor-pointer flex items-center gap-1.5"

@@ -20,28 +20,36 @@ const TOKEN_KEY = 'token';
 
 export const authService = {
   signUp: async (email: string, password?: string, name?: string): Promise<UserSession> => {
-    const cleanEmail = (email || '').trim().toLowerCase() || 'student@edupye.com';
+    const cleanEmail = (email || '').trim().toLowerCase();
+    if (!cleanEmail) {
+      throw new Error('Please enter a valid email address');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: cleanEmail, password, name }),
+    });
+
+    const json = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      const errorMsg =
+        json?.message ||
+        'This email ID already has an account or is already in use. Please log in instead.';
+      throw new Error(errorMsg);
+    }
+
     let profileId: string | undefined;
     let registeredName = name;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail, password, name }),
-      });
-
-      const json = await res.json().catch(() => null);
-      if (res.ok && json?.data) {
-        if (json.data.token) localStorage.setItem(TOKEN_KEY, json.data.token);
-        if (json.data.studentProfile?._id) {
-          profileId = json.data.studentProfile._id;
-          localStorage.setItem(PROFILE_ID_KEY, json.data.studentProfile._id);
-        }
-        if (json.data.user?.name) registeredName = json.data.user.name;
+    if (json?.data) {
+      if (json.data.token) localStorage.setItem(TOKEN_KEY, json.data.token);
+      if (json.data.studentProfile?._id) {
+        profileId = json.data.studentProfile._id;
+        localStorage.setItem(PROFILE_ID_KEY, json.data.studentProfile._id);
       }
-    } catch (err) {
-      console.warn('Backend register failed/offline, continuing with local session:', err);
+      if (json.data.user?.name) registeredName = json.data.user.name;
     }
 
     const session: UserSession = {
@@ -82,24 +90,66 @@ export const authService = {
       }
 
       if (json?.data) {
-        const { user, studentProfile, token } = json.data;
+        const { user, studentProfile, teacherProfile, researcherProfile, token } = json.data;
         if (token) localStorage.setItem(TOKEN_KEY, token);
         if (studentProfile?._id) localStorage.setItem(PROFILE_ID_KEY, studentProfile._id);
+        if (teacherProfile?._id) localStorage.setItem('teacherProfileId', teacherProfile._id);
+        if (researcherProfile?._id) localStorage.setItem('researcherProfileId', researcherProfile._id);
 
-        session = {
-          email: user.email,
-          name: studentProfile?.name || user.name || cleanEmail.split('@')[0],
-          role: 'student',
-          learningPath: studentProfile?.learningPath || 'school',
-          language: user.language || 'English',
-          phone: studentProfile?.phone,
-          dob: studentProfile?.dob,
-          gender: studentProfile?.gender,
-          avatar: studentProfile?.avatar,
-          goal: studentProfile?.goal || 'School Curriculum Mastery',
-          schoolDetails: studentProfile?.schoolDetails,
-          createdAt: studentProfile?.createdAt || new Date().toISOString(),
-        };
+        if (user.userType === 'teacher' || teacherProfile) {
+          localStorage.setItem(ROLE_KEY, 'teacher');
+          session = {
+            email: user.email,
+            name: teacherProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'teacher',
+            language: user.language || 'English',
+            phone: teacherProfile?.phone,
+            dob: teacherProfile?.dob,
+            gender: teacherProfile?.gender,
+            avatar: teacherProfile?.avatar,
+            goal: teacherProfile?.goal || 'Lesson Planning',
+            teacherDetails: {
+              teacherType: teacherProfile?.teacherType || 'institution',
+              institution: teacherProfile?.institution,
+              tuitionCentre: teacherProfile?.tuitionCentre,
+              department: teacherProfile?.department,
+              designation: teacherProfile?.designation,
+              subjects: teacherProfile?.subjects || [],
+              classesTaught: teacherProfile?.classesTaught || [],
+              boards: teacherProfile?.boards || [],
+              experienceYears: teacherProfile?.experienceYears || 0,
+            },
+            createdAt: teacherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else if (user.userType === 'researcher' || researcherProfile) {
+          localStorage.setItem(ROLE_KEY, 'researcher');
+          session = {
+            email: user.email,
+            name: researcherProfile?.fullName || user.name || cleanEmail.split('@')[0],
+            role: 'researcher',
+            language: user.language || 'English',
+            phone: researcherProfile?.contact?.phone,
+            researcherProfileId: researcherProfile?._id,
+            researcherDetails: researcherProfile,
+            goal: researcherProfile?.researchGoals?.primaryGoals?.[0] || 'Literature review',
+            createdAt: researcherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else {
+          session = {
+            email: user.email,
+            name: studentProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'student',
+            learningPath: studentProfile?.learningPath || 'school',
+            language: user.language || 'English',
+            phone: studentProfile?.phone,
+            dob: studentProfile?.dob,
+            gender: studentProfile?.gender,
+            avatar: studentProfile?.avatar,
+            goal: studentProfile?.goal || 'School Curriculum Mastery',
+            schoolDetails: studentProfile?.schoolDetails,
+            createdAt: studentProfile?.createdAt || new Date().toISOString(),
+          };
+        }
       }
     } catch (err) {
       if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('required') || err.message.includes('password'))) {
@@ -334,6 +384,58 @@ export const authService = {
     return updated;
   },
 
+  saveTeacherDetails: async (details: {
+    teacherType?: 'institution' | 'tuition';
+    institution?: string;
+    tuitionCentre?: string;
+    department?: string;
+    designation?: string;
+    subjects?: string[];
+    classesTaught?: string[];
+    boards?: string[];
+    experienceYears?: number;
+  }): Promise<UserSession> => {
+    const current = authService.getCurrentUser() || { email: 'teacher@edupye.com' };
+    const updated: UserSession = {
+      ...current,
+      role: 'teacher',
+      teacherDetails: {
+        ...current.teacherDetails,
+        ...details,
+      },
+    };
+    localStorage.setItem(ROLE_KEY, 'teacher');
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    const profileId = localStorage.getItem('teacherProfileId');
+    try {
+      if (profileId) {
+        await fetch(`${API_BASE_URL}/teachers/${profileId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(details),
+        });
+      } else {
+        const res = await fetch(`${API_BASE_URL}/teachers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...details,
+            email: current.email,
+            name: current.name || 'Teacher',
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (json?.data?._id) {
+          localStorage.setItem('teacherProfileId', json.data._id);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync teacher details to backend:', err);
+    }
+    return updated;
+  },
+
   setOnboardingGoal: async (goal: string): Promise<void> => {
     localStorage.setItem(GOAL_KEY, goal);
     const current = authService.getCurrentUser();
@@ -350,6 +452,10 @@ export const authService = {
     localStorage.removeItem(ROLE_KEY);
     localStorage.removeItem(LANG_KEY);
     localStorage.removeItem(PROFILE_ID_KEY);
+    localStorage.removeItem('teacherProfileId');
+    localStorage.removeItem('teacherProfileData');
+    localStorage.removeItem('researcherProfileId');
+    localStorage.removeItem('researcherProfileData');
     localStorage.removeItem(TOKEN_KEY);
   },
 
