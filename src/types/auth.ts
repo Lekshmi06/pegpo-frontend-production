@@ -4,7 +4,9 @@ export type UserRole =
   | 'researcher'
   | 'institution'
   | 'work'
-  | 'personal';
+  | 'personal'
+  | 'provider'
+  | 'learner';
 
 export type LearningPath =
   | 'school'

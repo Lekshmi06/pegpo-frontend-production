@@ -11,6 +11,7 @@ export default function SignUp() {
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedRole, setSelectedRole] = useState<'learner' | 'provider' | 'student'>('learner');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -27,7 +28,8 @@ export default function SignUp() {
 
     setIsLoading(true);
     try {
-      await authService.signUp(email, password);
+      localStorage.setItem('userRole', selectedRole);
+      await authService.signUp(email, password, undefined, selectedRole);
       navigate('/personal-details');
     } catch (err) {
       const msg =
@@ -42,7 +44,8 @@ export default function SignUp() {
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     try {
-      await authService.signUp('student@edupye.com');
+      localStorage.setItem('userRole', selectedRole);
+      await authService.signUp('student@edupye.com', undefined, undefined, selectedRole);
       navigate('/personal-details');
     } catch {
       toast.error('Google Sign Up failed. Please try again.');
@@ -67,8 +70,37 @@ export default function SignUp() {
             Create Your Pegpo Account
           </h1>
           <p className="text-xs font-semibold text-slate-500">
-            Let's get your personalized learning journey started.
+            Choose your learning or teaching pathway to get started.
           </p>
+        </div>
+
+        {/* Role Selection [ Learner ] [ Provider ] */}
+        <div className="text-left space-y-1.5">
+          <label className="block text-[11px] font-bold text-slate-600">I am joining as</label>
+          <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setSelectedRole('learner')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                selectedRole === 'learner'
+                  ? 'bg-white text-[#0091ff] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Learner / Student</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedRole('provider')}
+              className={`py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                selectedRole === 'provider'
+                  ? 'bg-white text-[#0091ff] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Course Provider</span>
+            </button>
+          </div>
         </div>
 
         <div className="pt-2">

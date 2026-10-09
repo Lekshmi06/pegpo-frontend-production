@@ -4,9 +4,11 @@ import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/authService';
 
-type UserRole = 'Institution' | 'Student' | 'Teacher' | 'Researcher' | 'Work' | 'Personal';
+type UserRole = 'Learner' | 'Provider' | 'Student' | 'Teacher' | 'Researcher' | 'Institution' | 'Work' | 'Personal';
 
 const goalOptions: Record<UserRole, string[]> = {
+  Learner: ['Browse Courses', 'Professional Skills', 'Exam Preparation', 'Learn to Code', 'Language Learning', 'Personal Interest'],
+  Provider: ['Course Creation', 'Skill Training', 'Certification Prep', 'Technical Coaching', 'Creative Arts', 'Business & Management'],
   Institution: ['School', 'Collage', 'University', 'Skill Development', 'Department', 'Others'],
   Student: ['School', 'Graduation', 'Post Graduation', 'Professional Course', 'Get a Coures', 'Prepare for Exam', 'Get a Certificate', 'Other Study'],
   Teacher: ['Lesson Planning', 'Improve Profession', 'Update Knowledge', 'Higher Study', 'Engage Students', 'Conduct a Class', 'Tuition', 'Other'],
@@ -17,8 +19,8 @@ const goalOptions: Record<UserRole, string[]> = {
 
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [role, setRole] = useState<UserRole>('Institution');
-  const [goal, setGoal] = useState<string>('School');
+  const [role, setRole] = useState<UserRole>('Learner');
+  const [goal, setGoal] = useState<string>('Browse Courses');
   const [language, setLanguage] = useState<string>('Select');
 
   const handleRoleChange = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -28,7 +30,7 @@ export default function Onboarding() {
   };
 
   const handleContinue = () => {
-    localStorage.setItem('userRole', role);
+    localStorage.setItem('userRole', role.toLowerCase());
     localStorage.setItem('userGoal', goal);
     localStorage.setItem('userLanguage', language);
 
@@ -38,10 +40,18 @@ export default function Onboarding() {
       language: language === 'Select' ? 'English' : language,
     });
 
-    if (role === 'Teacher') {
+    if (role === 'Provider') {
+      navigate('/provider');
+    } else if (role === 'Learner') {
+      navigate('/learner');
+    } else if (role === 'Teacher') {
       navigate('/onboarding/teacher');
     } else if (role === 'Institution') {
-      navigate('/teacher');
+      if (goal === 'School') {
+        navigate('/institution/school');
+      } else {
+        navigate('/institution');
+      }
     } else if (role === 'Researcher') {
       navigate('/onboarding/researcher');
     } else if (role === 'Student' && goal === 'School') {
@@ -83,8 +93,10 @@ export default function Onboarding() {
                   onChange={handleRoleChange}
                   className="w-full px-4 py-3 border border-blue-200 rounded-2xl bg-white text-xs font-bold text-[#111827] outline-none appearance-none cursor-pointer focus:border-[#0091ff] focus:ring-2 focus:ring-[#0091ff]/20 shadow-2xs"
                 >
+                  <option value="Learner">Learner / Consumer (Courses & Certificates)</option>
+                  <option value="Provider">Course Provider (Teach & Publish Courses)</option>
                   <option value="Institution">Institution</option>
-                  <option value="Student">Student</option>
+                  <option value="Student">Student (K-12 & College Syllabus)</option>
                   <option value="Teacher">Teacher</option>
                   <option value="Researcher">Researcher</option>
                   <option value="Work">Work</option>

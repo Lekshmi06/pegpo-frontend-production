@@ -19,7 +19,7 @@ const PROFILE_ID_KEY = 'studentProfileId';
 const TOKEN_KEY = 'token';
 
 export const authService = {
-  signUp: async (email: string, password?: string, name?: string): Promise<UserSession> => {
+  signUp: async (email: string, password?: string, name?: string, userType?: UserRole): Promise<UserSession> => {
     const cleanEmail = (email || '').trim().toLowerCase();
     if (!cleanEmail) {
       throw new Error('Please enter a valid email address');
@@ -28,7 +28,7 @@ export const authService = {
     const res = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: cleanEmail, password, name }),
+      body: JSON.stringify({ email: cleanEmail, password, name, userType: userType || 'student' }),
     });
 
     const json = await res.json().catch(() => null);
@@ -52,18 +52,20 @@ export const authService = {
       if (json.data.user?.name) registeredName = json.data.user.name;
     }
 
+    const resolvedRole: UserRole = (userType || (json?.data?.user?.userType as UserRole) || 'student');
     const session: UserSession = {
       email: cleanEmail,
       name:
         registeredName ||
         cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      role: 'student',
+      role: resolvedRole,
       learningPath: 'school',
       language: 'English',
       createdAt: new Date().toISOString(),
     };
 
     localStorage.setItem(EMAIL_KEY, session.email);
+    localStorage.setItem(ROLE_KEY, session.role || 'student');
     localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
     return session;
   },
@@ -96,7 +98,27 @@ export const authService = {
         if (teacherProfile?._id) localStorage.setItem('teacherProfileId', teacherProfile._id);
         if (researcherProfile?._id) localStorage.setItem('researcherProfileId', researcherProfile._id);
 
-        if (user.userType === 'teacher' || teacherProfile) {
+        if (user.userType === 'provider') {
+          localStorage.setItem(ROLE_KEY, 'provider');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'provider',
+            language: user.language || 'English',
+            goal: 'Course Creation',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (user.userType === 'learner') {
+          localStorage.setItem(ROLE_KEY, 'learner');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'learner',
+            language: user.language || 'English',
+            goal: 'Browse Courses',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (user.userType === 'teacher' || teacherProfile) {
           localStorage.setItem(ROLE_KEY, 'teacher');
           session = {
             email: user.email,

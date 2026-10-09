@@ -80,6 +80,25 @@ const ResearchUpload = lazy(() => import('../pages/research/Upload'));
 const ResearchNewFolder = lazy(() => import('../pages/research/NewFolder'));
 const GenericResearchPage = lazy(() => import('../pages/research/GenericResearchPage'));
 
+// Institution Module Pages
+const InstitutionHome = lazy(() => import('../pages/institution/InstitutionHome'));
+const SchoolPortalContainer = lazy(() => import('../pages/institution/SchoolPortalContainer'));
+const CollegePortalContainer = lazy(() => import('../pages/institution/CollegePortalContainer'));
+const InstitutionLayout = lazy(() => import('../layouts/InstitutionLayout'));
+const InstitutionDashboard = lazy(() => import('../pages/institution/InstitutionDashboard'));
+const InstitutionMembers = lazy(() => import('../pages/institution/InstitutionMembers'));
+const InstitutionJoin = lazy(() => import('../pages/institution/InstitutionJoin'));
+
+// Course Marketplace & LMS Modules
+const ProviderLayout = lazy(() => import('../layouts/ProviderLayout'));
+const ProviderDashboard = lazy(() => import('../pages/provider/ProviderDashboard'));
+const CourseBuilder = lazy(() => import('../pages/provider/CourseBuilder'));
+const LearnerLayout = lazy(() => import('../layouts/LearnerLayout'));
+const LearnerDashboard = lazy(() => import('../pages/learner/LearnerDashboard'));
+const Marketplace = lazy(() => import('../pages/marketplace/Marketplace'));
+const CourseDetails = lazy(() => import('../pages/marketplace/CourseDetails'));
+const CourseLearningPlayer = lazy(() => import('../pages/learner/CourseLearningPlayer'));
+
 
 export default function AppRoutes() {
   return (
@@ -189,6 +208,42 @@ export default function AppRoutes() {
           <Route path="bookshelf" element={<GenericResearchPage title="Research Bookshelf" desc="Manage textbooks and manuals." />} />
           <Route path="bookmarks" element={<Bookmarks />} />
           <Route path="genius-test" element={<GenericResearchPage title="Genius Testing Center" desc="Examine study benchmarks." />} />
+        </Route>
+
+        {/* Institution Module */}
+        <Route path="/institution" element={<InstitutionHome />} />
+        <Route path="/institution/join" element={<InstitutionJoin />} />
+        <Route path="/institution/school" element={<SchoolPortalContainer />} />
+        <Route path="/institution/school/*" element={<SchoolPortalContainer />} />
+        <Route path="/institution/college" element={<CollegePortalContainer />} />
+        <Route path="/institution/college/*" element={<CollegePortalContainer />} />
+
+        {/* Native EduPye Institution Workspace */}
+        <Route path="/institution/portal" element={<InstitutionLayout />}>
+          <Route index element={<InstitutionDashboard />} />
+          <Route path="dashboard" element={<InstitutionDashboard />} />
+          <Route path="members" element={<InstitutionMembers />} />
+        </Route>
+        <Route path="/institution/dashboard" element={<Navigate to="/institution/portal/dashboard" replace />} />
+        <Route path="/institution/members" element={<Navigate to="/institution/portal/members" replace />} />
+
+        {/* Course Marketplace (Public & Learners) */}
+        <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/courses" element={<Marketplace />} />
+        <Route path="/courses/:id" element={<CourseDetails />} />
+        <Route path="/learn/:id" element={<CourseLearningPlayer />} />
+
+        {/* Provider Studio Portal */}
+        <Route path="/provider" element={<ProviderLayout />}>
+          <Route index element={<ProviderDashboard />} />
+          <Route path="courses/new" element={<CourseBuilder />} />
+          <Route path="courses/:id/builder" element={<CourseBuilder />} />
+        </Route>
+
+        {/* Learner Portal */}
+        <Route path="/learner" element={<LearnerLayout />}>
+          <Route index element={<LearnerDashboard />} />
+          <Route path="courses" element={<LearnerDashboard />} />
         </Route>
 
         {/* Fallback */}

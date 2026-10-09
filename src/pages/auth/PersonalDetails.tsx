@@ -38,7 +38,15 @@ export default function PersonalDetails() {
         phone: phone.trim(),
         dob,
       });
-      navigate('/onboarding');
+
+      const currentRole = localStorage.getItem('userRole') || '';
+      if (currentRole === 'provider') {
+        navigate('/provider');
+      } else if (currentRole === 'learner') {
+        navigate('/learner');
+      } else {
+        navigate('/onboarding');
+      }
     } catch {
       toast.error('Failed to save personal details. Please try again.');
     } finally {
