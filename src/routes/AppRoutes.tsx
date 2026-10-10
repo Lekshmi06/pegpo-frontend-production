@@ -13,6 +13,7 @@ const PostgraduateOnboarding = lazy(() => import('../pages/auth/PostgraduateOnbo
 const CompetitiveExamOnboarding = lazy(() => import('../pages/auth/CompetitiveExamOnboarding'));
 const TeacherOnboarding = lazy(() => import('../pages/auth/TeacherOnboarding'));
 const ResearcherOnboarding = lazy(() => import('../pages/auth/ResearcherOnboarding/ResearcherOnboarding'));
+const CompanyOnboarding = lazy(() => import('../pages/auth/CompanyOnboarding'));
 
 // Student Layout & Pages
 const StudentLayout = lazy(() => import('../layouts/StudentLayout'));
@@ -87,6 +88,9 @@ const CollegePortalContainer = lazy(() => import('../pages/institution/CollegePo
 const InstitutionLayout = lazy(() => import('../layouts/InstitutionLayout'));
 const InstitutionDashboard = lazy(() => import('../pages/institution/InstitutionDashboard'));
 const InstitutionMembers = lazy(() => import('../pages/institution/InstitutionMembers'));
+const CorporatePrograms = lazy(() => import('../pages/institution/CorporatePrograms'));
+const CorporateDepartments = lazy(() => import('../pages/institution/CorporateDepartments'));
+const CompanySettings = lazy(() => import('../pages/institution/CompanySettings'));
 const InstitutionJoin = lazy(() => import('../pages/institution/InstitutionJoin'));
 
 // Course Marketplace & LMS Modules
@@ -116,6 +120,8 @@ export default function AppRoutes() {
         <Route path="/onboarding/competitive" element={<CompetitiveExamOnboarding />} />
         <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
         <Route path="/onboarding/researcher" element={<ResearcherOnboarding />} />
+        <Route path="/onboarding/company" element={<CompanyOnboarding />} />
+        <Route path="/company/setup" element={<CompanyOnboarding />} />
 
         {/* Student Portal */}
         <Route path="/student" element={<StudentLayout />}>
@@ -218,14 +224,22 @@ export default function AppRoutes() {
         <Route path="/institution/college" element={<CollegePortalContainer />} />
         <Route path="/institution/college/*" element={<CollegePortalContainer />} />
 
-        {/* Native EduPye Institution Workspace */}
+        {/* Native EduPye Corporate Learning Workspace */}
         <Route path="/institution/portal" element={<InstitutionLayout />}>
           <Route index element={<InstitutionDashboard />} />
           <Route path="dashboard" element={<InstitutionDashboard />} />
           <Route path="members" element={<InstitutionMembers />} />
+          <Route path="employees" element={<InstitutionMembers />} />
+          <Route path="programs" element={<CorporatePrograms />} />
+          <Route path="departments" element={<CorporateDepartments />} />
+          <Route path="settings" element={<CompanySettings />} />
         </Route>
         <Route path="/institution/dashboard" element={<Navigate to="/institution/portal/dashboard" replace />} />
         <Route path="/institution/members" element={<Navigate to="/institution/portal/members" replace />} />
+        <Route path="/institution/employees" element={<Navigate to="/institution/portal/members" replace />} />
+        <Route path="/institution/programs" element={<Navigate to="/institution/portal/programs" replace />} />
+        <Route path="/institution/departments" element={<Navigate to="/institution/portal/departments" replace />} />
+        <Route path="/institution/settings" element={<Navigate to="/institution/portal/settings" replace />} />
 
         {/* Course Marketplace (Public & Learners) */}
         <Route path="/marketplace" element={<Marketplace />} />

@@ -31,6 +31,8 @@ import {
   IInstitution,
   IInstitutionMembership,
   InstitutionRole,
+  IDepartment,
+  OnboardingStatus,
 } from '../../types/institution';
 
 interface OutletContextType {
@@ -55,14 +57,20 @@ export default function InstitutionMembers() {
   const [role, setRole] = useState<InstitutionRole>('trainee');
   const [title, setTitle] = useState('');
   const [department, setDepartment] = useState('');
+  const [team, setTeam] = useState('');
+  const [managerId, setManagerId] = useState('');
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>('not_started');
   const [notes, setNotes] = useState('');
   const [inviteMode, setInviteMode] = useState<'active' | 'invited'>('invited');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([
-    'manage_members',
+    'manage_employees',
   ]);
   const [linkedLearnersInput, setLinkedLearnersInput] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Departments list for selection
+  const [departmentsList, setDepartmentsList] = useState<IDepartment[]>([]);
 
   // Invitation Success Dialog State
   const [createdInviteCode, setCreatedInviteCode] = useState<string | null>(null);
@@ -78,6 +86,9 @@ export default function InstitutionMembers() {
   const [editStatus, setEditStatus] = useState<'active' | 'invited' | 'suspended'>('active');
   const [editTitle, setEditTitle] = useState('');
   const [editDepartment, setEditDepartment] = useState('');
+  const [editTeam, setEditTeam] = useState('');
+  const [editManagerId, setEditManagerId] = useState('');
+  const [editOnboardingStatus, setEditOnboardingStatus] = useState<OnboardingStatus>('not_started');
   const [editNotes, setEditNotes] = useState('');
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [editLinkedLearners, setEditLinkedLearners] = useState('');
@@ -88,12 +99,15 @@ export default function InstitutionMembers() {
   const subAdminCanManage =
     isSubAdmin &&
     Array.isArray(currentMembership?.permissions) &&
-    currentMembership.permissions.includes('manage_members');
+    (currentMembership.permissions.includes('manage_members') ||
+      currentMembership.permissions.includes('manage_employees'));
   const subAdminCanInvite =
     isSubAdmin &&
     Array.isArray(currentMembership?.permissions) &&
     (currentMembership.permissions.includes('manage_members') ||
-      currentMembership.permissions.includes('invite_members'));
+      currentMembership.permissions.includes('manage_employees') ||
+      currentMembership.permissions.includes('invite_members') ||
+      currentMembership.permissions.includes('invite_employees'));
 
   const canManageMembers = isAdmin || subAdminCanManage;
   const canInviteMembers = isAdmin || subAdminCanInvite;
@@ -106,8 +120,19 @@ export default function InstitutionMembers() {
   useEffect(() => {
     if (currentInst) {
       loadMembers();
+      loadDepartments();
     }
   }, [currentInst, roleFilter, statusFilter, searchQuery]);
+
+  const loadDepartments = async () => {
+    if (!currentInst) return;
+    try {
+      const depts = await institutionService.getDepartments(currentInst._id);
+      setDepartmentsList(depts || []);
+    } catch {
+      // non-blocking
+    }
+  };
 
   const loadMembers = async () => {
     if (!currentInst) return;
@@ -156,6 +181,9 @@ export default function InstitutionMembers() {
         role,
         title: title.trim() || undefined,
         department: department.trim() || undefined,
+        team: team.trim() || undefined,
+        managerId: managerId || undefined,
+        onboardingStatus,
         notes: notes.trim() || undefined,
         status: inviteMode,
         permissions: role === 'subadmin' ? selectedPermissions : undefined,
@@ -167,6 +195,9 @@ export default function InstitutionMembers() {
       setName('');
       setTitle('');
       setDepartment('');
+      setTeam('');
+      setManagerId('');
+      setOnboardingStatus('not_started');
       setNotes('');
       setLinkedLearnersInput('');
       setIsAddModalOpen(false);
@@ -189,8 +220,11 @@ export default function InstitutionMembers() {
     setEditStatus(member.status);
     setEditTitle(member.title || '');
     setEditDepartment(member.department || '');
+    setEditTeam(member.team || '');
+    setEditManagerId(member.managerId?._id || '');
+    setEditOnboardingStatus(member.onboardingStatus || 'not_started');
     setEditNotes(member.notes || '');
-    setEditPermissions(member.permissions || ['manage_members']);
+    setEditPermissions(member.permissions || ['manage_employees']);
     const learnerIds =
       member.linkedLearners && Array.isArray(member.linkedLearners)
         ? member.linkedLearners.map((l: any) => l._id || l).join(', ')
@@ -217,6 +251,9 @@ export default function InstitutionMembers() {
         status: editStatus,
         title: editTitle.trim() || undefined,
         department: editDepartment.trim() || undefined,
+        team: editTeam.trim() || undefined,
+        managerId: editManagerId || undefined,
+        onboardingStatus: editOnboardingStatus,
         notes: editNotes.trim() || undefined,
         permissions: editRole === 'subadmin' ? editPermissions : undefined,
         linkedLearners: payloadLearners,
@@ -345,6 +382,46 @@ export default function InstitutionMembers() {
     }
   };
 
+  const getRoleDisplayName = (r: string) => {
+    switch (r) {
+      case 'admin':
+        return 'Company Admin';
+      case 'subadmin':
+        return 'Training Manager / HR';
+      case 'trainer':
+        return 'Trainer / Instructor';
+      case 'trainee':
+        return 'Employee / Trainee';
+      case 'parent':
+        return 'Auditor / Parent';
+      default:
+        return r;
+    }
+  };
+
+  const getOnboardingBadge = (st?: string) => {
+    switch (st) {
+      case 'completed':
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+            Completed
+          </span>
+        );
+      case 'in_progress':
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+            In Progress
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+            Not Started
+          </span>
+        );
+    }
+  };
+
   const copyToClipboard = (text: string, isLink: boolean) => {
     navigator.clipboard.writeText(text);
     if (isLink) {
@@ -367,14 +444,14 @@ export default function InstitutionMembers() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-              Institution Members
+              Employee Directory
             </h1>
             <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-bold">
-              {members.length} {members.length === 1 ? 'member' : 'members'}
+              {members.length} {members.length === 1 ? 'employee' : 'employees'}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Manage administrators, instructors, trainees, and parents in {currentInst?.name}
+            Manage employees, corporate roles, department assignments, and onboarding progress in {currentInst?.name}
           </p>
         </div>
 
@@ -384,7 +461,7 @@ export default function InstitutionMembers() {
             className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
           >
             <UserPlus className="w-4 h-4" />
-            <span>Add / Invite Member</span>
+            <span>Add / Invite Employee</span>
           </button>
         )}
       </div>
@@ -396,7 +473,7 @@ export default function InstitutionMembers() {
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by name, email, title..."
+            placeholder="Search by name, email, department, team..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full text-xs pl-9 pr-3.5 py-2 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
@@ -420,12 +497,12 @@ export default function InstitutionMembers() {
           {/* Role Filter Tabs */}
           <div className="flex items-center gap-1 overflow-x-auto">
             {[
-              { id: 'all', label: 'All Roles' },
+              { id: 'all', label: 'All Staff' },
               { id: 'admin', label: 'Admins' },
-              { id: 'subadmin', label: 'Sub-Admins' },
+              { id: 'subadmin', label: 'Managers / HR' },
               { id: 'trainer', label: 'Trainers' },
-              { id: 'trainee', label: 'Trainees' },
-              { id: 'parent', label: 'Parents' },
+              { id: 'trainee', label: 'Employees' },
+              { id: 'parent', label: 'Auditors' },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -449,12 +526,13 @@ export default function InstitutionMembers() {
           <table className="w-full text-left text-xs">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-500 font-bold uppercase tracking-wider text-[10px]">
               <tr>
-                <th className="px-6 py-3.5">Member</th>
-                <th className="px-6 py-3.5">Institution Role</th>
-                <th className="px-6 py-3.5">Title / Designation</th>
-                <th className="px-6 py-3.5">Department</th>
+                <th className="px-6 py-3.5">Employee</th>
+                <th className="px-6 py-3.5">Company Role</th>
+                <th className="px-6 py-3.5">Job Title</th>
+                <th className="px-6 py-3.5">Department & Team</th>
+                <th className="px-6 py-3.5">Reporting Manager</th>
+                <th className="px-6 py-3.5">Onboarding</th>
                 <th className="px-6 py-3.5">Status</th>
-                <th className="px-6 py-3.5">Joined Date</th>
                 <th className="px-6 py-3.5 text-right">Actions</th>
               </tr>
             </thead>
@@ -480,7 +558,7 @@ export default function InstitutionMembers() {
                           <div>
                             <div className="flex items-center gap-1.5">
                               <span className="font-bold text-slate-900">
-                                {user?.name || 'Unnamed Member'}
+                                {user?.name || 'Unnamed Employee'}
                               </span>
                               {isOwner && (
                                 <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-1.5 py-0.2 rounded border border-amber-300">
@@ -501,16 +579,33 @@ export default function InstitutionMembers() {
                             member.role
                           )}`}
                         >
-                          {member.role}
+                          {getRoleDisplayName(member.role)}
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-slate-600">
+                      <td className="px-6 py-4 text-slate-600 font-medium">
                         {member.title || '—'}
                       </td>
 
                       <td className="px-6 py-4 text-slate-600">
-                        {member.department || '—'}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-semibold text-slate-800">{member.department || 'General'}</span>
+                          {member.team && (
+                            <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-1.5 py-0.5 rounded font-bold">
+                              {member.team}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-slate-600">
+                        {member.managerId?.name || member.managerId?.email || '—'}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        {member.role === 'trainee'
+                          ? getOnboardingBadge(member.onboardingStatus)
+                          : <span className="text-slate-400 text-[11px]">—</span>}
                       </td>
 
                       <td className="px-6 py-4">{getStatusBadge(member.status)}</td>
@@ -845,11 +940,11 @@ export default function InstitutionMembers() {
                   onChange={(e) => setRole(e.target.value as InstitutionRole)}
                   className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white capitalize"
                 >
-                  <option value="trainee">Trainee / Student</option>
+                  <option value="trainee">Employee / Trainee</option>
                   <option value="trainer">Trainer / Instructor</option>
-                  <option value="subadmin">Sub-Administrator</option>
-                  <option value="parent">Parent / Guardian</option>
-                  {isAdmin && <option value="admin">Administrator</option>}
+                  <option value="subadmin">Training Manager / HR</option>
+                  <option value="parent">Auditor / External</option>
+                  {isAdmin && <option value="admin">Company Administrator</option>}
                 </select>
               </div>
 
@@ -857,13 +952,16 @@ export default function InstitutionMembers() {
               {role === 'subadmin' && (
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                   <span className="text-xs font-bold text-slate-700 block">
-                    Sub-Admin Permissions
+                    Manager / HR Privileges
                   </span>
                   <div className="space-y-1.5">
                     {[
-                      { id: 'manage_members', label: 'Manage Members & Roles' },
-                      { id: 'invite_members', label: 'Create Member Invitations' },
-                      { id: 'view_reports', label: 'View Institution Reports' },
+                      { id: 'manage_employees', label: 'Manage Employees & Directory' },
+                      { id: 'create_programs', label: 'Create & Edit Training Programs' },
+                      { id: 'assign_training', label: 'Assign Training & Cohorts' },
+                      { id: 'view_reports', label: 'View Analytics & Progress Reports' },
+                      { id: 'record_attendance', label: 'Record Attendance Logs' },
+                      { id: 'evaluate_assessments', label: 'Evaluate Assessments' },
                     ].map((perm) => (
                       <label
                         key={perm.id}
@@ -904,17 +1002,17 @@ export default function InstitutionMembers() {
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                   />
                   <p className="text-[11px] text-slate-400 mt-1">
-                    Parents only have access to view linked learner progress and data.
+                    Auditors only have access to view linked learner progress and data.
                   </p>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Title / Designation</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Job Title</label>
                   <input
                     type="text"
-                    placeholder="e.g. Lead Trainer"
+                    placeholder="e.g. Frontend Engineer"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
@@ -924,11 +1022,47 @@ export default function InstitutionMembers() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
                   <input
                     type="text"
-                    placeholder="e.g. IT Department"
+                    list="dept-options-add"
+                    placeholder="e.g. Engineering"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                   />
+                  <datalist id="dept-options-add">
+                    {departmentsList.map((d) => (
+                      <option key={d._id} value={d.name} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Sub-Team</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Frontend, DevOps"
+                    value={team}
+                    onChange={(e) => setTeam(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Reporting Manager</label>
+                  <select
+                    value={managerId}
+                    onChange={(e) => setManagerId(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white"
+                  >
+                    <option value="">None / Direct</option>
+                    {members
+                      .filter((m) => m.role === 'admin' || m.role === 'subadmin')
+                      .map((m) => (
+                        <option key={m._id} value={m.userId?._id}>
+                          {m.userId?.name || m.userId?.email} ({getRoleDisplayName(m.role)})
+                        </option>
+                      ))}
+                  </select>
                 </div>
               </div>
 
@@ -1107,11 +1241,11 @@ export default function InstitutionMembers() {
                   onChange={(e) => setEditRole(e.target.value as InstitutionRole)}
                   className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white capitalize disabled:bg-slate-100"
                 >
-                  <option value="trainee">Trainee / Student</option>
+                  <option value="trainee">Employee / Trainee</option>
                   <option value="trainer">Trainer / Instructor</option>
-                  <option value="subadmin">Sub-Administrator</option>
-                  <option value="parent">Parent / Guardian</option>
-                  {isAdmin && <option value="admin">Administrator</option>}
+                  <option value="subadmin">Training Manager / HR</option>
+                  <option value="parent">Auditor / External</option>
+                  {isAdmin && <option value="admin">Company Administrator</option>}
                 </select>
                 {isMemberOwner(editingMember) && (
                   <p className="text-[11px] text-amber-600 font-medium mt-1">
@@ -1120,38 +1254,53 @@ export default function InstitutionMembers() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={editStatus}
-                  disabled={isMemberOwner(editingMember)}
-                  onChange={(e) => setEditStatus(e.target.value as any)}
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white capitalize disabled:bg-slate-100"
-                >
-                  <option value="active">Active</option>
-                  <option value="invited">Invited</option>
-                  <option value="suspended">Suspended</option>
-                </select>
-                {isMemberOwner(editingMember) && (
-                  <p className="text-[11px] text-amber-600 font-medium mt-1">
-                    Institution owner cannot be suspended.
-                  </p>
-                )}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editStatus}
+                    disabled={isMemberOwner(editingMember)}
+                    onChange={(e) => setEditStatus(e.target.value as any)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white capitalize disabled:bg-slate-100"
+                  >
+                    <option value="active">Active</option>
+                    <option value="invited">Invited</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Onboarding Status
+                  </label>
+                  <select
+                    value={editOnboardingStatus}
+                    onChange={(e) => setEditOnboardingStatus(e.target.value as any)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white capitalize"
+                  >
+                    <option value="not_started">Not Started</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
               </div>
 
               {/* Sub-Admin Permissions Checkboxes */}
               {editRole === 'subadmin' && (
                 <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
                   <span className="text-xs font-bold text-slate-700 block">
-                    Sub-Admin Permissions
+                    Manager / HR Privileges
                   </span>
                   <div className="space-y-1.5">
                     {[
-                      { id: 'manage_members', label: 'Manage Members & Roles' },
-                      { id: 'invite_members', label: 'Create Member Invitations' },
-                      { id: 'view_reports', label: 'View Institution Reports' },
+                      { id: 'manage_employees', label: 'Manage Employees & Directory' },
+                      { id: 'create_programs', label: 'Create & Edit Training Programs' },
+                      { id: 'assign_training', label: 'Assign Training & Cohorts' },
+                      { id: 'view_reports', label: 'View Analytics & Progress Reports' },
+                      { id: 'record_attendance', label: 'Record Attendance Logs' },
+                      { id: 'evaluate_assessments', label: 'Evaluate Assessments' },
                     ].map((perm) => (
                       <label
                         key={perm.id}
@@ -1196,7 +1345,7 @@ export default function InstitutionMembers() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Title / Designation</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Job Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Lead Trainer"
@@ -1209,11 +1358,47 @@ export default function InstitutionMembers() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">Department</label>
                   <input
                     type="text"
-                    placeholder="e.g. IT Department"
+                    list="dept-options-edit"
+                    placeholder="e.g. Engineering"
                     value={editDepartment}
                     onChange={(e) => setEditDepartment(e.target.value)}
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
                   />
+                  <datalist id="dept-options-edit">
+                    {departmentsList.map((d) => (
+                      <option key={d._id} value={d.name} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Sub-Team</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Frontend, DevOps"
+                    value={editTeam}
+                    onChange={(e) => setEditTeam(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Reporting Manager</label>
+                  <select
+                    value={editManagerId}
+                    onChange={(e) => setEditManagerId(e.target.value)}
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:outline-hidden bg-white"
+                  >
+                    <option value="">None / Direct</option>
+                    {members
+                      .filter((m) => m._id !== editingMember._id && (m.role === 'admin' || m.role === 'subadmin'))
+                      .map((m) => (
+                        <option key={m._id} value={m.userId?._id}>
+                          {m.userId?.name || m.userId?.email} ({getRoleDisplayName(m.role)})
+                        </option>
+                      ))}
+                  </select>
                 </div>
               </div>
 

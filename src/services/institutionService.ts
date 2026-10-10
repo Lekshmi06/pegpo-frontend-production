@@ -6,6 +6,10 @@ import {
   IInvitationInfo,
   InstitutionRole,
   InstitutionType,
+  IDepartment,
+  ITrainingProgram,
+  ICorporateDashboardMetrics,
+  IEmployeeTrainingProgress,
 } from '../types/institution';
 
 export interface CreateInstitutionPayload {
@@ -23,6 +27,13 @@ export interface CreateInstitutionPayload {
     country?: string;
     zipCode?: string;
   };
+  settings?: {
+    allowMemberInvites?: boolean;
+    defaultBatchNaming?: string;
+    industryOrField?: string;
+    companySize?: string;
+  };
+  adminTitle?: string;
 }
 
 export interface AddMemberPayload {
@@ -30,6 +41,9 @@ export interface AddMemberPayload {
   role: InstitutionRole;
   title?: string;
   department?: string;
+  team?: string;
+  managerId?: string;
+  onboardingStatus?: 'not_started' | 'in_progress' | 'completed';
   name?: string;
   permissions?: string[];
   linkedLearners?: string[];
@@ -42,6 +56,9 @@ export interface UpdateMemberPayload {
   status?: 'active' | 'invited' | 'suspended';
   title?: string;
   department?: string;
+  team?: string;
+  managerId?: string;
+  onboardingStatus?: 'not_started' | 'in_progress' | 'completed';
   permissions?: string[];
   linkedLearners?: string[];
   notes?: string;
@@ -244,6 +261,214 @@ export const institutionService = {
       }
     );
     return res;
+  },
+
+  // Corporate Learning & Onboarding Methods
+  getCorporateDashboardMetrics: async (
+    institutionId: string
+  ): Promise<ICorporateDashboardMetrics> => {
+    const res = await apiRequest<{ success: boolean; data: ICorporateDashboardMetrics }>(
+      `/institutions/${institutionId}/corporate-dashboard`,
+      {
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res.data;
+  },
+
+  getDepartments: async (institutionId: string): Promise<IDepartment[]> => {
+    const res = await apiRequest<{ success: boolean; data: IDepartment[] }>(
+      `/institutions/${institutionId}/departments`,
+      {
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res.data;
+  },
+
+  createDepartment: async (
+    institutionId: string,
+    data: { name: string; description?: string; teams?: string[] }
+  ): Promise<IDepartment> => {
+    const res = await apiRequest<{ success: boolean; data: IDepartment }>(
+      `/institutions/${institutionId}/departments`,
+      {
+        method: 'POST',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data;
+  },
+
+  updateDepartment: async (
+    institutionId: string,
+    departmentId: string,
+    data: Partial<{ name: string; description: string; teams: string[] }>
+  ): Promise<IDepartment> => {
+    const res = await apiRequest<{ success: boolean; data: IDepartment }>(
+      `/institutions/${institutionId}/departments/${departmentId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data;
+  },
+
+  deleteDepartment: async (
+    institutionId: string,
+    departmentId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const res = await apiRequest<{ success: boolean; message: string }>(
+      `/institutions/${institutionId}/departments/${departmentId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res;
+  },
+
+  getTrainingPrograms: async (
+    institutionId: string,
+    filter?: { status?: string; category?: string; search?: string }
+  ): Promise<ITrainingProgram[]> => {
+    const params = new URLSearchParams();
+    if (filter?.status) params.append('status', filter.status);
+    if (filter?.category) params.append('category', filter.category);
+    if (filter?.search) params.append('search', filter.search);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const res = await apiRequest<{ success: boolean; data: ITrainingProgram[] }>(
+      `/institutions/${institutionId}/programs${query}`,
+      {
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res.data;
+  },
+
+  getTrainingProgramById: async (
+    institutionId: string,
+    programId: string
+  ): Promise<ITrainingProgram> => {
+    const res = await apiRequest<{ success: boolean; data: ITrainingProgram }>(
+      `/institutions/${institutionId}/programs/${programId}`,
+      {
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res.data;
+  },
+
+  createTrainingProgram: async (
+    institutionId: string,
+    data: {
+      title: string;
+      description?: string;
+      category?: string;
+      courses: Array<{ courseId: string; isRequired?: boolean; order?: number }>;
+      assignedEmployees?: string[];
+      assignedDepartments?: string[];
+      dueDate?: string;
+      estimatedDurationHours?: number;
+      status?: 'draft' | 'active' | 'archived';
+    }
+  ): Promise<ITrainingProgram> => {
+    const res = await apiRequest<{ success: boolean; data: ITrainingProgram }>(
+      `/institutions/${institutionId}/programs`,
+      {
+        method: 'POST',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data;
+  },
+
+  updateTrainingProgram: async (
+    institutionId: string,
+    programId: string,
+    data: any
+  ): Promise<ITrainingProgram> => {
+    const res = await apiRequest<{ success: boolean; data: ITrainingProgram }>(
+      `/institutions/${institutionId}/programs/${programId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+        body: JSON.stringify(data),
+      }
+    );
+    return res.data;
+  },
+
+  deleteTrainingProgram: async (
+    institutionId: string,
+    programId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    const res = await apiRequest<{ success: boolean; message: string }>(
+      `/institutions/${institutionId}/programs/${programId}`,
+      {
+        method: 'DELETE',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res;
+  },
+
+  assignProgram: async (
+    institutionId: string,
+    programId: string,
+    payload: { employeeIds?: string[]; departments?: string[] }
+  ): Promise<ITrainingProgram> => {
+    const res = await apiRequest<{ success: boolean; data: ITrainingProgram }>(
+      `/institutions/${institutionId}/programs/${programId}/assign`,
+      {
+        method: 'POST',
+        headers: {
+          'x-institution-id': institutionId,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+    return res.data;
+  },
+
+  getEmployeeTrainingProgress: async (
+    institutionId: string,
+    userId: string
+  ): Promise<IEmployeeTrainingProgress> => {
+    const res = await apiRequest<{ success: boolean; data: IEmployeeTrainingProgress }>(
+      `/institutions/${institutionId}/employees/${userId}/progress`,
+      {
+        headers: {
+          'x-institution-id': institutionId,
+        },
+      }
+    );
+    return res.data;
   },
 };
 

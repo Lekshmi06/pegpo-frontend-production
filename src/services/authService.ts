@@ -242,11 +242,45 @@ export const authService = {
 
   selectRole: async (role: UserRole): Promise<UserSession> => {
     const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
+    const cleanRole = (role || 'student').toLowerCase() as UserRole;
+    const token = localStorage.getItem(TOKEN_KEY);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/select-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          userId: token,
+          email: current.email,
+          role: cleanRole,
+        }),
+      });
+
+      const json = await res.json().catch(() => null);
+      if (json?.data) {
+        if (json.data.token) localStorage.setItem(TOKEN_KEY, json.data.token);
+        if (json.data.studentProfile?._id) {
+          localStorage.setItem(PROFILE_ID_KEY, json.data.studentProfile._id);
+        }
+        if (json.data.teacherProfile?._id) {
+          localStorage.setItem('teacherProfileId', json.data.teacherProfile._id);
+        }
+        if (json.data.researcherProfile?._id) {
+          localStorage.setItem('researcherProfileId', json.data.researcherProfile._id);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not sync role to backend, using local state:', err);
+    }
+
     const updated: UserSession = {
       ...current,
-      role,
+      role: cleanRole,
     };
-    localStorage.setItem(ROLE_KEY, role);
+    localStorage.setItem(ROLE_KEY, cleanRole);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
   },

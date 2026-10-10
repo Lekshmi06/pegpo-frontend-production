@@ -36,6 +36,35 @@ export default function Login() {
     };
   }, []);
 
+  const navigateByRole = (session: any) => {
+    if (session.role === 'provider') {
+      navigate('/provider');
+    } else if (session.role === 'learner') {
+      navigate('/learner');
+    } else if (session.role === 'company') {
+      navigate('/institution/portal/dashboard');
+    } else if (session.role === 'teacher') {
+      navigate('/teacher');
+    } else if (session.role === 'institution') {
+      navigate('/institution/portal/dashboard');
+    } else if (session.role === 'researcher') {
+      const cached = localStorage.getItem('researcherProfileData');
+      let isCompleted = false;
+      try {
+        if (cached) isCompleted = Boolean(JSON.parse(cached)?.onboardingCompleted);
+      } catch {
+        // ignore error
+      }
+      if (session.researcherDetails?.onboardingCompleted || isCompleted) {
+        navigate('/research');
+      } else {
+        navigate('/onboarding/researcher');
+      }
+    } else {
+      navigate('/student/home');
+    }
+  };
+
   const handleLogin = async (e?: FormEvent) => {
     if (e) e.preventDefault();
     if (!email.trim()) {
@@ -46,32 +75,8 @@ export default function Login() {
     setIsLoading(true);
     try {
       const session = await authService.login(email, password);
-      toast.success(`Welcome back, ${session.name || 'Student'}!`);
-
-      if (session.role === 'provider') {
-        navigate('/provider');
-      } else if (session.role === 'learner') {
-        navigate('/learner');
-      } else if (session.role === 'teacher') {
-        navigate('/teacher');
-      } else if (session.role === 'institution') {
-        navigate('/institution/school');
-      } else if (session.role === 'researcher') {
-        const cached = localStorage.getItem('researcherProfileData');
-        let isCompleted = false;
-        try {
-          if (cached) isCompleted = Boolean(JSON.parse(cached)?.onboardingCompleted);
-        } catch {
-          // ignore error
-        }
-        if (session.researcherDetails?.onboardingCompleted || isCompleted) {
-          navigate('/research');
-        } else {
-          navigate('/onboarding/researcher');
-        }
-      } else {
-        navigate('/student/home');
-      }
+      toast.success(`Welcome back, ${session.name || 'User'}!`);
+      navigateByRole(session);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Login failed. Please check your credentials.';
       toast.error(msg);
@@ -89,8 +94,8 @@ export default function Login() {
     try {
       const googleEmail = 'student@edupye.com';
       const session = await authService.login(googleEmail);
-      toast.success(`Signed in as ${session.name || 'Student'}`);
-      navigate('/student/home');
+      toast.success(`Signed in as ${session.name || 'User'}`);
+      navigateByRole(session);
     } catch {
       toast.error('Google Sign In failed');
     } finally {

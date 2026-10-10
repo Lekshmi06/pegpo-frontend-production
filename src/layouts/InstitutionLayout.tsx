@@ -74,23 +74,26 @@ export default function InstitutionLayout() {
   };
 
   const navItems = [
-    { path: '/institution/portal/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/institution/portal/members', label: 'Members & Roles', icon: Users },
+    { path: '/institution/portal/dashboard', label: 'Company Dashboard', icon: LayoutDashboard },
+    { path: '/institution/portal/members', label: 'Employee Directory', icon: Users },
+    { path: '/institution/portal/programs', label: 'Training Programs', icon: GraduationCap },
+    { path: '/institution/portal/departments', label: 'Departments & Teams', icon: Building2 },
+    { path: '/institution/portal/settings', label: 'Company Settings', icon: Settings },
   ];
 
   const getInstitutionTypeBadge = (type?: InstitutionType) => {
     switch (type) {
       case 'company':
       case 'corporate_training':
-        return { label: 'Company Training', icon: Briefcase, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+        return { label: 'Corporate LMS', icon: Briefcase, color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
       case 'college':
-        return { label: 'College / University', icon: GraduationCap, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
+        return { label: 'Higher Education', icon: GraduationCap, color: 'bg-indigo-50 text-indigo-700 border-indigo-200' };
       case 'school':
-        return { label: 'School', icon: BookOpen, color: 'bg-blue-50 text-blue-700 border-blue-200' };
+        return { label: 'Academy', icon: BookOpen, color: 'bg-blue-50 text-blue-700 border-blue-200' };
       case 'coaching_centre':
-        return { label: 'Coaching Centre', icon: Building2, color: 'bg-amber-50 text-amber-700 border-amber-200' };
+        return { label: 'Coaching Center', icon: Building2, color: 'bg-amber-50 text-amber-700 border-amber-200' };
       default:
-        return { label: 'Training Institute', icon: Building2, color: 'bg-sky-50 text-sky-700 border-sky-200' };
+        return { label: 'Workforce Academy', icon: Building2, color: 'bg-sky-50 text-sky-700 border-sky-200' };
     }
   };
 
@@ -121,7 +124,7 @@ export default function InstitutionLayout() {
             <div>
               <span className="text-sm font-black tracking-tight text-white block">EDUPYE</span>
               <span className="text-[10px] font-bold text-[#5da9f6] uppercase tracking-wider block">
-                Institution
+                Corporate Learning
               </span>
             </div>
           </Link>
@@ -138,7 +141,7 @@ export default function InstitutionLayout() {
           <div className="bg-[#173050] rounded-xl p-3 border border-[#234570]">
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#5da9f6]">
-                Active Institution
+                Active Company
               </span>
               {currentMembership && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 capitalize">

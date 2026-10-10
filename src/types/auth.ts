@@ -3,6 +3,7 @@ export type UserRole =
   | 'teacher'
   | 'researcher'
   | 'institution'
+  | 'company'
   | 'work'
   | 'personal'
   | 'provider'

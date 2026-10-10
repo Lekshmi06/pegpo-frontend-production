@@ -42,8 +42,6 @@ export default function PersonalDetails() {
       const currentRole = localStorage.getItem('userRole') || '';
       if (currentRole === 'provider') {
         navigate('/provider');
-      } else if (currentRole === 'learner') {
-        navigate('/learner');
       } else {
         navigate('/onboarding');
       }
