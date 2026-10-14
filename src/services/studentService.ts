@@ -23,7 +23,7 @@ import {
 import { authService } from './authService';
 import { API_BASE_URL } from './apiClient';
 
-const LOCAL_EXTENDED_PROFILE_KEY = 'pegpo_student_extended_profile';
+const LOCAL_EXTENDED_PROFILE_KEY = 'edupye_student_extended_profile';
 
 function getLocalExtended(): Partial<StudentProfile> {
   try {

@@ -180,17 +180,17 @@ export default function SchoolPortalContainer() {
           </div>
           <div>
             <span className="font-semibold text-slate-200">Admin: </span>
-            <code className="text-emerald-400">yogendra@12</code> / <code className="text-emerald-400">zxc</code>
+            <code className="text-emerald-400">admin@edupye.school</code> / <code className="text-emerald-400">zxc</code>
           </div>
           <div className="w-px h-3 bg-slate-700" />
           <div>
             <span className="font-semibold text-slate-200">Teacher: </span>
-            <code className="text-emerald-400">tony@12</code> / <code className="text-emerald-400">zxc</code>
+            <code className="text-emerald-400">teacher@edupye.school</code> / <code className="text-emerald-400">zxc</code>
           </div>
           <div className="w-px h-3 bg-slate-700" />
           <div>
             <span className="font-semibold text-slate-200">Student: </span>
-            <code className="text-emerald-400">Dipesh Awasthi</code> (Roll 1) / <code className="text-emerald-400">zxc</code>
+            <code className="text-emerald-400">EduPye Student</code> (Roll 1) / <code className="text-emerald-400">zxc</code>
           </div>
         </div>
       </div>

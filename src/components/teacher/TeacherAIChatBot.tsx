@@ -360,7 +360,7 @@ I am your dedicated **Pedagogical Assistant and Subject Mentor**. I'm here to su
         <button
           onClick={() => setIsOpen(true)}
           className="group relative flex items-center gap-2.5 bg-gradient-to-r from-[#254b73] via-[#1c395c] to-[#0091ff] text-white px-4 py-3 rounded-full shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer border border-white/20"
-          title="Open Pegpo Teacher AI Copilot"
+          title="Open EduPye Teacher AI Copilot"
         >
           {/* Animated Glow Pill */}
           <span className="relative flex h-3 w-3">
@@ -626,7 +626,7 @@ I am your dedicated **Pedagogical Assistant and Subject Mentor**. I'm here to su
             </div>
 
             <p className="text-[10px] text-center text-slate-400 mt-1.5">
-              Pegpo Teacher AI &bull; Clear academic doubts with curriculum grounding
+              EduPye Teacher AI &bull; Clear academic doubts with curriculum grounding
             </p>
           </div>
         </div>

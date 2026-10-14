@@ -1,4 +1,4 @@
-# Pegpo EduPay — Educational & Academic Management Platform
+# EduPye — Educational & Academic Management Platform
 
 A modern, high-performance interactive educational, teaching, and research management platform built with **React 19**, **TypeScript**, **Vite 8**, **React Router 7**, and **Tailwind CSS 4**.
 
@@ -19,7 +19,7 @@ A modern, high-performance interactive educational, teaching, and research manag
 ## 📁 Project Architecture
 
 ```
-pegpo-edupay/
+edupye/
 ├── public/                  # Favicons and static SVG icons
 ├── src/
 │   ├── assets/              # Subject cards, artwork, and profile images

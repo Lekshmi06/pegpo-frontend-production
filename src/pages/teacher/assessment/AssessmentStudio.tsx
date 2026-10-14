@@ -564,7 +564,7 @@ export default function AssessmentStudio() {
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#254b73]/10 text-[#254b73]">
                 Assessment Studio
               </span>
-              <span className="text-xs text-slate-400 font-medium">Pegpo Multi-Purpose Evaluation</span>
+              <span className="text-xs text-slate-400 font-medium">EduPye Multi-Purpose Evaluation</span>
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-[#254b73] tracking-tight">
               Test & Question Paper System
@@ -2182,7 +2182,7 @@ export default function AssessmentStudio() {
       >
         <div className="space-y-3 py-2">
           <p className="text-xs text-slate-500">
-            Below is the preview of raw text extracted by Pegpo Document Extraction Service from the original uploaded file:
+            Below is the preview of raw text extracted by EduPye Document Extraction Service from the original uploaded file:
           </p>
           <pre className="p-4 rounded-xl bg-slate-900 text-slate-100 text-xs font-mono max-h-96 overflow-y-auto whitespace-pre-wrap leading-relaxed">
             {activeDraft?.originalDocument?.extractedText || 'No text content available'}

@@ -2,6 +2,9 @@ import React, { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loader } from '../components/ui/Loader';
 
+// Public Landing Page
+const LandingPage = lazy(() => import('../pages/landing/LandingPage'));
+
 // Auth Pages
 const SignUp = lazy(() => import('../pages/auth/SignUp'));
 const Login = lazy(() => import('../pages/auth/Login'));
@@ -102,14 +105,18 @@ const LearnerDashboard = lazy(() => import('../pages/learner/LearnerDashboard'))
 const Marketplace = lazy(() => import('../pages/marketplace/Marketplace'));
 const CourseDetails = lazy(() => import('../pages/marketplace/CourseDetails'));
 const CourseLearningPlayer = lazy(() => import('../pages/learner/CourseLearningPlayer'));
+const EmbeddedWorkspace = lazy(() => import('../pages/workspace/EmbeddedWorkspace'));
 
 
 export default function AppRoutes() {
   return (
     <Suspense fallback={<Loader fullScreen size="lg" text="Loading module..." />}>
       <Routes>
+        {/* Public SaaS Landing Page */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/landing" element={<LandingPage />} />
+
         {/* Auth Flows */}
-        <Route path="/" element={<Navigate to="/signup" replace />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/personal-details" element={<PersonalDetails />} />
@@ -259,6 +266,10 @@ export default function AppRoutes() {
           <Route index element={<LearnerDashboard />} />
           <Route path="courses" element={<LearnerDashboard />} />
         </Route>
+
+        {/* Shared Teaching & Learning Workspace (Embedded for School and College ERPs) */}
+        <Route path="/embed/workspace" element={<EmbeddedWorkspace />} />
+        <Route path="/workspace/embed" element={<EmbeddedWorkspace />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

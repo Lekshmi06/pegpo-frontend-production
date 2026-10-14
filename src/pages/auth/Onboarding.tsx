@@ -133,6 +133,9 @@ export default function Onboarding() {
       } else if (selectedRole === 'company') {
         localStorage.setItem('userGoal', 'Corporate Learning');
         navigate('/onboarding/company');
+      } else if (selectedRole === 'institution') {
+        localStorage.setItem('userGoal', 'Institutional Management');
+        navigate('/institution/school');
       } else {
         navigate('/student/home');
       }
@@ -143,6 +146,7 @@ export default function Onboarding() {
       else if (selectedRole === 'provider') navigate('/provider');
       else if (selectedRole === 'learner') navigate('/learner');
       else if (selectedRole === 'company') navigate('/onboarding/company');
+      else if (selectedRole === 'institution') navigate('/institution/school');
       else navigate('/onboarding/school');
     } finally {
       setIsLoading(false);

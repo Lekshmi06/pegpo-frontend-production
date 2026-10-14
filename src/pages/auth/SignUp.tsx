@@ -67,7 +67,7 @@ export default function SignUp() {
 
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">
-            Create Your Pegpo Account
+            Create Your EduPye Account
           </h1>
           <p className="text-xs font-semibold text-slate-500">
             Choose your learning or teaching pathway to get started.

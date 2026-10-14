@@ -6,7 +6,7 @@ import {
   PlanPeriod,
 } from '../types/subscription';
 
-const STORAGE_SUBSCRIPTION_KEY = 'pegpo_user_subscription';
+const STORAGE_SUBSCRIPTION_KEY = 'edupye_user_subscription';
 
 const AVAILABLE_PLANS: SubscriptionPlan[] = [
   {

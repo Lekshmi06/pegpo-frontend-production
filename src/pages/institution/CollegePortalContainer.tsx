@@ -172,7 +172,7 @@ export default function CollegePortalContainer() {
         <iframe
           key={iframeKey}
           src={currentUrl}
-          title="EduPye College Management System (CampusIQ)"
+          title="EduPye College Management System"
           className="w-full flex-1 border-0"
           style={{ height: isFullscreen ? 'calc(100vh - 56px)' : 'calc(100vh - 65px)' }}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"

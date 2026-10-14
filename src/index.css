@@ -1,8 +1,12 @@
 @import "tailwindcss";
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+    font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
   body {
-    @apply bg-[#f8fafc] text-slate-800 antialiased font-sans;
+    @apply antialiased text-slate-800;
   }
 }
 

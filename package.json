@@ -1,5 +1,5 @@
 {
-  "name": "pegpo-edupay",
+  "name": "edupye",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,8 +11,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "edupye-monorepo": "file:..",
     "lucide-react": "^1.33.0",
-    "pegpo-edupay": "file:",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.2"

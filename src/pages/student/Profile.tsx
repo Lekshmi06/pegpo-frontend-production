@@ -1135,7 +1135,7 @@ export default function Profile() {
                       <div>
                         <h2 className="text-lg font-extrabold text-[#111827]">Personal Details</h2>
                         <p className="text-xs text-slate-500 font-medium">
-                          Manage your basic identity information across all Pegpo modules.
+                          Manage your basic identity information across all EduPye modules.
                         </p>
                       </div>
                       {!isEditingPersonal && (
