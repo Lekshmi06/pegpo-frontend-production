@@ -139,6 +139,7 @@ function mergeProfileWithExtended(profile: StudentProfile): StudentProfile {
     undergraduateDetails: profile.undergraduateDetails || currentUser?.undergraduateDetails || extended.undergraduateDetails,
     postgraduateDetails: profile.postgraduateDetails || currentUser?.postgraduateDetails || extended.postgraduateDetails,
     competitiveExamDetails: profile.competitiveExamDetails || currentUser?.competitiveExamDetails || extended.competitiveExamDetails,
+    studyPreferences: profile.studyPreferences || extended.studyPreferences,
   };
 }
 
@@ -371,6 +372,7 @@ export const studentService = {
     if (data.undergraduateDetails !== undefined) backendPayload.undergraduateDetails = data.undergraduateDetails;
     if (data.postgraduateDetails !== undefined) backendPayload.postgraduateDetails = data.postgraduateDetails;
     if (data.competitiveExamDetails !== undefined) backendPayload.competitiveExamDetails = data.competitiveExamDetails;
+    if (data.studyPreferences !== undefined) backendPayload.studyPreferences = data.studyPreferences;
     if (educationPayload) backendPayload.education = educationPayload;
 
     try {
@@ -378,6 +380,7 @@ export const studentService = {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...authService.getAuthHeaders(),
         },
         body: JSON.stringify(backendPayload),
       });

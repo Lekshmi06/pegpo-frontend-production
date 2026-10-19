@@ -308,6 +308,97 @@ async function runBrowserVerificationSuite() {
       assert(loggedOutUrl.includes('/login'), `Expected redirect to /login after logout, but got: ${loggedOutUrl}`);
     });
 
+    // -------------------------------------------------------------
+    // Test 12: Registration Page Structure (Google, Divider, Email/WhatsApp)
+    // -------------------------------------------------------------
+    await testStep('Registration page renders Google auth, "OR REGISTER WITH" divider, and Email/WhatsApp tabs', async () => {
+      await page.goto(`${baseURL}/signup`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('form, button', { timeout: 10000 });
+
+      const bodyText = await page.innerText('body');
+      assert(/sign up with google/i.test(bodyText), 'Google signup missing');
+      assert(/or register with/i.test(bodyText), '"OR REGISTER WITH" divider missing');
+      assert(/email id/i.test(bodyText) && /whatsapp/i.test(bodyText), 'Email/WhatsApp tabs missing');
+      assert(!/candidate|recruiter/i.test(bodyText), 'Forbidden candidate/recruiter control detected');
+
+      // Check WhatsApp tab switch and honest gateway notice
+      const waTab = await page.$('button:has-text("WhatsApp")');
+      if (waTab) {
+        await waTab.click();
+        await page.waitForTimeout(100);
+        const waNotice = await page.innerText('body');
+        assert(/whatsapp phone verification notice|gateway configuration/i.test(waNotice), 'Honest WhatsApp notice not displayed');
+      }
+
+      // Switch back to Email tab
+      const emailTab = await page.$('button:has-text("Email ID")');
+      if (emailTab) await emailTab.click();
+    });
+
+    // -------------------------------------------------------------
+    // Test 13: Exam Preparation Quick-Entry Onboarding Flow (Zero Flashcards & Completion)
+    // -------------------------------------------------------------
+    await testStep('Exam Prep Quick-Entry onboarding multi-step flow (steps 1-6) and completion', async () => {
+      await page.goto(`${baseURL}/onboarding/quick`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h2', { timeout: 10000 });
+
+      // Step 1: About You
+      let step1Title = await page.innerText('h2');
+      assert(/category|describes you/i.test(step1Title), 'Step 1 title unexpected');
+
+      // Click Continue to Step 2
+      await page.click('button:has-text("Continue")');
+      await page.waitForTimeout(150);
+
+      // Step 2: Goal
+      let step2Title = await page.innerText('h2');
+      assert(/goal/i.test(step2Title), 'Step 2 title unexpected');
+      await page.click('button:has-text("Continue")');
+      await page.waitForTimeout(150);
+
+      // Step 3: Current performance
+      let step3Title = await page.innerText('h2');
+      assert(/recent exam score|performance/i.test(step3Title), 'Step 3 title unexpected');
+      await page.click('button:has-text("Continue")');
+      await page.waitForTimeout(150);
+
+      // Step 4: Target outcome
+      let step4Title = await page.innerText('h2');
+      assert(/target outcome/i.test(step4Title), 'Step 4 title unexpected');
+      await page.click('button:has-text("Continue")');
+      await page.waitForTimeout(150);
+
+      // Step 5: Preferred study tools - STRICT CHECK: ZERO FLASHCARDS
+      let step5Title = await page.innerText('h2');
+      assert(/study tools/i.test(step5Title), 'Step 5 title unexpected');
+      const step5Body = await page.innerText('body');
+      assert(!/flashcard/i.test(step5Body), 'CRITICAL FAILURE: Flashcard detected in Step 5 DOM!');
+
+      await page.click('button:has-text("Continue")');
+      await page.waitForTimeout(150);
+
+      // Step 6: Study material
+      let step6Title = await page.innerText('h2');
+      assert(/study material/i.test(step6Title), 'Step 6 title unexpected');
+
+      // Finish & Launch
+      await page.click('button:has-text("Finish & Launch")');
+      await page.waitForFunction(() => /ready to study|setup complete/i.test(document.body.innerText), { timeout: 10000 });
+
+      // Verify completion screen
+      const completionText = await page.innerText('body');
+      assert(/you're ready to study|setup complete/i.test(completionText), 'Completion screen not rendered');
+      assert(/go to my dashboard/i.test(completionText), 'Go to dashboard button missing on completion screen');
+
+      // Test mobile viewport responsiveness
+      await page.setViewportSize({ width: 375, height: 667 });
+      await page.goto(`${baseURL}/onboarding/quick`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h2', { timeout: 10000 });
+      const mobileHeader = await page.innerText('header');
+      assert(/skip setup/i.test(mobileHeader), 'Skip setup control missing on mobile viewport');
+      await page.setViewportSize({ width: 1280, height: 800 });
+    });
+
   } finally {
     await browser.close();
     await server.close();

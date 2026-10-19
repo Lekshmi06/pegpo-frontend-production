@@ -81,6 +81,7 @@ export interface UserSession {
   undergraduateDetails?: UndergraduateAcademicInfo;
   postgraduateDetails?: PostgraduateAcademicInfo;
   competitiveExamDetails?: CompetitiveExamAcademicInfo;
+  studyPreferences?: any;
   teacherDetails?: {
     teacherType?: 'institution' | 'tuition';
     institution?: string;

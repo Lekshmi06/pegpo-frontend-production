@@ -17,6 +17,7 @@ const CompetitiveExamOnboarding = lazy(() => import('../pages/auth/CompetitiveEx
 const TeacherOnboarding = lazy(() => import('../pages/auth/TeacherOnboarding'));
 const ResearcherOnboarding = lazy(() => import('../pages/auth/ResearcherOnboarding/ResearcherOnboarding'));
 const CompanyOnboarding = lazy(() => import('../pages/auth/CompanyOnboarding'));
+const ExamPrepQuickOnboarding = lazy(() => import('../pages/auth/ExamPrepQuickOnboarding'));
 
 // Student Layout & Pages
 const StudentLayout = lazy(() => import('../layouts/StudentLayout'));
@@ -137,6 +138,8 @@ export default function AppRoutes() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/personal-details" element={<PersonalDetails />} />
+        <Route path="/onboarding/quick" element={<ExamPrepQuickOnboarding />} />
+        <Route path="/onboarding/exam-prep" element={<ExamPrepQuickOnboarding />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/onboarding/school" element={<SchoolOnboarding />} />
         <Route path="/onboarding/undergraduate" element={<UndergraduateOnboarding />} />

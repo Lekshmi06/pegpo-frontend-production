@@ -82,8 +82,19 @@ export interface StudentProfile {
   undergraduateDetails?: UndergraduateAcademicInfo;
   postgraduateDetails?: PostgraduateAcademicInfo;
   competitiveExamDetails?: CompetitiveExamAcademicInfo;
+  studyPreferences?: StudyPreferences;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface StudyPreferences {
+  category?: 'school' | 'college' | 'competitive_exam' | 'other' | string;
+  goal?: string;
+  currentScore?: string;
+  hasTakenExam?: boolean;
+  targetScore?: string;
+  preferredTools?: string[];
+  uploadedMaterialFileName?: string;
 }
 
 export interface UpdateStudentProfileDTO {
@@ -100,6 +111,7 @@ export interface UpdateStudentProfileDTO {
   undergraduateDetails?: UndergraduateAcademicInfo;
   postgraduateDetails?: PostgraduateAcademicInfo;
   competitiveExamDetails?: CompetitiveExamAcademicInfo;
+  studyPreferences?: StudyPreferences;
 }
 
 export interface CreateStudentProfileDTO {

@@ -341,6 +341,47 @@ export default function Profile() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isCancelSubModalOpen, setIsCancelSubModalOpen] = useState(false);
 
+  // Avatar Photo Upload State & Handler
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please upload a valid image file (JPEG, PNG, WebP).', 'Invalid Image Format');
+      return;
+    }
+
+    const MAX_SIZE = 3 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      toast.error('Profile photo must be smaller than 3MB.', 'File Too Large');
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const dataUrl = reader.result as string;
+        await updateProfile({ avatar: dataUrl });
+        authService.updateCurrentUser({ avatar: dataUrl });
+        toast.success('Profile picture updated successfully!');
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to update profile photo.', 'Upload Error');
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    };
+    reader.onerror = () => {
+      setIsUploadingAvatar(false);
+      toast.error('Could not read image file. Please try again.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Sync recognitions when profile loads or recognition tab clicked
   useEffect(() => {
     if (profile?._id) {
@@ -985,7 +1026,11 @@ export default function Profile() {
                 className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 shadow-2xs hover:ring-2 hover:ring-[#0091ff]/30 transition-all cursor-pointer block"
                 title="Account Menu"
               >
-                <img src={userImg} alt="Profile" className="w-full h-full object-cover" />
+                <img
+                  src={profile?.avatar || authService.getCurrentUser()?.avatar || userImg}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
               </button>
 
               {showProfileMenu && (
@@ -1022,13 +1067,31 @@ export default function Profile() {
             <div className="bg-white rounded-3xl border border-[#e2ebf4] p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
               <div className="flex items-center gap-5">
                 <div className="relative group">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden border-2 border-[#d0e3f7] shadow-sm bg-slate-100">
-                    <img src={userImg} alt={userName} className="w-full h-full object-cover" />
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden border-2 border-[#d0e3f7] shadow-sm bg-slate-100 flex items-center justify-center relative">
+                    <img
+                      src={profile?.avatar || authService.getCurrentUser()?.avatar || userImg}
+                      alt={userName}
+                      className="w-full h-full object-cover"
+                    />
+                    {isUploadingAvatar && (
+                      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center rounded-3xl">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    )}
                   </div>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                  />
                   <button
-                    onClick={() => toast.info('Avatar photo update coming in next revision!')}
-                    className="absolute bottom-1 right-1 p-1.5 bg-[#1c3352] text-white rounded-xl shadow-xs hover:bg-[#0091ff] transition-colors cursor-pointer"
-                    title="Change Photo"
+                    type="button"
+                    disabled={isUploadingAvatar}
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="absolute bottom-1 right-1 p-1.5 bg-[#1c3352] text-white rounded-xl shadow-xs hover:bg-[#0091ff] transition-colors cursor-pointer disabled:opacity-50"
+                    title="Change Profile Photo"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
