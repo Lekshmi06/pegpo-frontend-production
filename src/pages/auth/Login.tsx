@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Building2, School, GraduationCap, ChevronDown } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Building2, School, GraduationCap, ChevronDown, Lock } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { Input } from '../../components/ui/Input';
 import { Button } from '../../components/ui/Button';
@@ -9,12 +9,16 @@ import { useToast } from '../../hooks/useToast';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isSystemMenuOpen, setIsSystemMenuOpen] = useState(false);
   const systemMenuRef = useRef<HTMLDivElement>(null);
+
+  const redirectTarget = (location.state as any)?.from as string | undefined;
+  const redirectMessage = (location.state as any)?.message as string | undefined;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -37,6 +41,12 @@ export default function Login() {
   }, []);
 
   const navigateByRole = (session: any) => {
+    // If a specific deep link was requested and is compatible, prioritize it
+    if (redirectTarget && !redirectTarget.startsWith('/login') && !redirectTarget.startsWith('/signup')) {
+      navigate(redirectTarget, { replace: true });
+      return;
+    }
+
     if (session.role === 'provider') {
       navigate('/provider');
     } else if (session.role === 'learner') {
@@ -205,6 +215,16 @@ export default function Login() {
         <div className="flex justify-center">
           <img src={logoImg} alt="EDUPYE" className="h-12 max-w-full object-contain" />
         </div>
+
+        {redirectMessage && (
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium flex items-center gap-2.5 text-left shadow-2xs">
+            <Lock className="w-4 h-4 text-amber-600 shrink-0" />
+            <div>
+              <span className="font-bold">Authentication Required: </span>
+              <span>{redirectMessage}</span>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">

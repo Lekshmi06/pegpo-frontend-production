@@ -1,7 +1,38 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StudentDashboardData, Course } from '../types/student';
+import { StudentDashboardData, StudentAnalyticsData, Course } from '../types/student';
 import { studentService } from '../services/studentService';
 import { AsyncStatus } from '../types/common';
+
+export function useStudentAnalytics() {
+  const [analytics, setAnalytics] = useState<StudentAnalyticsData | null>(null);
+  const [status, setStatus] = useState<AsyncStatus>('idle');
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAnalytics = useCallback(async () => {
+    setStatus('loading');
+    setError(null);
+    try {
+      const res = await studentService.getStudentAnalytics();
+      setAnalytics(res);
+      setStatus('success');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch student analytics');
+      setStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, [fetchAnalytics]);
+
+  return {
+    analytics,
+    status,
+    error,
+    refetch: fetchAnalytics,
+    isLoading: status === 'loading',
+  };
+}
 
 export function useStudentDashboard() {
   const [data, setData] = useState<StudentDashboardData | null>(null);

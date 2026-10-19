@@ -34,23 +34,10 @@ export async function apiRequest<T>(
     headers.set('Content-Type', 'application/json');
   }
 
-  // Automatically attach authentication & researcher identity headers if available in storage
+  // Automatically attach authentication header if available in storage
   const token = localStorage.getItem('token');
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
-  }
-
-  const researcherId =
-    localStorage.getItem('researcherProfileId') ||
-    localStorage.getItem('userId') ||
-    token;
-  if (researcherId && !headers.has('x-researcher-id')) {
-    headers.set('x-researcher-id', researcherId);
-  }
-
-  const userEmail = localStorage.getItem('userEmail');
-  if (userEmail && !headers.has('x-user-email')) {
-    headers.set('x-user-email', userEmail);
   }
 
   const res = await fetch(url, {

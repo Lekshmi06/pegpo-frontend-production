@@ -400,6 +400,17 @@ export default function CourseDetails() {
           </section>
         </div>
       </main>
+
+      {/* Public Footer */}
+      <footer className="bg-white border-t border-slate-200 py-8 px-4 text-center text-xs text-slate-500 space-y-2 mt-12">
+        <div>© 2026 EDUPYE LMS & Course Marketplace. All rights reserved.</div>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-500 font-medium">
+          <Link to="/help" className="hover:text-slate-800 transition-colors">FAQs & Help</Link>
+          <Link to="/privacy" className="hover:text-slate-800 transition-colors">Privacy Policy</Link>
+          <Link to="/terms" className="hover:text-slate-800 transition-colors">Terms of Service</Link>
+          <Link to="/cookies" className="hover:text-slate-800 transition-colors">Cookie Settings</Link>
+        </div>
+      </footer>
     </div>
   );
 }

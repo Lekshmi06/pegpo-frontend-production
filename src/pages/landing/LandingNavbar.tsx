@@ -5,13 +5,10 @@ import {
   X, 
   ArrowRight, 
   Sparkles, 
-  GraduationCap, 
-  Layers, 
-  ChevronDown, 
-  BookOpen, 
-  Building2, 
-  Microscope,
-  Briefcase
+  ShoppingBag,
+  Building2,
+  Smartphone,
+  HelpCircle
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 
@@ -23,7 +20,6 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [portalsDropdownOpen, setPortalsDropdownOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -52,37 +48,25 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
             </Link>
             <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase bg-blue-500/10 text-blue-400 border border-blue-500/20">
               <Sparkles className="w-3 h-3 text-blue-400" />
-              Unified SaaS
+              Unified LMS
             </span>
           </div>
 
           {/* Desktop Navigation Links */}
           <nav className="hidden lg:flex items-center gap-1 text-sm font-medium text-slate-300">
             <a
-              href="#journeys"
-              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-            >
-              Journeys
-            </a>
-            <a
               href="#features"
               className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
             >
               Features
             </a>
-            <a
-              href="#how-it-works"
-              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-            >
-              How It Works
-            </a>
             <Link
               to="/marketplace"
               className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
             >
-              <span>Course Marketplace</span>
-              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-indigo-500/20 text-indigo-300 rounded border border-indigo-500/30">
-                New
+              <span>Marketplace</span>
+              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-blue-500/20 text-blue-300 rounded border border-blue-500/30">
+                Explore
               </span>
             </Link>
             <Link
@@ -91,100 +75,32 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
             >
               Institutions & ERP
             </Link>
-
-            {/* Quick Portals Dropdown */}
-            <div className="relative">
-              <button
-                onClick={() => setPortalsDropdownOpen(!portalsDropdownOpen)}
-                onBlur={() => setTimeout(() => setPortalsDropdownOpen(false), 200)}
-                className="px-3 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors inline-flex items-center gap-1.5 cursor-pointer text-slate-300"
-              >
-                <span>Direct Portals</span>
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${portalsDropdownOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {portalsDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700/80 rounded-2xl p-2 shadow-2xl backdrop-blur-xl animate-fadeIn">
-                  <Link
-                    to="/student"
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                      <GraduationCap className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold">Student Learning Portal</div>
-                      <div className="text-[11px] text-slate-400">AI tutor, tests & study hub</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/teacher"
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                      <Layers className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold">Teacher Studio & SmartBoard</div>
-                      <div className="text-[11px] text-slate-400">Lessons, whiteboard, assessments</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/institution"
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                      <Building2 className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold">Campus & School ERP</div>
-                      <div className="text-[11px] text-slate-400">Administration, admissions & fees</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/research"
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center">
-                      <Microscope className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold">Researcher Workspace</div>
-                      <div className="text-[11px] text-slate-400">Synthesis, citations, papers</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/institution/portal"
-                    className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 text-slate-200 hover:text-white transition-colors"
-                  >
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                      <Briefcase className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-semibold">Corporate Training Portal</div>
-                      <div className="text-[11px] text-slate-400">Cohorts, programs, employees</div>
-                    </div>
-                  </Link>
-                </div>
-              )}
-            </div>
+            <a
+              href="#mobile-apps"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Mobile Apps</span>
+            </a>
+            <Link
+              to="/help"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
+            >
+              Help & FAQs
+            </Link>
           </nav>
 
           {/* Desktop Right Actions */}
           <div className="hidden lg:flex items-center gap-3">
             <button
               onClick={onOpenDemo}
-              className="text-xs font-semibold text-slate-300 hover:text-white px-3.5 py-2 rounded-xl hover:bg-slate-800/60 transition-colors"
+              className="text-xs font-semibold text-slate-300 hover:text-white px-3.5 py-2 rounded-xl hover:bg-slate-800/60 transition-colors cursor-pointer"
             >
               Book Demo
             </button>
             <button
               onClick={() => navigate('/login')}
-              className="text-xs font-semibold text-slate-200 hover:text-white px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-all shadow-sm"
+              className="text-xs font-semibold text-slate-200 hover:text-white px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-all shadow-sm cursor-pointer"
             >
               Sign In
             </button>
@@ -221,25 +137,11 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
         <div className="lg:hidden bg-slate-950/95 border-b border-slate-800 px-6 py-6 space-y-4 backdrop-blur-xl animate-fadeIn">
           <div className="flex flex-col space-y-2 text-sm font-medium text-slate-300">
             <a
-              href="#journeys"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-2 hover:text-white border-b border-slate-800/60"
-            >
-              Choose Your Journey
-            </a>
-            <a
               href="#features"
               onClick={() => setMobileMenuOpen(false)}
               className="py-2 hover:text-white border-b border-slate-800/60"
             >
               Platform Features
-            </a>
-            <a
-              href="#how-it-works"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-2 hover:text-white border-b border-slate-800/60"
-            >
-              How It Works
             </a>
             <Link
               to="/marketplace"
@@ -254,26 +156,22 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
               onClick={() => setMobileMenuOpen(false)}
               className="py-2 hover:text-white border-b border-slate-800/60"
             >
-              Institutional ERP & Portals
+              Institutional ERP Hub
             </Link>
-          </div>
-
-          <div className="pt-2 grid grid-cols-2 gap-2 text-xs">
-            <Link
-              to="/student"
+            <a
+              href="#mobile-apps"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-2"
+              className="py-2 hover:text-white border-b border-slate-800/60 flex items-center justify-between"
             >
-              <GraduationCap className="w-4 h-4 text-blue-400" />
-              <span>Student Hub</span>
-            </Link>
+              <span>Mobile Applications</span>
+              <span className="text-[10px] text-cyan-400 font-bold">GeniusSpy & EduPay</span>
+            </a>
             <Link
-              to="/teacher"
+              to="/help"
               onClick={() => setMobileMenuOpen(false)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 flex items-center gap-2"
+              className="py-2 hover:text-white border-b border-slate-800/60"
             >
-              <Layers className="w-4 h-4 text-purple-400" />
-              <span>Teacher Studio</span>
+              Help & FAQs
             </Link>
           </div>
 
@@ -285,7 +183,7 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
               }}
               className="w-full py-2.5 rounded-xl bg-slate-800 text-slate-200 text-xs font-semibold hover:bg-slate-700 transition-colors"
             >
-              Request Institutional Demo
+              Request Campus Demo
             </button>
             <button
               onClick={() => {

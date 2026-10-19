@@ -97,6 +97,7 @@ const CompanySettings = lazy(() => import('../pages/institution/CompanySettings'
 const InstitutionJoin = lazy(() => import('../pages/institution/InstitutionJoin'));
 
 // Course Marketplace & LMS Modules
+// Course Marketplace & LMS Modules
 const ProviderLayout = lazy(() => import('../layouts/ProviderLayout'));
 const ProviderDashboard = lazy(() => import('../pages/provider/ProviderDashboard'));
 const CourseBuilder = lazy(() => import('../pages/provider/CourseBuilder'));
@@ -107,6 +108,15 @@ const CourseDetails = lazy(() => import('../pages/marketplace/CourseDetails'));
 const CourseLearningPlayer = lazy(() => import('../pages/learner/CourseLearningPlayer'));
 const EmbeddedWorkspace = lazy(() => import('../pages/workspace/EmbeddedWorkspace'));
 
+// Public Informational & Legal Pages
+const HelpFaq = lazy(() => import('../pages/public/HelpFaq'));
+const PrivacyPolicy = lazy(() => import('../pages/public/PrivacyPolicy'));
+const TermsOfService = lazy(() => import('../pages/public/TermsOfService'));
+const CookieSettings = lazy(() => import('../pages/public/CookieSettings'));
+
+// Security & Authorization Route Guard
+import ProtectedRoute from '../components/common/ProtectedRoute';
+
 
 export default function AppRoutes() {
   return (
@@ -115,6 +125,13 @@ export default function AppRoutes() {
         {/* Public SaaS Landing Page */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
+
+        {/* Public Informational, Help & Legal Pages */}
+        <Route path="/help" element={<HelpFaq />} />
+        <Route path="/faq" element={<HelpFaq />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/cookies" element={<CookieSettings />} />
 
         {/* Auth Flows */}
         <Route path="/signup" element={<SignUp />} />
@@ -130,9 +147,17 @@ export default function AppRoutes() {
         <Route path="/onboarding/company" element={<CompanyOnboarding />} />
         <Route path="/company/setup" element={<CompanyOnboarding />} />
 
-        {/* Student Portal */}
-        <Route path="/student" element={<StudentLayout />}>
+        {/* Student Portal (Protected) */}
+        <Route
+          path="/student"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'learner', 'personal']}>
+              <StudentLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<StudentDashboard />} />
+          <Route path="dashboard" element={<StudentDashboard />} />
           <Route path="home" element={<StudentHomeExplore />} />
           <Route path="learn" element={<Learn />} />
           <Route path="library" element={<Library />} />
@@ -159,9 +184,17 @@ export default function AppRoutes() {
           <Route path="bookshelf" element={<Bookshelf />} />
         </Route>
 
-        {/* Teacher Portal */}
-        <Route path="/teacher" element={<TeacherLayout />}>
+        {/* Teacher Portal (Protected) */}
+        <Route
+          path="/teacher"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <TeacherLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<TeacherDashboard />} />
+          <Route path="dashboard" element={<TeacherDashboard />} />
           <Route path="profile" element={<TeacherProfile />} />
           <Route path="tasks" element={<KanbanBoard />} />
           <Route path="calendar" element={<TeacherCalendar />} />
@@ -188,13 +221,35 @@ export default function AppRoutes() {
           <Route path="edu-shop" element={<GenericTeacherPage title="Edu Shop" desc="Syllabus materials and classroom supplies store." />} />
         </Route>
 
-        {/* Dedicated Full-Screen Teacher Smart Board Workspaces */}
-        <Route path="/teacher/smartboard/standard" element={<StandardSmartBoard />} />
-        <Route path="/teacher/smartboard/integrated" element={<IntegratedSmartBoard />} />
+        {/* Dedicated Full-Screen Teacher Smart Board Workspaces (Protected) */}
+        <Route
+          path="/teacher/smartboard/standard"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <StandardSmartBoard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teacher/smartboard/integrated"
+          element={
+            <ProtectedRoute allowedRoles={['teacher']}>
+              <IntegratedSmartBoard />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Research Portal */}
-        <Route path="/research" element={<ResearchLayout />}>
+        {/* Research Portal (Protected) */}
+        <Route
+          path="/research"
+          element={
+            <ProtectedRoute allowedRoles={['researcher']}>
+              <ResearchLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<ResearchDashboard />} />
+          <Route path="dashboard" element={<ResearchDashboard />} />
           <Route path="discover" element={<Discover />} />
           <Route path="search" element={<Discover />} />
           <Route path="library" element={<ResearchLibrary />} />
@@ -223,7 +278,7 @@ export default function AppRoutes() {
           <Route path="genius-test" element={<GenericResearchPage title="Genius Testing Center" desc="Examine study benchmarks." />} />
         </Route>
 
-        {/* Institution Module */}
+        {/* Institution Module (Public Overviews & Wrappers) */}
         <Route path="/institution" element={<InstitutionHome />} />
         <Route path="/institution/join" element={<InstitutionJoin />} />
         <Route path="/institution/school" element={<SchoolPortalContainer />} />
@@ -231,8 +286,15 @@ export default function AppRoutes() {
         <Route path="/institution/college" element={<CollegePortalContainer />} />
         <Route path="/institution/college/*" element={<CollegePortalContainer />} />
 
-        {/* Native EduPye Corporate Learning Workspace */}
-        <Route path="/institution/portal" element={<InstitutionLayout />}>
+        {/* Native EduPye Corporate Learning Workspace (Protected) */}
+        <Route
+          path="/institution/portal"
+          element={
+            <ProtectedRoute allowedRoles={['institution', 'company']}>
+              <InstitutionLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<InstitutionDashboard />} />
           <Route path="dashboard" element={<InstitutionDashboard />} />
           <Route path="members" element={<InstitutionMembers />} />
@@ -248,22 +310,47 @@ export default function AppRoutes() {
         <Route path="/institution/departments" element={<Navigate to="/institution/portal/departments" replace />} />
         <Route path="/institution/settings" element={<Navigate to="/institution/portal/settings" replace />} />
 
-        {/* Course Marketplace (Public & Learners) */}
+        {/* Course Marketplace (Public Course Discovery) */}
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/courses" element={<Marketplace />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
-        <Route path="/learn/:id" element={<CourseLearningPlayer />} />
 
-        {/* Provider Studio Portal */}
-        <Route path="/provider" element={<ProviderLayout />}>
+        {/* Protected Learning Player */}
+        <Route
+          path="/learn/:id"
+          element={
+            <ProtectedRoute allowedRoles={['learner', 'student']}>
+              <CourseLearningPlayer />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Provider Studio Portal (Protected) */}
+        <Route
+          path="/provider"
+          element={
+            <ProtectedRoute allowedRoles={['provider', 'teacher']}>
+              <ProviderLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<ProviderDashboard />} />
+          <Route path="dashboard" element={<ProviderDashboard />} />
           <Route path="courses/new" element={<CourseBuilder />} />
           <Route path="courses/:id/builder" element={<CourseBuilder />} />
         </Route>
 
-        {/* Learner Portal */}
-        <Route path="/learner" element={<LearnerLayout />}>
+        {/* Learner Portal (Protected) */}
+        <Route
+          path="/learner"
+          element={
+            <ProtectedRoute allowedRoles={['learner', 'student']}>
+              <LearnerLayout />
+            </ProtectedRoute>
+          }
+        >
           <Route index element={<LearnerDashboard />} />
+          <Route path="dashboard" element={<LearnerDashboard />} />
           <Route path="courses" element={<LearnerDashboard />} />
         </Route>
 

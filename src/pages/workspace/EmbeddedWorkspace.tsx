@@ -54,7 +54,12 @@ interface SSOSessionData {
   institutionId: string;
 }
 
+const ENV_ALLOWED_ORIGINS = (import.meta as any).env?.VITE_ALLOWED_PARENT_ORIGINS
+  ? String((import.meta as any).env.VITE_ALLOWED_PARENT_ORIGINS).split(/[,\s]+/).filter(Boolean)
+  : [];
+
 const ALLOWED_PARENT_ORIGINS = [
+  ...ENV_ALLOWED_ORIGINS,
   'http://localhost:3001',
   'http://localhost:3002',
   'http://localhost:5173',

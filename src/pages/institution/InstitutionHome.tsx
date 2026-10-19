@@ -3,8 +3,29 @@ import { useNavigate } from 'react-router-dom';
 import { School, Building2, GraduationCap, ArrowRight, ShieldCheck, Users, CheckCircle2, Sparkles, BookOpen, Layers } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 
+import { authService } from '../../services/authService';
+
 export default function InstitutionHome() {
   const navigate = useNavigate();
+  const currentUser = authService.getCurrentUser();
+
+  const getDashboardPath = () => {
+    switch (currentUser?.role) {
+      case 'teacher':
+        return '/teacher';
+      case 'researcher':
+        return '/research';
+      case 'institution':
+      case 'company':
+        return '/institution/portal/dashboard';
+      case 'provider':
+        return '/provider';
+      case 'learner':
+        return '/learner';
+      default:
+        return '/student/home';
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex flex-col font-sans">
@@ -16,29 +37,42 @@ export default function InstitutionHome() {
           <nav className="hidden sm:flex items-center gap-4 text-xs font-bold text-slate-600">
             <span className="text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5" />
-              Institution Portal
+              Institution Systems Overview
             </span>
+            <button
+              onClick={() => navigate('/marketplace')}
+              className="hover:text-blue-600 transition-colors"
+            >
+              Course Marketplace
+            </button>
           </nav>
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => navigate('/student/home')}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            Student Portal
-          </button>
-          <button
-            onClick={() => navigate('/teacher')}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            Teacher Portal
-          </button>
-          <button
-            onClick={() => navigate('/research')}
-            className="text-xs font-semibold text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
-          >
-            Researcher Hub
-          </button>
+          {currentUser ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate(getDashboardPath())}
+                className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/login')}
+                className="text-xs font-semibold text-slate-700 hover:text-slate-900 px-3.5 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                Sign In
+              </button>
+              <button
+                onClick={() => navigate('/signup')}
+                className="text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 rounded-lg transition-colors shadow-sm"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -229,6 +263,17 @@ export default function InstitutionHome() {
           </div>
         </div>
       </main>
+
+      {/* Public Footer */}
+      <footer className="bg-white border-t border-slate-200 py-8 px-6 text-center text-xs text-slate-500 space-y-2 mt-12">
+        <div>© 2026 EDUPYE Institutional Systems & Campus Operations. All rights reserved.</div>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-500 font-medium">
+          <button onClick={() => navigate('/help')} className="hover:text-blue-600 transition-colors">FAQs & Help</button>
+          <button onClick={() => navigate('/privacy')} className="hover:text-blue-600 transition-colors">Privacy Policy</button>
+          <button onClick={() => navigate('/terms')} className="hover:text-blue-600 transition-colors">Terms of Service</button>
+          <button onClick={() => navigate('/cookies')} className="hover:text-blue-600 transition-colors">Cookie Settings</button>
+        </div>
+      </footer>
     </div>
   );
 }

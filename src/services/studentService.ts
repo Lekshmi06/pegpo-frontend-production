@@ -1,5 +1,6 @@
 import {
   StudentDashboardData,
+  StudentAnalyticsData,
   Course,
   DocumentItem,
   StudentProfile,
@@ -154,7 +155,126 @@ async function safeParseResponse(res: Response): Promise<{ success: boolean; dat
   }
 }
 
+function buildFallbackAnalytics(profile: StudentProfile): StudentAnalyticsData {
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const distanceToMonday = (dayOfWeek + 6) % 7;
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - distanceToMonday);
+
+  return {
+    student: {
+      name: profile.name || 'Student',
+      email: profile.userId?.email || 'student@edupye.com',
+      avatar: profile.avatar,
+      learningPath: profile.learningPath || 'School Curriculum',
+      gradeOrLevel: profile.schoolDetails?.classLevel || profile.education?.classLevel || 'Class 10',
+      institution: profile.schoolDetails?.schoolName || profile.education?.institution || 'EduPye Academy',
+    },
+    summaryCards: {
+      studyTimeThisWeek: {
+        totalMinutes: 0,
+        formatted: '0 hrs',
+        previousWeekMinutes: 0,
+        percentageChange: null,
+        hasActivity: false,
+        measurementNotice: 'Measured from active quiz attempts & practice sessions (idle time excluded)',
+      },
+      learningMaterialsCompleted: {
+        total: 0,
+        lessonsCompleted: 0,
+        quizzesCompleted: 0,
+        hasActivity: false,
+      },
+      quizAverage: {
+        averagePercentage: null,
+        formatted: '—',
+        totalQuizzesTaken: 0,
+        hasActivity: false,
+      },
+      currentStudyStreak: {
+        days: 0,
+        bestStreakDays: 0,
+        hasActivity: false,
+        lastActiveDate: null,
+      },
+    },
+    weeklyStudyActivity: dayNames.map((label, idx) => {
+      const d = new Date(startOfWeek);
+      d.setDate(startOfWeek.getDate() + idx);
+      return {
+        dayLabel: label,
+        date: d.toISOString().split('T')[0],
+        studyMinutes: 0,
+        quizMinutes: 0,
+        totalMinutes: 0,
+      };
+    }),
+    subjectProgress: [],
+    recentAssessments: [],
+    recentActivity: [],
+    upcomingTasks: [],
+    continueLearning: [],
+    aiStudyRecommendations: [
+      {
+        id: 'rec_get_started',
+        type: 'practice',
+        title: 'Start Your First Practice Session',
+        description: 'Complete a quiz or upload study materials to unlock personalized analytics and study recommendations.',
+        actionLabel: 'Take Practice Quiz',
+        actionPath: '/student/exam-cracker',
+        priority: 'high',
+      },
+    ],
+  };
+}
+
 export const studentService = {
+  getStudentAnalytics: async (): Promise<StudentAnalyticsData> => {
+    try {
+      const headers = authService.getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/students/dashboard/analytics`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      });
+
+      const json = await safeParseResponse(res);
+      if (res.ok && json.success && json.data) {
+        return json.data;
+      }
+    } catch (err) {
+      console.warn('Backend getStudentAnalytics unreachable, using fallback profile data:', err);
+    }
+
+    const fallbackProfile = buildFallbackProfile();
+    return buildFallbackAnalytics(fallbackProfile);
+  },
+
+  recordStudySession: async (data: {
+    durationSeconds: number;
+    activityType: 'practice' | 'reading' | 'video' | 'note_taking' | 'general';
+    subject?: string;
+    notes?: string;
+  }): Promise<boolean> => {
+    try {
+      const headers = authService.getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/students/dashboard/study-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        body: JSON.stringify(data),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
   getDashboardData: async (): Promise<StudentDashboardData> => {
     await new Promise((resolve) => setTimeout(resolve, 150));
     return { ...studentDashboardData };

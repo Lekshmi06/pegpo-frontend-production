@@ -515,6 +515,15 @@ export const authService = {
     localStorage.removeItem(TOKEN_KEY);
   },
 
+  getToken: (): string | null => {
+    return localStorage.getItem(TOKEN_KEY);
+  },
+
+  getAuthHeaders: (): Record<string, string> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  },
+
   getCurrentUser: (): UserSession | null => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {

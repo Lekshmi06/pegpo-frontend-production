@@ -87,15 +87,17 @@ export default function Marketplace() {
             <Link to="/marketplace" className="text-[#0091ff]">
               Explore Catalog
             </Link>
-            <Link to="/learner" className="hover:text-slate-900 transition-colors">
-              My Courses
-            </Link>
+            {currentUser && (
+              <Link to="/learner" className="hover:text-slate-900 transition-colors">
+                My Courses
+              </Link>
+            )}
             {currentUser?.role === 'provider' ? (
               <Link to="/provider" className="hover:text-slate-900 transition-colors">
                 Provider Studio
               </Link>
             ) : (
-              <Link to="/onboarding" className="hover:text-slate-900 transition-colors">
+              <Link to={currentUser ? "/provider" : "/signup"} className="hover:text-slate-900 transition-colors">
                 Teach on EduPye
               </Link>
             )}
@@ -335,8 +337,14 @@ export default function Marketplace() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-8 px-4 text-center text-xs font-bold text-slate-400">
-        © 2026 EDUPYE LMS & Course Marketplace. All rights reserved.
+      <footer className="bg-white border-t border-slate-200 py-8 px-4 text-center text-xs text-slate-500 space-y-2">
+        <div>© 2026 EDUPYE LMS & Course Marketplace. All rights reserved.</div>
+        <div className="flex flex-wrap items-center justify-center gap-4 text-slate-500 font-medium">
+          <Link to="/help" className="hover:text-slate-800 transition-colors">FAQs & Help</Link>
+          <Link to="/privacy" className="hover:text-slate-800 transition-colors">Privacy Policy</Link>
+          <Link to="/terms" className="hover:text-slate-800 transition-colors">Terms of Service</Link>
+          <Link to="/cookies" className="hover:text-slate-800 transition-colors">Cookie Settings</Link>
+        </div>
       </footer>
     </div>
   );
