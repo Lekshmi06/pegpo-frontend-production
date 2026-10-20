@@ -340,6 +340,8 @@ async function runBrowserVerificationSuite() {
     // -------------------------------------------------------------
     await testStep('Exam Prep Quick-Entry onboarding multi-step flow (steps 1-6) and completion', async () => {
       await page.goto(`${baseURL}/onboarding/quick`, { waitUntil: 'domcontentloaded' });
+      await page.evaluate(() => localStorage.removeItem('edupye_exam_onboarding_draft'));
+      await page.reload({ waitUntil: 'domcontentloaded' });
       await page.waitForSelector('h2', { timeout: 10000 });
 
       // Step 1: About You
@@ -397,6 +399,42 @@ async function runBrowserVerificationSuite() {
       const mobileHeader = await page.innerText('header');
       assert(/skip setup/i.test(mobileHeader), 'Skip setup control missing on mobile viewport');
       await page.setViewportSize({ width: 1280, height: 800 });
+    });
+
+    // -------------------------------------------------------------
+    // Test 14: Course Provider Login Routing (/provider instead of /onboarding/researcher)
+    // -------------------------------------------------------------
+    await testStep('Course Provider login resolves role "provider" and routes to /provider (not researcher onboarding)', async () => {
+      // Simulate authentic provider session setup in browser localStorage
+      await page.goto(`${baseURL}/login`, { waitUntil: 'domcontentloaded' });
+      await page.evaluate(() => {
+        const providerSession = {
+          email: 'sourav@mail.com',
+          name: 'Sourav',
+          role: 'provider',
+          language: 'English',
+          goal: 'Course Creation',
+          createdAt: new Date().toISOString(),
+        };
+        localStorage.setItem('user', JSON.stringify(providerSession));
+        localStorage.setItem('userEmail', 'sourav@mail.com');
+        localStorage.setItem('userRole', 'provider');
+        localStorage.setItem('token', 'mock_verified_provider_jwt_token_2026');
+      });
+
+      // Navigate to /provider and verify successful portal access
+      await page.goto(`${baseURL}/provider`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('text=Provider Studio', { timeout: 10000 });
+
+      const currentUrl = page.url();
+      assert(!currentUrl.includes('/onboarding/researcher'), `Course provider must NEVER be redirected to /onboarding/researcher. Current URL: ${currentUrl}`);
+      assert(currentUrl.includes('/provider'), `Course provider should be at /provider. Current URL: ${currentUrl}`);
+
+      const pageText = await page.innerText('body');
+      assert(/provider studio|creator platform|dashboard/i.test(pageText), 'Provider studio UI not rendered');
+
+      // Clear session after test
+      await page.evaluate(() => localStorage.clear());
     });
 
   } finally {

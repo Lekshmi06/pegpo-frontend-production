@@ -118,7 +118,7 @@ export const authService = {
             goal: 'Browse Courses',
             createdAt: new Date().toISOString(),
           };
-        } else if (user.userType === 'teacher' || teacherProfile) {
+        } else if (user.userType === 'teacher' || (!user.userType && teacherProfile)) {
           localStorage.setItem(ROLE_KEY, 'teacher');
           session = {
             email: user.email,
@@ -143,7 +143,7 @@ export const authService = {
             },
             createdAt: teacherProfile?.createdAt || new Date().toISOString(),
           };
-        } else if (user.userType === 'researcher' || researcherProfile) {
+        } else if (user.userType === 'researcher' || (!user.userType && researcherProfile)) {
           localStorage.setItem(ROLE_KEY, 'researcher');
           session = {
             email: user.email,
