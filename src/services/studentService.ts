@@ -383,6 +383,7 @@ export const studentService = {
           ...authService.getAuthHeaders(),
         },
         body: JSON.stringify(backendPayload),
+        signal: AbortSignal.timeout(3000),
       });
 
       const json = await safeParseResponse(res);

@@ -118,6 +118,16 @@ export const authService = {
             goal: 'Browse Courses',
             createdAt: new Date().toISOString(),
           };
+        } else if (user.userType === 'company' || user.userType === 'institution') {
+          localStorage.setItem(ROLE_KEY, user.userType);
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: user.userType,
+            language: user.language || 'English',
+            goal: 'Corporate & Institutional Learning',
+            createdAt: new Date().toISOString(),
+          };
         } else if (user.userType === 'teacher' || (!user.userType && teacherProfile)) {
           localStorage.setItem(ROLE_KEY, 'teacher');
           session = {
@@ -157,6 +167,7 @@ export const authService = {
             createdAt: researcherProfile?.createdAt || new Date().toISOString(),
           };
         } else {
+          localStorage.setItem(ROLE_KEY, 'student');
           session = {
             email: user.email,
             name: studentProfile?.name || user.name || cleanEmail.split('@')[0],
@@ -173,28 +184,12 @@ export const authService = {
           };
         }
       }
-    } catch (err) {
-      if (err instanceof Error && (err.message.includes('Invalid') || err.message.includes('required') || err.message.includes('password'))) {
-        throw err;
-      }
-      console.warn('Backend login unreachable, falling back to cached local session:', err);
+    } catch (err: any) {
+      throw err instanceof Error ? err : new Error('Unable to connect to the authentication service.');
     }
 
     if (!session) {
-      const existing = authService.getCurrentUser();
-      if (existing && existing.email.toLowerCase() === cleanEmail) {
-        session = existing;
-      } else {
-        session = {
-          email: cleanEmail,
-          name: cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-          role: (localStorage.getItem(ROLE_KEY) as UserRole) || 'student',
-          learningPath: 'school',
-          language: localStorage.getItem(LANG_KEY) || 'English',
-          goal: localStorage.getItem(GOAL_KEY) || 'Prepare for Exam',
-          createdAt: new Date().toISOString(),
-        };
-      }
+      throw new Error('Authentication failed: no session was returned by the server.');
     }
 
     localStorage.setItem(EMAIL_KEY, session.email);

@@ -6,6 +6,7 @@ import { Loader } from '../components/ui/Loader';
 const LandingPage = lazy(() => import('../pages/landing/LandingPage'));
 
 // Auth Pages
+const ChooseJourney = lazy(() => import('../pages/auth/ChooseJourney'));
 const SignUp = lazy(() => import('../pages/auth/SignUp'));
 const Login = lazy(() => import('../pages/auth/Login'));
 const PersonalDetails = lazy(() => import('../pages/auth/PersonalDetails'));
@@ -135,7 +136,12 @@ export default function AppRoutes() {
         <Route path="/cookies" element={<CookieSettings />} />
 
         {/* Auth Flows */}
-        <Route path="/signup" element={<SignUp />} />
+        <Route path="/signup" element={<ChooseJourney />} />
+        <Route path="/signup/journey" element={<ChooseJourney />} />
+        <Route path="/choose-journey" element={<ChooseJourney />} />
+        <Route path="/signup/register" element={<SignUp />} />
+        <Route path="/signup/account" element={<SignUp />} />
+        <Route path="/register" element={<SignUp />} />
         <Route path="/login" element={<Login />} />
         <Route path="/personal-details" element={<PersonalDetails />} />
         <Route path="/onboarding/quick" element={<ExamPrepQuickOnboarding />} />

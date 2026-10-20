@@ -40,9 +40,34 @@ export default function Login() {
     };
   }, []);
 
+  const isCompatibleTarget = (role: string, target?: string): boolean => {
+    if (!target) return false;
+    if (target.startsWith('/login') || target.startsWith('/signup') || target.startsWith('/register') || target.startsWith('/choose-journey')) return false;
+
+    if (role === 'provider') {
+      return target.startsWith('/provider') || target.startsWith('/courses') || target.startsWith('/marketplace');
+    }
+    if (role === 'learner') {
+      return target.startsWith('/learner') || target.startsWith('/courses') || target.startsWith('/marketplace') || target.startsWith('/learn');
+    }
+    if (role === 'teacher') {
+      return target.startsWith('/teacher') || target.startsWith('/provider');
+    }
+    if (role === 'researcher') {
+      return target.startsWith('/research') || target.startsWith('/onboarding/researcher');
+    }
+    if (role === 'company' || role === 'institution') {
+      return target.startsWith('/institution');
+    }
+    if (role === 'student') {
+      return target.startsWith('/student') || target.startsWith('/onboarding') || target.startsWith('/learn');
+    }
+    return false;
+  };
+
   const navigateByRole = (session: any) => {
-    // If a specific deep link was requested and is compatible, prioritize it
-    if (redirectTarget && !redirectTarget.startsWith('/login') && !redirectTarget.startsWith('/signup')) {
+    // If a specific deep link was requested and is compatible with user role, prioritize it
+    if (redirectTarget && isCompatibleTarget(session.role, redirectTarget)) {
       navigate(redirectTarget, { replace: true });
       return;
     }

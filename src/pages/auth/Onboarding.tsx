@@ -4,165 +4,351 @@ import {
   GraduationCap,
   BookOpen,
   Sparkles,
-  Video,
   Compass,
   Building2,
+  Target,
   CheckCircle2,
   ArrowRight,
   Globe,
+  Trophy,
+  Video,
+  Layers,
+  FileText,
+  Users,
+  BarChart3,
+  Award,
+  FolderPlus,
+  FileCheck,
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/authService';
 import { UserRole } from '../../types/auth';
 
-interface RoleOption {
-  id: UserRole;
+export interface GoalItem {
+  id: string;
   title: string;
-  badge?: string;
+  badge: string;
   description: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: string;
+  route: string;
 }
 
-const ROLES: RoleOption[] = [
-  {
-    id: 'student',
-    title: 'Student',
-    badge: 'K-12 & Higher Ed',
-    description: 'School curriculum, college syllabus, competitive exams, smart mock tests & AI study tools.',
-    icon: GraduationCap,
-    color: 'blue',
-  },
-  {
-    id: 'teacher',
-    title: 'Teacher / Faculty',
-    badge: 'Teaching Workspace',
-    description: 'Lesson planning, interactive smart board, automated question generator & classroom tracking.',
-    icon: BookOpen,
-    color: 'emerald',
-  },
-  {
-    id: 'researcher',
-    title: 'Academic Researcher',
-    badge: 'Research Suite',
-    description: 'Literature reviews, citation manager, manuscripts, thesis assistance & research copilot.',
-    icon: Sparkles,
-    color: 'purple',
-  },
-  {
-    id: 'provider',
-    title: 'Course Provider',
-    badge: 'Marketplace Studio',
-    description: 'Design courses, upload video lectures, build curriculums & publish to EduPye Marketplace.',
-    icon: Video,
-    color: 'amber',
-  },
-  {
-    id: 'learner',
-    title: 'Online Learner',
-    badge: 'Self-Paced Learning',
-    description: 'Explore the open course marketplace, master professional skills & earn verified certificates.',
-    icon: Compass,
-    color: 'sky',
-  },
-  {
-    id: 'company',
-    title: 'Company / Organization',
-    badge: 'Corporate Learning',
-    description: 'Onboard employees, organize departments, assign training programs, and track workforce learning progress.',
-    icon: Building2,
-    color: 'indigo',
-  },
-];
+export const ROLE_GOAL_MAP: Record<string, GoalItem[]> = {
+  student: [
+    {
+      id: 'school_curriculum',
+      title: 'School Curriculum',
+      badge: 'Classes 1–12',
+      description: 'CBSE, ICSE, and State Board classes, textbook chapters, revision notes, and homework exercises.',
+      icon: GraduationCap,
+      route: '/onboarding/school',
+    },
+    {
+      id: 'college_academics',
+      title: 'College & Degree Academics',
+      badge: 'Undergraduate & Postgrad',
+      description: 'Semester degree programs (B.Tech, B.Sc, B.Com, MBA) with syllabus guides and lecture notes.',
+      icon: Building2,
+      route: '/onboarding/undergraduate',
+    },
+    {
+      id: 'competitive_exams',
+      title: 'Competitive & Entrance Exams',
+      badge: 'JEE · NEET · UPSC · GATE',
+      description: 'Specialized national entrance exams, previous years questions, and comprehensive test series.',
+      icon: Trophy,
+      route: '/onboarding/competitive',
+    },
+    {
+      id: 'exam_prep',
+      title: 'Exam Preparation & Mock Tests',
+      badge: 'Quick Entry · AI Prep',
+      description: 'Focused preparation for upcoming exams, adaptive mock tests, study materials, and AI tutoring.',
+      icon: Target,
+      route: '/onboarding/quick',
+    },
+  ],
 
-type StudentGoal = 'school' | 'undergraduate' | 'postgraduate' | 'competitive';
+  teacher: [
+    {
+      id: 'lesson_planning',
+      title: 'Lesson Planning',
+      badge: 'Curriculum Planner',
+      description: 'AI-assisted lesson plans, structured unit schedules, and curriculum mapping.',
+      icon: BookOpen,
+      route: '/onboarding/teacher',
+    },
+    {
+      id: 'teaching_resources',
+      title: 'Teaching Resources',
+      badge: 'Resource Library',
+      description: 'Upload textbook references, organize class folders, and share handouts with students.',
+      icon: FolderPlus,
+      route: '/onboarding/teacher',
+    },
+    {
+      id: 'assessments_quizzes',
+      title: 'Assessments & Quizzes',
+      badge: 'Assessment Studio',
+      description: 'Create automated quizzes, midterm tests, answer keys, and grading rubrics.',
+      icon: FileCheck,
+      route: '/onboarding/teacher',
+    },
+    {
+      id: 'smartboard_classroom',
+      title: 'Smartboard & Classroom Activities',
+      badge: 'Live Classroom',
+      description: 'Launch digital whiteboard presentations, live screen sharing, and real-time class polls.',
+      icon: Layers,
+      route: '/onboarding/teacher',
+    },
+  ],
 
-const STUDENT_GOALS: { id: StudentGoal; title: string; desc: string }[] = [
-  { id: 'school', title: 'School (K-12)', desc: 'Classes 1–12, CBSE, ICSE, State Boards' },
-  { id: 'undergraduate', title: 'Undergraduate (College)', desc: 'B.Tech, B.Sc, B.Com, B.A degree courses' },
-  { id: 'postgraduate', title: 'Postgraduate', desc: 'M.Tech, M.Sc, MBA, Ph.D coursework' },
-  { id: 'competitive', title: 'Competitive Exams', desc: 'JEE, NEET, UPSC, GATE, Banking & SSC' },
-];
+  researcher: [
+    {
+      id: 'literature_discovery',
+      title: 'Literature Discovery',
+      badge: 'Paper Search',
+      description: 'Semantic search across academic repositories, open-access papers, and key journals.',
+      icon: Compass,
+      route: '/onboarding/researcher',
+    },
+    {
+      id: 'research_project_mgmt',
+      title: 'Research Project Management',
+      badge: 'Workspace Mgmt',
+      description: 'Manage laboratory experiments, collaborative milestones, research files, and deadlines.',
+      icon: Layers,
+      route: '/onboarding/researcher',
+    },
+    {
+      id: 'paper_analysis',
+      title: 'Paper Analysis',
+      badge: 'AI Analysis',
+      description: 'Deep comparative analyses, methodology extraction, and automated paper summaries.',
+      icon: Sparkles,
+      route: '/onboarding/researcher',
+    },
+    {
+      id: 'research_writing',
+      title: 'Research Writing',
+      badge: 'Manuscripts & BibTeX',
+      description: 'Draft conference manuscripts, format bibliographies in APA/IEEE, and manage citations.',
+      icon: FileText,
+      route: '/onboarding/researcher',
+    },
+  ],
+
+  institution: [
+    {
+      id: 'school_college_mgmt',
+      title: 'School or College Management',
+      badge: 'Campus ERP',
+      description: 'Access institution administration, student rosters, academic calendars, and campus analytics.',
+      icon: Building2,
+      route: '/institution/portal/dashboard',
+    },
+    {
+      id: 'staff_learner_mgmt',
+      title: 'Staff & Learner Management',
+      badge: 'Directory',
+      description: 'Manage educator rosters, student cohorts, departmental access permissions, and roles.',
+      icon: Users,
+      route: '/institution/portal/members',
+    },
+    {
+      id: 'training_mgmt',
+      title: 'Training Management',
+      badge: 'Programs',
+      description: 'Design structured workforce and faculty development curricula with automated scheduling.',
+      icon: BookOpen,
+      route: '/institution/portal/programs',
+    },
+    {
+      id: 'progress_reporting',
+      title: 'Learning Progress & Reporting',
+      badge: 'Reporting',
+      description: 'Monitor organizational completion rates, test scores, attendance, and compliance reports.',
+      icon: BarChart3,
+      route: '/institution/portal/dashboard',
+    },
+  ],
+
+  company: [
+    {
+      id: 'workforce_training',
+      title: 'Workforce Training Management',
+      badge: 'Enterprise Programs',
+      description: 'Deploy role-specific training modules, track completion rates, and assign team certifications.',
+      icon: Building2,
+      route: '/onboarding/company',
+    },
+    {
+      id: 'department_org',
+      title: 'Department Organization',
+      badge: 'Teams & Departments',
+      description: 'Structure teams, assign department managers, and monitor employee training compliance.',
+      icon: Users,
+      route: '/onboarding/company',
+    },
+    {
+      id: 'progress_reporting',
+      title: 'Learning Progress & Reporting',
+      badge: 'Analytics',
+      description: 'Monitor organizational completion rates, test scores, attendance, and compliance reports.',
+      icon: BarChart3,
+      route: '/institution/portal/dashboard',
+    },
+    {
+      id: 'custom_curriculum',
+      title: 'Custom Company Curricula',
+      badge: 'Internal Courses',
+      description: 'Create customized onboarding pathways and proprietary corporate learning resources.',
+      icon: Layers,
+      route: '/onboarding/company',
+    },
+  ],
+
+  provider: [
+    {
+      id: 'create_publish_courses',
+      title: 'Create & Publish Courses',
+      badge: 'Course Studio',
+      description: 'Build video curricula, organize modules and chapters, and publish to the marketplace.',
+      icon: Video,
+      route: '/provider/courses/new',
+    },
+    {
+      id: 'manage_course_content',
+      title: 'Manage Course Content',
+      badge: 'Content Studio',
+      description: 'Update lecture materials, upload lecture recordings, and attach downloadable notes.',
+      icon: Layers,
+      route: '/provider',
+    },
+    {
+      id: 'manage_enrollments',
+      title: 'Manage Enrollments',
+      badge: 'Learner Roster',
+      description: 'Track student enrollments, issue certificates, and review course questions.',
+      icon: Users,
+      route: '/provider',
+    },
+    {
+      id: 'course_sales_performance',
+      title: 'Course Sales & Performance',
+      badge: 'Revenue & Metrics',
+      description: 'Monitor course views, ratings, enrollment trends, and revenue metrics.',
+      icon: BarChart3,
+      route: '/provider',
+    },
+  ],
+
+  learner: [
+    {
+      id: 'professional_skills',
+      title: 'Professional Skills',
+      badge: 'Skill Tracks',
+      description: 'Master in-demand technical, business, and creative competencies with guided tutorials.',
+      icon: Compass,
+      route: '/learner',
+    },
+    {
+      id: 'online_courses',
+      title: 'Online Courses',
+      badge: 'Video Courses',
+      description: 'Browse our open library of verified courses across computer science, business, and sciences.',
+      icon: BookOpen,
+      route: '/marketplace',
+    },
+    {
+      id: 'structured_learning_paths',
+      title: 'Structured Learning Paths',
+      badge: 'Career Paths',
+      description: 'Follow step-by-step career pathways from beginner to advanced professional certification.',
+      icon: Target,
+      route: '/learner',
+    },
+    {
+      id: 'certificates_career',
+      title: 'Certificates & Career Development',
+      badge: 'Verified Creds',
+      description: 'Earn accredited certificates, share badges on LinkedIn, and build your digital resume.',
+      icon: Award,
+      route: '/learner',
+    },
+  ],
+};
+
+const USER_TYPE_DISPLAY: Record<string, string> = {
+  student: 'Student',
+  teacher: 'Teacher / Faculty',
+  researcher: 'Academic Researcher',
+  institution: 'Institution Management',
+  company: 'Company / Organization',
+  provider: 'Course Provider',
+  learner: 'Online Learner',
+};
 
 export default function Onboarding() {
   const navigate = useNavigate();
 
-  // Read initial role if pre-set in localStorage (e.g. from signup)
-  const storedRole = (localStorage.getItem('userRole') || 'student').toLowerCase() as UserRole;
-  const initialRole: UserRole = ROLES.some((r) => r.id === storedRole) ? storedRole : 'student';
+  // Resolve user type from session or localStorage
+  const currentUser = authService.getCurrentUser();
+  const rawRole = (currentUser?.role || localStorage.getItem('userRole') || localStorage.getItem('selectedUserType') || 'student').toLowerCase() as UserRole;
+  const userType = ROLE_GOAL_MAP[rawRole] ? rawRole : 'student';
 
-  const [selectedRole, setSelectedRole] = useState<UserRole>(initialRole);
-  const [studentGoal, setStudentGoal] = useState<StudentGoal>('school');
-  const [language, setLanguage] = useState<string>('English');
+  const availableGoals = ROLE_GOAL_MAP[userType] || ROLE_GOAL_MAP.student;
+
+  // Selected goal state (default to first goal in list)
+  const [selectedGoalId, setSelectedGoalId] = useState<string>(availableGoals[0].id);
+  const [language, setLanguage] = useState<string>(localStorage.getItem('userLanguage') || 'English');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleContinue = async () => {
     setIsLoading(true);
     try {
+      const selected = availableGoals.find((g) => g.id === selectedGoalId) || availableGoals[0];
+
+      // 1. Store language preference
       localStorage.setItem('userLanguage', language);
 
-      // Persist chosen role to MongoDB backend and update local user session
-      await authService.selectRole(selectedRole);
+      // 2. Store selected goal SEPARATELY from authorization role
+      // CRITICAL ARCHITECTURAL CONSTRAINT:
+      // Selecting a goal must never grant permissions or change the user's authorization role.
+      localStorage.setItem('userGoal', selected.id);
+      localStorage.setItem('userGoalTitle', selected.title);
 
-      if (selectedRole === 'student') {
-        localStorage.setItem('userGoal', studentGoal);
-        if (studentGoal === 'school') {
-          navigate('/onboarding/school');
-        } else if (studentGoal === 'undergraduate') {
-          navigate('/onboarding/undergraduate');
-        } else if (studentGoal === 'postgraduate') {
-          navigate('/onboarding/postgraduate');
-        } else if (studentGoal === 'competitive') {
-          navigate('/onboarding/competitive');
-        } else {
-          navigate('/student/home');
-        }
-      } else if (selectedRole === 'teacher') {
-        localStorage.setItem('userGoal', 'Lesson Planning');
-        navigate('/onboarding/teacher');
-      } else if (selectedRole === 'researcher') {
-        localStorage.setItem('userGoal', 'Literature Review');
-        navigate('/onboarding/researcher');
-      } else if (selectedRole === 'provider') {
-        localStorage.setItem('userGoal', 'Course Creation');
-        navigate('/provider');
-      } else if (selectedRole === 'learner') {
-        localStorage.setItem('userGoal', 'Browse Courses');
-        navigate('/learner');
-      } else if (selectedRole === 'company') {
-        localStorage.setItem('userGoal', 'Corporate Learning');
-        navigate('/onboarding/company');
-      } else if (selectedRole === 'institution') {
-        localStorage.setItem('userGoal', 'Institutional Management');
-        navigate('/institution/school');
-      } else {
-        navigate('/student/home');
+      if (currentUser) {
+        currentUser.goal = selected.title;
+        currentUser.language = language;
+        localStorage.setItem('user', JSON.stringify(currentUser));
       }
+
+      // 3. Goal-specific navigation to supported workflow
+      navigate(selected.route);
     } catch (err) {
-      console.warn('Role setup proceeded with local fallback:', err);
-      if (selectedRole === 'teacher') navigate('/onboarding/teacher');
-      else if (selectedRole === 'researcher') navigate('/onboarding/researcher');
-      else if (selectedRole === 'provider') navigate('/provider');
-      else if (selectedRole === 'learner') navigate('/learner');
-      else if (selectedRole === 'company') navigate('/onboarding/company');
-      else if (selectedRole === 'institution') navigate('/institution/school');
-      else navigate('/onboarding/school');
+      console.warn('Navigation fallback:', err);
+      navigate(availableGoals[0].route);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const userTypeTitle = USER_TYPE_DISPLAY[userType] || 'User';
+
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between p-4 sm:p-8 font-sans">
-      <header className="w-full max-w-4xl mx-auto flex items-center justify-between pt-2 pb-4">
+    <div className="min-h-screen bg-[#FAF8F5] flex flex-col justify-between p-4 sm:p-8 font-sans">
+      {/* Brand & Language Header */}
+      <header className="w-full max-w-5xl mx-auto flex items-center justify-between pt-2 pb-4">
         <EdupyeLogo className="scale-105" />
-        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-xs font-semibold text-slate-600 shadow-2xs">
-          <Globe className="w-3.5 h-3.5 text-slate-400" />
+        <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-stone-200 text-xs font-semibold text-stone-600 shadow-2xs">
+          <Globe className="w-3.5 h-3.5 text-stone-400" />
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            className="bg-transparent text-xs font-bold text-stone-700 outline-none cursor-pointer"
           >
             <option value="English">English</option>
             <option value="Hindi">Hindi</option>
@@ -173,65 +359,70 @@ export default function Onboarding() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center py-6 sm:py-10">
-        <div className="max-w-4xl w-full space-y-6">
-          {/* Headline */}
+      {/* Main Goal Selection */}
+      <main className="flex-1 flex items-center justify-center py-6 sm:py-8">
+        <div className="max-w-5xl w-full space-y-6">
+          {/* Header & Step Badge */}
           <div className="text-center space-y-2">
-            <span className="inline-block px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-black uppercase tracking-wider">
-              Step 2 of 2 · Role Selection
+            <span className="inline-block px-3 py-1 rounded-full bg-orange-100/70 text-orange-700 border border-orange-200/60 text-[11px] font-black uppercase tracking-wider">
+              Step 3 of 3 · Goal Selection & Setup
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-[#111827] tracking-tight">
-              Choose Your EduPye Pathway
+            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">
+              What is your primary goal as a {userTypeTitle}?
             </h1>
-            <p className="text-xs sm:text-sm font-semibold text-slate-500 max-w-lg mx-auto">
-              Select your primary role to configure your personalized dashboard and study tools.
+            <p className="text-xs sm:text-sm font-semibold text-stone-500 max-w-lg mx-auto">
+              Select your primary goal to configure your workspace tools. You can explore all other features anytime.
             </p>
           </div>
 
-          {/* Role Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {ROLES.map((role) => {
-              const Icon = role.icon;
-              const isSelected = selectedRole === role.id;
+          {/* Role-Specific Goal Cards Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {availableGoals.map((goal) => {
+              const Icon = goal.icon;
+              const isSelected = selectedGoalId === goal.id;
 
               return (
                 <button
-                  key={role.id}
+                  key={goal.id}
                   type="button"
-                  onClick={() => setSelectedRole(role.id)}
-                  className={`p-4 sm:p-5 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between gap-3 relative cursor-pointer bg-white shadow-xs hover:shadow-md ${
+                  onClick={() => setSelectedGoalId(goal.id)}
+                  className={`p-5 rounded-2xl border text-left transition-all duration-150 flex flex-col justify-between gap-3 relative cursor-pointer bg-white shadow-xs hover:shadow-md ${
                     isSelected
-                      ? 'border-[#0091ff] ring-2 ring-[#0091ff]/20 bg-blue-50/20'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-orange-500 ring-2 ring-orange-500/20 bg-orange-50/20'
+                      : 'border-stone-200/90 hover:border-stone-300'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div
-                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
                         isSelected
-                          ? 'bg-[#0091ff] text-white shadow-xs'
-                          : 'bg-slate-100 text-slate-600'
+                          ? 'bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-xs'
+                          : 'bg-stone-100 text-stone-600'
                       }`}
                     >
                       <Icon className="w-5 h-5" />
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {role.badge && (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                          {role.badge}
-                        </span>
-                      )}
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          isSelected
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-stone-100 text-stone-600'
+                        }`}
+                      >
+                        {goal.badge}
+                      </span>
                       {isSelected && (
-                        <CheckCircle2 className="w-4 h-4 text-[#0091ff] shrink-0" />
+                        <CheckCircle2 className="w-4 h-4 text-orange-600 shrink-0" />
                       )}
                     </div>
                   </div>
 
                   <div>
-                    <h2 className="text-sm font-bold text-slate-900">{role.title}</h2>
-                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed line-clamp-3">
-                      {role.description}
+                    <h2 className="text-sm font-bold text-stone-900">{goal.title}</h2>
+                    <p className="text-[11px] text-stone-500 mt-1 leading-relaxed line-clamp-3">
+                      {goal.description}
                     </p>
                   </div>
                 </button>
@@ -239,51 +430,26 @@ export default function Onboarding() {
             })}
           </div>
 
-          {/* Sub-selector when Student is selected */}
-          {selectedRole === 'student' && (
-            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs space-y-3 animate-in fade-in duration-150">
-              <label className="block text-xs font-bold text-slate-700">
-                What are you currently studying?
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {STUDENT_GOALS.map((goal) => {
-                  const isGoalActive = studentGoal === goal.id;
-                  return (
-                    <button
-                      key={goal.id}
-                      type="button"
-                      onClick={() => setStudentGoal(goal.id)}
-                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                        isGoalActive
-                          ? 'border-[#0091ff] bg-blue-50/50 text-[#0091ff]'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      <div className="text-xs font-bold">{goal.title}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">{goal.desc}</div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Action Button */}
-          <div className="flex items-center justify-end pt-2">
+          {/* Action Row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-stone-200/60">
+            <p className="text-xs text-stone-400 font-medium">
+              You can explore additional tools and update your goal anytime from your account settings.
+            </p>
             <Button
               type="button"
               onClick={handleContinue}
               isLoading={isLoading}
-              className="w-full sm:w-auto px-8 py-3.5 text-xs font-bold flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-8 py-3.5 text-xs font-bold flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-2xl shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
             >
-              <span>Continue to Setup</span>
+              <span>Continue to Workspace</span>
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </main>
 
-      <footer className="w-full max-w-4xl mx-auto text-center text-xs font-bold text-slate-400 py-2">
+      {/* Footer */}
+      <footer className="w-full max-w-5xl mx-auto text-center text-xs font-bold text-stone-400 py-2">
         © 2026 EDUPYE. All rights reserved.
       </footer>
     </div>

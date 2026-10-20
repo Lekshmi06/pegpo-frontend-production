@@ -1,11 +1,11 @@
 import React, { useState, FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { MessageSquare, Mail, AlertCircle, ArrowRight, ShieldCheck, Check } from 'lucide-react';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { MessageSquare, Mail, AlertCircle, ArrowRight } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
 import { authService } from '../../services/authService';
 import { useToast } from '../../hooks/useToast';
+import { UserRole } from '../../types/auth';
 
 type RegistrationMode = 'email' | 'whatsapp';
 
@@ -19,9 +19,37 @@ const COUNTRY_CODES = [
   { code: '+49', country: 'DE', label: '+49 (Germany)' },
 ];
 
+const SUBTITLES: Record<string, string> = {
+  student: 'Join EduPye to begin your academic learning and examination preparation.',
+  teacher: 'Join EduPye to access lesson planning, smartboard, and classroom tools.',
+  researcher: 'Join EduPye to discover literature, manage projects, and write papers.',
+  institution: 'Join EduPye to manage your campus, staff, training, and student progress.',
+  company: 'Join EduPye to organize corporate training and track workforce learning.',
+  provider: 'Join EduPye to publish, sell, and manage courses in our marketplace.',
+  learner: 'Join EduPye to develop in-demand skills and earn career certificates.',
+};
+
+const USER_TYPE_LABELS: Record<string, string> = {
+  student: 'Student',
+  teacher: 'Teacher / Faculty',
+  researcher: 'Researcher',
+  institution: 'Institution Management',
+  company: 'Company / Organization',
+  provider: 'Course Provider',
+  learner: 'Online Learner',
+};
+
 export default function SignUp() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const toast = useToast();
+
+  // Resolve intended user type from query param, navigation state, or localStorage
+  const queryType = searchParams.get('type') as UserRole | null;
+  const stateType = (location.state as any)?.userType as UserRole | null;
+  const storedType = (localStorage.getItem('selectedUserType') as UserRole | null);
+  const userType: UserRole = queryType || stateType || storedType || 'student';
 
   const [mode, setMode] = useState<RegistrationMode>('email');
 
@@ -75,11 +103,15 @@ export default function SignUp() {
 
     setIsLoading(true);
     try {
-      // Self-registering exam preparation students strictly receive the 'student' role
-      localStorage.setItem('userRole', 'student');
-      await authService.signUp(cleanEmail, password, undefined, 'student');
+      localStorage.setItem('userRole', userType);
+      localStorage.setItem('selectedUserType', userType);
+
+      // Register account using existing backend authentication service
+      await authService.signUp(cleanEmail, password, undefined, userType);
       toast.success('Account created! Welcome to EduPye.');
-      navigate('/onboarding/quick');
+      
+      // Page Two to Page Three: navigate to goal selection and profile setup
+      navigate('/onboarding');
     } catch (err: any) {
       const msg =
         err instanceof Error ? err.message : 'Registration failed. Please try again.';
@@ -95,28 +127,33 @@ export default function SignUp() {
     e.preventDefault();
     setErrorMessage(null);
 
-    // Honest notice per requirement:
-    // "Do not activate WhatsApp registration unless phone verification is genuinely implemented and configured."
     const msg =
       'WhatsApp phone verification is awaiting SMS/WhatsApp gateway configuration. Please register with your Email ID or Google account to proceed immediately.';
     setErrorMessage(msg);
     toast.info(msg, 'WhatsApp Gateway Configuration Pending');
   };
 
+  // Google Authentication Sign Up
   const handleGoogleSignUp = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      localStorage.setItem('userRole', 'student');
-      await authService.signUp('student@edupye.com', undefined, undefined, 'student');
+      localStorage.setItem('userRole', userType);
+      localStorage.setItem('selectedUserType', userType);
+
+      // Pass intended user type through to backend registration
+      await authService.signUp('student@edupye.com', undefined, undefined, userType);
       toast.success('Signed in with Google!');
-      navigate('/onboarding/quick');
+      navigate('/onboarding');
     } catch {
       toast.error('Google Sign Up failed. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
+
+  const subtitle = SUBTITLES[userType] || SUBTITLES.student;
+  const userTypeLabel = USER_TYPE_LABELS[userType] || userType;
 
   return (
     <div className="min-h-screen bg-[#FAF8F5] flex items-center justify-center p-4 sm:p-6 font-sans">
@@ -128,16 +165,35 @@ export default function SignUp() {
           </Link>
         </div>
 
+        {/* Selected Journey Contextual Indicator */}
+        <div className="flex items-center justify-between px-3.5 py-2 bg-stone-50 rounded-2xl border border-stone-200/80 text-xs text-left">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase font-black tracking-wider text-stone-400">
+              Journey:
+            </span>
+            <span className="font-extrabold text-stone-800">
+              {userTypeLabel}
+            </span>
+          </div>
+          <Link
+            to="/signup"
+            className="text-[11px] font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline cursor-pointer"
+          >
+            Change
+          </Link>
+        </div>
+
+        {/* Page Title & Contextual Subtitle */}
         <div className="space-y-1.5">
           <h1 className="text-2xl font-black text-stone-900 tracking-tight">
-            Start Your Exam Preparation
+            Create Your EduPye Account
           </h1>
           <p className="text-xs font-semibold text-stone-500">
-            Join EduPye to access adaptive AI tutors, practice papers & mock tests.
+            {subtitle}
           </p>
         </div>
 
-        {/* 1. Google Authentication First */}
+        {/* 1. Google Authentication */}
         <div>
           <button
             type="button"
@@ -186,7 +242,7 @@ export default function SignUp() {
             }}
             className={`py-2 px-3 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 ${
               mode === 'email'
-                ? 'bg-white text-orange-600 shadow-xs'
+                ? 'bg-white text-[#2563EB] shadow-xs'
                 : 'text-stone-600 hover:text-stone-900'
             }`}
           >
@@ -226,7 +282,7 @@ export default function SignUp() {
               errorMessage.includes('already exists')) && (
               <div className="pt-1 flex items-center justify-between text-[11px] border-t border-rose-200/60 mt-1">
                 <span className="text-rose-700">Already registered with this email?</span>
-                <Link to="/login" className="font-bold text-orange-600 hover:underline shrink-0 ml-2">
+                <Link to="/login" className="font-bold text-[#2563EB] hover:text-[#1D4ED8] hover:underline shrink-0 ml-2">
                   Log In &rarr;
                 </Link>
               </div>
@@ -247,6 +303,7 @@ export default function SignUp() {
               }}
               placeholder="name@example.com"
               label="Email Address"
+              className="focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
             />
 
             <Input
@@ -259,6 +316,7 @@ export default function SignUp() {
               }}
               placeholder="Create password (min. 6 characters)"
               label="Create Password"
+              className="focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
             />
 
             <Input
@@ -271,15 +329,16 @@ export default function SignUp() {
               }}
               placeholder="Re-enter password to confirm"
               label="Confirm Password"
+              className="focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
             />
 
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-xs shadow-md shadow-orange-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="w-full py-3.5 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-extrabold text-xs shadow-md shadow-blue-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                <span>{isLoading ? 'Creating Account...' : 'Continue to Exam Prep Setup'}</span>
+                <span>{isLoading ? 'Creating Account...' : 'Create Account & Choose Goal'}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -307,7 +366,7 @@ export default function SignUp() {
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="col-span-1 p-3 rounded-2xl border border-stone-200 bg-white text-xs font-semibold text-stone-800 outline-none focus:border-orange-500"
+                  className="col-span-1 p-3 rounded-2xl border border-stone-200 bg-white text-xs font-semibold text-stone-800 outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
                 >
                   {COUNTRY_CODES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -321,7 +380,7 @@ export default function SignUp() {
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="98765 43210"
-                  className="col-span-2 p-3 rounded-2xl border border-stone-200 bg-white text-xs font-semibold text-stone-800 outline-none focus:border-orange-500"
+                  className="col-span-2 p-3 rounded-2xl border border-stone-200 bg-white text-xs font-semibold text-stone-800 outline-none focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
                 />
               </div>
             </div>
@@ -333,6 +392,7 @@ export default function SignUp() {
               onChange={(e) => setWaPassword(e.target.value)}
               placeholder="Create password"
               label="Create Password"
+              className="focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
             />
 
             <Input
@@ -342,6 +402,7 @@ export default function SignUp() {
               onChange={(e) => setWaConfirmPassword(e.target.value)}
               placeholder="Confirm password"
               label="Confirm Password"
+              className="focus:border-[#93C5FD] focus:ring-2 focus:ring-[#93C5FD]/40"
             />
 
             <div className="pt-2">
@@ -360,7 +421,7 @@ export default function SignUp() {
         {/* Existing Log In & Legal Navigation */}
         <div className="text-xs font-semibold text-stone-500 pt-2 border-t border-stone-100">
           <span>Already have an account? </span>
-          <Link to="/login" className="text-orange-600 font-bold hover:underline cursor-pointer">
+          <Link to="/login" className="text-[#2563EB] font-bold hover:text-[#1D4ED8] hover:underline cursor-pointer">
             Sign In
           </Link>
         </div>

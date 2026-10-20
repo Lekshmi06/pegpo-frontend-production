@@ -309,19 +309,66 @@ async function runBrowserVerificationSuite() {
     });
 
     // -------------------------------------------------------------
-    // Test 12: Registration Page Structure (Google, Divider, Email/WhatsApp)
+    // Test 12A: Page One — Select Your EduPye Journey (/signup)
     // -------------------------------------------------------------
-    await testStep('Registration page renders Google auth, "OR REGISTER WITH" divider, and Email/WhatsApp tabs', async () => {
+    await testStep('Page One (/signup) renders all 6 selectable journey cards, disables Continue until selected, and advances to Page Two', async () => {
       await page.goto(`${baseURL}/signup`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h1', { timeout: 10000 });
+
+      const heading = await page.innerText('h1');
+      assert(/select your edupye journey/i.test(heading), `Page One heading unexpected: "${heading}"`);
+
+      // Verify all 6 cards are rendered without hiding any behind a dropdown
+      const bodyText = await page.innerText('body');
+      assert(/student/i.test(bodyText), 'Student card missing');
+      assert(/teacher/i.test(bodyText), 'Teacher card missing');
+      assert(/researcher/i.test(bodyText), 'Researcher card missing');
+      assert(/institution/i.test(bodyText), 'Institution card missing');
+      assert(/course provider/i.test(bodyText), 'Course Provider card missing');
+      assert(/learner/i.test(bodyText), 'Learner card missing');
+
+      // Requirement: Do not select a privileged role automatically. Require selection before enabling Continue.
+      const continueBtn = await page.$('button:has-text("Continue to Account Setup")');
+      assert(continueBtn, 'Continue to Account Setup button missing');
+      const isDisabledInitially = await continueBtn.isDisabled();
+      assert(isDisabledInitially, 'Continue button must be disabled initially before role selection');
+
+      // Click Student card
+      const studentCard = await page.$('button:has-text("Student")');
+      assert(studentCard, 'Student card button not found');
+      await studentCard.click();
+
+      // Continue button should now be enabled
+      const isEnabledAfterClick = !(await continueBtn.isDisabled());
+      assert(isEnabledAfterClick, 'Continue button should be enabled after user type selection');
+
+      // Click continue to advance to Page Two
+      await continueBtn.click();
+      await page.waitForURL('**/signup/register**', { timeout: 10000 });
+
+      const currentUrl = page.url();
+      assert(currentUrl.includes('/signup/register'), `Expected navigation to /signup/register but got: ${currentUrl}`);
+      assert(currentUrl.includes('type=student'), `Expected type=student query param but got: ${currentUrl}`);
+    });
+
+    // -------------------------------------------------------------
+    // Test 12B: Page Two — Create Your Account (/signup/register)
+    // -------------------------------------------------------------
+    await testStep('Page Two (/signup/register) displays contextual badge, Google auth, divider, Email/WhatsApp tabs, and password toggle', async () => {
+      await page.goto(`${baseURL}/signup/register?type=student`, { waitUntil: 'domcontentloaded' });
       await page.waitForSelector('form, button', { timeout: 10000 });
 
+      const heading = await page.innerText('h1');
+      assert(/create your edupye account/i.test(heading), `Headline must be "Create Your EduPye Account", got: "${heading}"`);
+
       const bodyText = await page.innerText('body');
+      assert(/journey:\s*student/i.test(bodyText), 'Selected journey contextual badge missing');
       assert(/sign up with google/i.test(bodyText), 'Google signup missing');
       assert(/or register with/i.test(bodyText), '"OR REGISTER WITH" divider missing');
       assert(/email id/i.test(bodyText) && /whatsapp/i.test(bodyText), 'Email/WhatsApp tabs missing');
       assert(!/candidate|recruiter/i.test(bodyText), 'Forbidden candidate/recruiter control detected');
 
-      // Check WhatsApp tab switch and honest gateway notice
+      // Verify WhatsApp tab honest notice
       const waTab = await page.$('button:has-text("WhatsApp")');
       if (waTab) {
         await waTab.click();
@@ -333,6 +380,124 @@ async function runBrowserVerificationSuite() {
       // Switch back to Email tab
       const emailTab = await page.$('button:has-text("Email ID")');
       if (emailTab) await emailTab.click();
+    });
+
+    // -------------------------------------------------------------
+    // Test 12C: Page Three — Goal Selection for Student (/onboarding) & Exam Prep Route
+    // -------------------------------------------------------------
+    await testStep('Page Three (/onboarding) presents 4 student goals, stores goal separately, and routes Exam Prep to /onboarding/quick', async () => {
+      // Simulate authenticated student session
+      await page.goto(`${baseURL}/login`);
+      await page.evaluate(() => {
+        localStorage.setItem('token', 'mock_student_token_2026');
+        localStorage.setItem('userRole', 'student');
+        localStorage.setItem('user', JSON.stringify({
+          email: 'student.test@edupye.test',
+          name: 'Student Test',
+          role: 'student',
+          language: 'English',
+        }));
+      });
+
+      // Navigate to /onboarding
+      await page.goto(`${baseURL}/onboarding`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h1', { timeout: 10000 });
+
+      const heading = await page.innerText('h1');
+      assert(/primary goal as a student/i.test(heading), 'Goal selection headline unexpected for student');
+
+      const content = await page.innerText('body');
+      assert(/school curriculum/i.test(content), 'School curriculum goal missing');
+      assert(/college & degree academics/i.test(content), 'College academics goal missing');
+      assert(/competitive & entrance exams/i.test(content), 'Competitive exams goal missing');
+      assert(/exam preparation & mock tests/i.test(content), 'Exam Preparation goal missing');
+
+      // Click Exam Preparation goal card and continue
+      const examGoalBtn = await page.$('button:has-text("Exam Preparation")');
+      assert(examGoalBtn, 'Exam Preparation button not found');
+      await examGoalBtn.click();
+
+      const continueBtn = await page.$('button:has-text("Continue to Workspace")');
+      assert(continueBtn, 'Continue to Workspace button not found');
+      await continueBtn.click();
+
+      // Verify routing strictly to /onboarding/quick
+      await page.waitForURL('**/onboarding/quick**', { timeout: 10000 });
+      const currentUrl = page.url();
+      assert(currentUrl.includes('/onboarding/quick'), `Expected /onboarding/quick for Exam Prep but got: ${currentUrl}`);
+
+      // Verify role and goal separation
+      const storedRole = await page.evaluate(() => localStorage.getItem('userRole'));
+      const storedGoal = await page.evaluate(() => localStorage.getItem('userGoal'));
+      assert.equal(storedRole, 'student', `Role must remain "student": got ${storedRole}`);
+      assert.equal(storedGoal, 'exam_prep', `Goal must be "exam_prep": got ${storedGoal}`);
+    });
+
+    // -------------------------------------------------------------
+    // Test 12D: Non-Exam Prep Student Goals Route Correctly
+    // -------------------------------------------------------------
+    await testStep('Selecting non-exam student goal (School Curriculum) routes to /onboarding/school', async () => {
+      await page.goto(`${baseURL}/onboarding`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h1', { timeout: 10000 });
+
+      const schoolGoalBtn = await page.$('button:has-text("School Curriculum")');
+      assert(schoolGoalBtn, 'School Curriculum button not found');
+      await schoolGoalBtn.click();
+
+      const continueBtn = await page.$('button:has-text("Continue to Workspace")');
+      await continueBtn.click();
+
+      await page.waitForURL('**/onboarding/school**', { timeout: 10000 });
+      const currentUrl = page.url();
+      assert(currentUrl.includes('/onboarding/school'), `Expected /onboarding/school but got: ${currentUrl}`);
+      assert(!currentUrl.includes('/onboarding/quick'), 'Must NOT reach /onboarding/quick for non-exam goal');
+
+      const storedGoal = await page.evaluate(() => localStorage.getItem('userGoal'));
+      assert.equal(storedGoal, 'school_curriculum', `Goal must be saved as "school_curriculum": got ${storedGoal}`);
+    });
+
+    // -------------------------------------------------------------
+    // Test 12E: Teacher and Course Provider Role-Specific Goal Selection
+    // -------------------------------------------------------------
+    await testStep('Teacher and Course Provider journey selection presents role-tailored goals and portals', async () => {
+      // 1. Teacher goal selection
+      await page.goto(`${baseURL}/login`);
+      await page.evaluate(() => {
+        localStorage.setItem('token', 'mock_teacher_token_2026');
+        localStorage.setItem('userRole', 'teacher');
+        localStorage.setItem('user', JSON.stringify({
+          email: 'teacher.test@edupye.test',
+          name: 'Teacher Test',
+          role: 'teacher',
+          language: 'English',
+        }));
+      });
+
+      await page.goto(`${baseURL}/onboarding`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h1', { timeout: 10000 });
+      let pageText = await page.innerText('body');
+      assert(/teacher \/ faculty/i.test(pageText), 'Teacher title missing on goal page');
+      assert(/lesson planning/i.test(pageText), 'Lesson Planning goal missing');
+      assert(/assessments & quizzes/i.test(pageText), 'Assessments goal missing');
+
+      // 2. Provider goal selection
+      await page.evaluate(() => {
+        localStorage.setItem('token', 'mock_provider_token_2026');
+        localStorage.setItem('userRole', 'provider');
+        localStorage.setItem('user', JSON.stringify({
+          email: 'provider.test@edupye.test',
+          name: 'Provider Test',
+          role: 'provider',
+          language: 'English',
+        }));
+      });
+
+      await page.goto(`${baseURL}/onboarding`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('h1', { timeout: 10000 });
+      pageText = await page.innerText('body');
+      assert(/course provider/i.test(pageText), 'Provider title missing on goal page');
+      assert(/create & publish courses/i.test(pageText), 'Create & Publish Courses goal missing');
+      assert(/manage course content/i.test(pageText), 'Manage Course Content goal missing');
     });
 
     // -------------------------------------------------------------
