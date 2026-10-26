@@ -197,6 +197,271 @@ export const authService = {
     return session;
   },
 
+  googleAuth: async (credential: string, userType?: UserRole): Promise<UserSession & { isNewUser?: boolean }> => {
+    if (!credential || !credential.trim()) {
+      throw new Error('Google credential is required');
+    }
+
+    let session: UserSession | null = null;
+    let isNewUser = false;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential, userType }),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(json?.message || 'Google authentication failed. Please try again.');
+      }
+
+      if (json?.data) {
+        const { user, studentProfile, teacherProfile, researcherProfile, token } = json.data;
+        isNewUser = Boolean(json.data.isNewUser);
+
+        if (token) localStorage.setItem(TOKEN_KEY, token);
+        if (studentProfile?._id) localStorage.setItem(PROFILE_ID_KEY, studentProfile._id);
+        if (teacherProfile?._id) localStorage.setItem('teacherProfileId', teacherProfile._id);
+        if (researcherProfile?._id) localStorage.setItem('researcherProfileId', researcherProfile._id);
+
+        const cleanEmail = (user.email || '').trim().toLowerCase();
+
+        if (user.userType === 'provider') {
+          localStorage.setItem(ROLE_KEY, 'provider');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'provider',
+            language: user.language || 'English',
+            goal: 'Course Creation',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (user.userType === 'learner') {
+          localStorage.setItem(ROLE_KEY, 'learner');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'learner',
+            language: user.language || 'English',
+            goal: 'Browse Courses',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (user.userType === 'company' || user.userType === 'institution') {
+          localStorage.setItem(ROLE_KEY, user.userType);
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: user.userType,
+            language: user.language || 'English',
+            goal: 'Corporate & Institutional Learning',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (user.userType === 'teacher' || (!user.userType && teacherProfile)) {
+          localStorage.setItem(ROLE_KEY, 'teacher');
+          session = {
+            email: user.email,
+            name: teacherProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'teacher',
+            language: user.language || 'English',
+            phone: teacherProfile?.phone,
+            dob: teacherProfile?.dob,
+            gender: teacherProfile?.gender,
+            avatar: teacherProfile?.avatar,
+            goal: teacherProfile?.goal || 'Lesson Planning',
+            teacherDetails: {
+              teacherType: teacherProfile?.teacherType || 'institution',
+              institution: teacherProfile?.institution,
+              tuitionCentre: teacherProfile?.tuitionCentre,
+              department: teacherProfile?.department,
+              designation: teacherProfile?.designation,
+              subjects: teacherProfile?.subjects || [],
+              classesTaught: teacherProfile?.classesTaught || [],
+              boards: teacherProfile?.boards || [],
+              experienceYears: teacherProfile?.experienceYears || 0,
+            },
+            createdAt: teacherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else if (user.userType === 'researcher' || (!user.userType && researcherProfile)) {
+          localStorage.setItem(ROLE_KEY, 'researcher');
+          session = {
+            email: user.email,
+            name: researcherProfile?.fullName || user.name || cleanEmail.split('@')[0],
+            role: 'researcher',
+            language: user.language || 'English',
+            phone: researcherProfile?.contact?.phone,
+            researcherProfileId: researcherProfile?._id,
+            researcherDetails: researcherProfile,
+            goal: researcherProfile?.researchGoals?.primaryGoals?.[0] || 'Literature review',
+            createdAt: researcherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else {
+          localStorage.setItem(ROLE_KEY, 'student');
+          session = {
+            email: user.email,
+            name: studentProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'student',
+            learningPath: studentProfile?.learningPath || 'school',
+            language: user.language || 'English',
+            phone: studentProfile?.phone,
+            dob: studentProfile?.dob,
+            gender: studentProfile?.gender,
+            avatar: studentProfile?.avatar,
+            goal: studentProfile?.goal || 'School Curriculum Mastery',
+            schoolDetails: studentProfile?.schoolDetails,
+            createdAt: studentProfile?.createdAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch (err: any) {
+      throw err instanceof Error ? err : new Error('Unable to connect to the authentication service.');
+    }
+
+    if (!session) {
+      throw new Error('Authentication failed: no session was returned by the server.');
+    }
+
+    localStorage.setItem(EMAIL_KEY, session.email);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    return { ...session, isNewUser };
+  },
+
+  mockGoogleAuth: async (params: {
+    accountId?: string;
+    email?: string;
+    name?: string;
+    userType?: UserRole;
+    isNewUserTest?: boolean;
+  }): Promise<UserSession & { isNewUser?: boolean }> => {
+    let session: UserSession | null = null;
+    let isNewUser = false;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/mock-google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(json?.message || 'Mock Google authentication failed. Please try again.');
+      }
+
+      if (json?.data) {
+        const { user, studentProfile, teacherProfile, researcherProfile, token } = json.data;
+        isNewUser = Boolean(json.data.isNewUser);
+
+        if (token) localStorage.setItem(TOKEN_KEY, token);
+        if (studentProfile?._id) localStorage.setItem(PROFILE_ID_KEY, studentProfile._id);
+        if (teacherProfile?._id) localStorage.setItem('teacherProfileId', teacherProfile._id);
+        if (researcherProfile?._id) localStorage.setItem('researcherProfileId', researcherProfile._id);
+
+        const cleanEmail = (user.email || '').trim().toLowerCase();
+        const resolvedRole: UserRole = (user.userType as UserRole) || params.userType || 'student';
+
+        if (resolvedRole === 'provider') {
+          localStorage.setItem(ROLE_KEY, 'provider');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'provider',
+            language: user.language || 'English',
+            goal: 'Course Creation',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (resolvedRole === 'learner') {
+          localStorage.setItem(ROLE_KEY, 'learner');
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: 'learner',
+            language: user.language || 'English',
+            goal: 'Browse Courses',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (resolvedRole === 'company' || resolvedRole === 'institution') {
+          localStorage.setItem(ROLE_KEY, resolvedRole);
+          session = {
+            email: user.email,
+            name: user.name || cleanEmail.split('@')[0],
+            role: resolvedRole,
+            language: user.language || 'English',
+            goal: 'Corporate & Institutional Learning',
+            createdAt: new Date().toISOString(),
+          };
+        } else if (resolvedRole === 'teacher' || (!user.userType && teacherProfile)) {
+          localStorage.setItem(ROLE_KEY, 'teacher');
+          session = {
+            email: user.email,
+            name: teacherProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'teacher',
+            language: user.language || 'English',
+            phone: teacherProfile?.phone,
+            dob: teacherProfile?.dob,
+            gender: teacherProfile?.gender,
+            avatar: teacherProfile?.avatar,
+            goal: teacherProfile?.goal || 'Lesson Planning',
+            teacherDetails: {
+              teacherType: teacherProfile?.teacherType || 'institution',
+              institution: teacherProfile?.institution,
+              tuitionCentre: teacherProfile?.tuitionCentre,
+              department: teacherProfile?.department,
+              designation: teacherProfile?.designation,
+              subjects: teacherProfile?.subjects || [],
+              classesTaught: teacherProfile?.classesTaught || [],
+              boards: teacherProfile?.boards || [],
+              experienceYears: teacherProfile?.experienceYears || 0,
+            },
+            createdAt: teacherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else if (resolvedRole === 'researcher' || (!user.userType && researcherProfile)) {
+          localStorage.setItem(ROLE_KEY, 'researcher');
+          session = {
+            email: user.email,
+            name: researcherProfile?.fullName || user.name || cleanEmail.split('@')[0],
+            role: 'researcher',
+            language: user.language || 'English',
+            phone: researcherProfile?.contact?.phone,
+            researcherProfileId: researcherProfile?._id,
+            researcherDetails: researcherProfile,
+            goal: researcherProfile?.researchGoals?.primaryGoals?.[0] || 'Literature review',
+            createdAt: researcherProfile?.createdAt || new Date().toISOString(),
+          };
+        } else {
+          localStorage.setItem(ROLE_KEY, 'student');
+          session = {
+            email: user.email,
+            name: studentProfile?.name || user.name || cleanEmail.split('@')[0],
+            role: 'student',
+            learningPath: studentProfile?.learningPath || 'school',
+            language: user.language || 'English',
+            phone: studentProfile?.phone,
+            dob: studentProfile?.dob,
+            gender: studentProfile?.gender,
+            avatar: studentProfile?.avatar,
+            goal: studentProfile?.goal || 'School Curriculum Mastery',
+            schoolDetails: studentProfile?.schoolDetails,
+            createdAt: studentProfile?.createdAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch (err: any) {
+      throw err instanceof Error ? err : new Error('Unable to connect to the authentication service.');
+    }
+
+    if (!session) {
+      throw new Error('Authentication failed: no session was returned by the server.');
+    }
+
+    localStorage.setItem(EMAIL_KEY, session.email);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
+    return { ...session, isNewUser };
+  },
+
   savePersonalDetails: async (details: PersonalDetails): Promise<UserSession> => {
     const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
     const updated: UserSession = {
