@@ -15,9 +15,12 @@ import {
   Minimize2,
   Download,
   Highlighter,
+  MousePointer2,
 } from 'lucide-react';
 
-export type ToolType = 'pen' | 'highlighter' | 'eraser' | 'text' | 'rect' | 'circle' | 'line' | 'arrow';
+export type ToolType = 'select' | 'pen' | 'highlighter' | 'eraser' | 'text' | 'rect' | 'circle' | 'line' | 'arrow';
+
+export type ResizeHandle = 'nw' | 'ne' | 'se' | 'sw' | 'start' | 'end';
 
 export interface StrokePoint {
   x: number;
@@ -37,6 +40,187 @@ export interface CanvasElement {
   heightBox?: number;
   image?: HTMLImageElement;
   imageDataUrl?: string;
+}
+
+export function cloneElement(el: CanvasElement): CanvasElement {
+  return {
+    ...el,
+    points: el.points ? el.points.map((p) => ({ ...p })) : undefined,
+  };
+}
+
+export function cloneElements(els: CanvasElement[]): CanvasElement[] {
+  return els.map(cloneElement);
+}
+
+export function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+export function getElementBounds(el: CanvasElement): {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+} {
+  if (
+    el.x !== undefined &&
+    el.y !== undefined &&
+    el.widthBox !== undefined &&
+    el.heightBox !== undefined
+  ) {
+    const minX = Math.min(el.x, el.x + el.widthBox);
+    const minY = Math.min(el.y, el.y + el.heightBox);
+    const maxX = Math.max(el.x, el.x + el.widthBox);
+    const maxY = Math.max(el.y, el.y + el.heightBox);
+    return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) };
+  }
+
+  if (el.points && el.points.length > 0) {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of el.points) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const pad = Math.max(4, el.width / 2);
+    return {
+      minX: minX - pad,
+      minY: minY - pad,
+      maxX: maxX + pad,
+      maxY: maxY + pad,
+      width: Math.max(1, maxX - minX + pad * 2),
+      height: Math.max(1, maxY - minY + pad * 2),
+    };
+  }
+
+  if (el.tool === 'text' && el.text && el.x !== undefined && el.y !== undefined) {
+    const fontSize = Math.max(16, el.width * 4);
+    const textWidth = Math.max(20, el.text.length * fontSize * 0.62);
+    return {
+      minX: el.x,
+      minY: el.y - fontSize,
+      maxX: el.x + textWidth,
+      maxY: el.y + 4,
+      width: textWidth,
+      height: fontSize + 4,
+    };
+  }
+
+  return { minX: 0, minY: 0, maxX: 0, maxY: 0, width: 0, height: 0 };
+}
+
+export function hitTestElement(el: CanvasElement, px: number, py: number): boolean {
+  // 1. Box / Image / Rect / Circle
+  if (
+    el.x !== undefined &&
+    el.y !== undefined &&
+    el.widthBox !== undefined &&
+    el.heightBox !== undefined
+  ) {
+    const bounds = getElementBounds(el);
+    const tolerance = 6;
+    if (el.tool === 'circle') {
+      const radiusX = Math.abs(el.widthBox) / 2;
+      const radiusY = Math.abs(el.heightBox) / 2;
+      const centerX = el.x + el.widthBox / 2;
+      const centerY = el.y + el.heightBox / 2;
+      const rx = radiusX + tolerance;
+      const ry = radiusY + tolerance;
+      if (rx <= 0 || ry <= 0) return false;
+      const norm = Math.pow((px - centerX) / rx, 2) + Math.pow((py - centerY) / ry, 2);
+      return norm <= 1;
+    }
+    return (
+      px >= bounds.minX - tolerance &&
+      px <= bounds.maxX + tolerance &&
+      py >= bounds.minY - tolerance &&
+      py <= bounds.maxY + tolerance
+    );
+  }
+
+  // 2. Line or Arrow
+  if ((el.tool === 'line' || el.tool === 'arrow') && el.points && el.points.length >= 2) {
+    const p1 = el.points[0];
+    const p2 = el.points[1];
+    const tolerance = Math.max(8, el.width + 4);
+    return distToSegment(px, py, p1.x, p1.y, p2.x, p2.y) <= tolerance;
+  }
+
+  // 3. Freehand pen / highlighter / eraser
+  if (el.points && el.points.length > 0) {
+    const tolerance = Math.max(8, el.width + 4);
+    if (el.points.length === 1) {
+      return Math.hypot(px - el.points[0].x, py - el.points[0].y) <= tolerance;
+    }
+    for (let i = 0; i < el.points.length - 1; i++) {
+      if (distToSegment(px, py, el.points[i].x, el.points[i].y, el.points[i + 1].x, el.points[i + 1].y) <= tolerance) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 4. Text
+  if (el.tool === 'text') {
+    const bounds = getElementBounds(el);
+    const tolerance = 6;
+    return (
+      px >= bounds.minX - tolerance &&
+      px <= bounds.maxX + tolerance &&
+      py >= bounds.minY - tolerance &&
+      py <= bounds.maxY + tolerance
+    );
+  }
+
+  return false;
+}
+
+export function getHandlesForElement(el: CanvasElement): Array<{ type: ResizeHandle; x: number; y: number }> {
+  if (
+    el.x !== undefined &&
+    el.y !== undefined &&
+    el.widthBox !== undefined &&
+    el.heightBox !== undefined
+  ) {
+    const bounds = getElementBounds(el);
+    return [
+      { type: 'nw', x: bounds.minX, y: bounds.minY },
+      { type: 'ne', x: bounds.maxX, y: bounds.minY },
+      { type: 'se', x: bounds.maxX, y: bounds.maxY },
+      { type: 'sw', x: bounds.minX, y: bounds.maxY },
+    ];
+  }
+  if ((el.tool === 'line' || el.tool === 'arrow') && el.points && el.points.length >= 2) {
+    return [
+      { type: 'start', x: el.points[0].x, y: el.points[0].y },
+      { type: 'end', x: el.points[1].x, y: el.points[1].y },
+    ];
+  }
+  return [];
+}
+
+export function hitTestHandles(el: CanvasElement, px: number, py: number): ResizeHandle | null {
+  const handles = getHandlesForElement(el);
+  const handleRadius = 9;
+  for (const h of handles) {
+    if (Math.hypot(px - h.x, py - h.y) <= handleRadius) {
+      return h.type;
+    }
+  }
+  return null;
 }
 
 export interface WhiteboardCanvasRef {
@@ -84,7 +268,20 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
 
   // History stacks
   const [elements, setElements] = useState<CanvasElement[]>([]);
+  const [undoStack, setUndoStack] = useState<CanvasElement[][]>([]);
   const [redoStack, setRedoStack] = useState<CanvasElement[][]>([]);
+
+  // Selection & manipulation state
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  const selectedElementIdRef = useRef<string | null>(null);
+  selectedElementIdRef.current = selectedElementId;
+
+  const dragActionRef = useRef<'move' | 'resize' | null>(null);
+  const resizeHandleRef = useRef<ResizeHandle | null>(null);
+  const dragStartRef = useRef<StrokePoint>({ x: 0, y: 0 });
+  const hasMovedRef = useRef<boolean>(false);
+  const snapshotBeforeActionRef = useRef<CanvasElement[] | null>(null);
+  const [canvasCursor, setCanvasCursor] = useState<string>('crosshair');
 
   // Refs for real-time drawing without React re-renders on pointermove
   const elementsRef = useRef<CanvasElement[]>([]);
@@ -353,6 +550,98 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
   }, [initialElements, renderAllElements]);
 
   // Resize canvases strictly to parent container while preserving DPI and avoiding unnecessary buffer resets
+  const renderSelectionOverlay = useCallback((selectedId: string | null, customElements?: CanvasElement[]) => {
+    const canvas = previewCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const { width, height } = lastSizeRef.current;
+
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width || width * dpr, canvas.height || height * dpr);
+    ctx.restore();
+
+    if (!selectedId) return;
+
+    const list = customElements || elementsRef.current;
+    const el = list.find((item) => item.id === selectedId);
+    if (!el) return;
+
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    const bounds = getElementBounds(el);
+    const pad = 6;
+    const boxX = bounds.minX - pad;
+    const boxY = bounds.minY - pad;
+    const boxW = bounds.width + pad * 2;
+    const boxH = bounds.height + pad * 2;
+
+    // Draw dashed bounding box
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.strokeRect(boxX, boxY, boxW, boxH);
+    ctx.setLineDash([]);
+
+    // Draw handles
+    const handles = getHandlesForElement(el);
+    const handleSize = 8;
+    for (const h of handles) {
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.rect(h.x - handleSize / 2, h.y - handleSize / 2, handleSize, handleSize);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }, []);
+
+  const handleSelectTool = (tool: ToolType) => {
+    setActiveTool(tool);
+    if (tool !== 'select') {
+      setSelectedElementId(null);
+      selectedElementIdRef.current = null;
+      renderSelectionOverlay(null);
+      if (tool === 'text') {
+        setCanvasCursor('text');
+      } else {
+        setCanvasCursor('crosshair');
+      }
+    } else {
+      setCanvasCursor('default');
+    }
+  };
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedElementIdRef.current) return;
+    const currentId = selectedElementIdRef.current;
+    const beforeSnapshot = cloneElements(elementsRef.current);
+    const remaining = elementsRef.current.filter((el) => el.id !== currentId);
+    setUndoStack((prev) => [...prev, beforeSnapshot]);
+    setRedoStack([]);
+    setElements(remaining);
+    elementsRef.current = remaining;
+    setSelectedElementId(null);
+    selectedElementIdRef.current = null;
+    renderSelectionOverlay(null);
+    renderAllElements(remaining);
+
+    if (onSave) {
+      const canvas = mainCanvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'), remaining);
+      }
+    }
+  }, [onSave, renderAllElements, renderSelectionOverlay]);
+
+  // Resize canvases strictly to parent container while preserving DPI and avoiding unnecessary buffer resets
   const handleResize = useCallback(() => {
     const container = containerRef.current;
     const mainCanvas = mainCanvasRef.current;
@@ -393,7 +682,10 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     }
 
     renderAllElements();
-  }, [renderAllElements]);
+    if (selectedElementIdRef.current) {
+      renderSelectionOverlay(selectedElementIdRef.current);
+    }
+  }, [renderAllElements, renderSelectionOverlay]);
 
   useEffect(() => {
     handleResize();
@@ -421,7 +713,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     };
   };
 
-  // 1. Pointer Down: Start stroke or shape
+  // 1. Pointer Down: Selection or start stroke/shape
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     // If text input is open, commit first
     if (textInput) {
@@ -430,6 +722,91 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     }
 
     const { x, y } = getCanvasCoords(e);
+
+    if (activeTool === 'select') {
+      // 1. Check if clicking on a resize handle of the currently selected element
+      if (selectedElementIdRef.current) {
+        const currentSel = elementsRef.current.find((item) => item.id === selectedElementIdRef.current);
+        if (currentSel) {
+          const handle = hitTestHandles(currentSel, x, y);
+          if (handle) {
+            dragActionRef.current = 'resize';
+            resizeHandleRef.current = handle;
+            dragStartRef.current = { x, y };
+            hasMovedRef.current = false;
+            snapshotBeforeActionRef.current = cloneElements(elementsRef.current);
+
+            // Normalize box dimensions if applicable
+            if (
+              currentSel.widthBox !== undefined &&
+              currentSel.heightBox !== undefined &&
+              currentSel.x !== undefined &&
+              currentSel.y !== undefined
+            ) {
+              const bounds = getElementBounds(currentSel);
+              currentSel.x = bounds.minX;
+              currentSel.y = bounds.minY;
+              currentSel.widthBox = bounds.width;
+              currentSel.heightBox = bounds.height;
+            }
+
+            try {
+              (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            } catch {}
+            return;
+          }
+        }
+      }
+
+      // 2. Hit-test elements from top to bottom
+      let hitIndex = -1;
+      for (let i = elementsRef.current.length - 1; i >= 0; i--) {
+        if (hitTestElement(elementsRef.current[i], x, y)) {
+          hitIndex = i;
+          break;
+        }
+      }
+
+      if (hitIndex >= 0) {
+        const hitEl = elementsRef.current[hitIndex];
+        setSelectedElementId(hitEl.id);
+        selectedElementIdRef.current = hitEl.id;
+        dragActionRef.current = 'move';
+        resizeHandleRef.current = null;
+        dragStartRef.current = { x, y };
+        hasMovedRef.current = false;
+        snapshotBeforeActionRef.current = cloneElements(elementsRef.current);
+
+        // Normalize box dimensions if applicable
+        if (
+          hitEl.widthBox !== undefined &&
+          hitEl.heightBox !== undefined &&
+          hitEl.x !== undefined &&
+          hitEl.y !== undefined
+        ) {
+          const bounds = getElementBounds(hitEl);
+          hitEl.x = bounds.minX;
+          hitEl.y = bounds.minY;
+          hitEl.widthBox = bounds.width;
+          hitEl.heightBox = bounds.height;
+        }
+
+        renderSelectionOverlay(hitEl.id);
+
+        try {
+          (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        } catch {}
+      } else {
+        // Clicked empty canvas -> Deselect
+        setSelectedElementId(null);
+        selectedElementIdRef.current = null;
+        dragActionRef.current = null;
+        resizeHandleRef.current = null;
+        snapshotBeforeActionRef.current = null;
+        renderSelectionOverlay(null);
+      }
+      return;
+    }
 
     if (activeTool === 'text') {
       setTextInput({ x, y, value: '' });
@@ -503,11 +880,132 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     }
   };
 
-  // 2. Pointer Move: Incremental drawing for pen/eraser/highlighter, preview overlay for shapes
+  // 2. Pointer Move: Select drag/resize or drawing stroke
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const { x, y } = getCanvasCoords(e);
+
+    if (activeTool === 'select') {
+      // Case A: Hovering (not actively dragging)
+      if (dragActionRef.current === null) {
+        if (selectedElementIdRef.current) {
+          const selEl = elementsRef.current.find((item) => item.id === selectedElementIdRef.current);
+          if (selEl) {
+            const handle = hitTestHandles(selEl, x, y);
+            if (handle) {
+              if (handle === 'nw' || handle === 'se') {
+                setCanvasCursor('nwse-resize');
+                return;
+              } else if (handle === 'ne' || handle === 'sw') {
+                setCanvasCursor('nesw-resize');
+                return;
+              } else if (handle === 'start' || handle === 'end') {
+                setCanvasCursor('crosshair');
+                return;
+              }
+            }
+          }
+        }
+
+        // Check if hovering over any element
+        let isOverElement = false;
+        for (let i = elementsRef.current.length - 1; i >= 0; i--) {
+          if (hitTestElement(elementsRef.current[i], x, y)) {
+            isOverElement = true;
+            break;
+          }
+        }
+        setCanvasCursor(isOverElement ? 'move' : 'default');
+        return;
+      }
+
+      // Case B: Actively dragging (move or resize)
+      const targetEl = elementsRef.current.find((item) => item.id === selectedElementIdRef.current);
+      if (!targetEl) return;
+
+      const dx = x - dragStartRef.current.x;
+      const dy = y - dragStartRef.current.y;
+      if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) {
+        hasMovedRef.current = true;
+      }
+
+      if (dragActionRef.current === 'move') {
+        if (targetEl.x !== undefined && targetEl.y !== undefined) {
+          targetEl.x += dx;
+          targetEl.y += dy;
+        }
+        if (targetEl.points && targetEl.points.length > 0) {
+          for (const p of targetEl.points) {
+            p.x += dx;
+            p.y += dy;
+          }
+        }
+        dragStartRef.current = { x, y };
+        renderAllElements();
+        renderSelectionOverlay(targetEl.id);
+        return;
+      }
+
+      if (dragActionRef.current === 'resize' && resizeHandleRef.current) {
+        const h = resizeHandleRef.current;
+        if (h === 'se') {
+          if (targetEl.widthBox !== undefined && targetEl.heightBox !== undefined) {
+            targetEl.widthBox = Math.max(15, targetEl.widthBox + dx);
+            targetEl.heightBox = Math.max(15, targetEl.heightBox + dy);
+          }
+        } else if (h === 'sw') {
+          if (targetEl.widthBox !== undefined && targetEl.heightBox !== undefined && targetEl.x !== undefined) {
+            const newW = targetEl.widthBox - dx;
+            if (newW >= 15) {
+              targetEl.x += dx;
+              targetEl.widthBox = newW;
+            }
+            targetEl.heightBox = Math.max(15, targetEl.heightBox + dy);
+          }
+        } else if (h === 'ne') {
+          if (targetEl.widthBox !== undefined && targetEl.heightBox !== undefined && targetEl.y !== undefined) {
+            targetEl.widthBox = Math.max(15, targetEl.widthBox + dx);
+            const newH = targetEl.heightBox - dy;
+            if (newH >= 15) {
+              targetEl.y += dy;
+              targetEl.heightBox = newH;
+            }
+          }
+        } else if (h === 'nw') {
+          if (
+            targetEl.widthBox !== undefined &&
+            targetEl.heightBox !== undefined &&
+            targetEl.x !== undefined &&
+            targetEl.y !== undefined
+          ) {
+            const newW = targetEl.widthBox - dx;
+            if (newW >= 15) {
+              targetEl.x += dx;
+              targetEl.widthBox = newW;
+            }
+            const newH = targetEl.heightBox - dy;
+            if (newH >= 15) {
+              targetEl.y += dy;
+              targetEl.heightBox = newH;
+            }
+          }
+        } else if (h === 'start' && targetEl.points && targetEl.points.length >= 2) {
+          targetEl.points[0].x += dx;
+          targetEl.points[0].y += dy;
+        } else if (h === 'end' && targetEl.points && targetEl.points.length >= 2) {
+          targetEl.points[1].x += dx;
+          targetEl.points[1].y += dy;
+        }
+
+        dragStartRef.current = { x, y };
+        renderAllElements();
+        renderSelectionOverlay(targetEl.id);
+        return;
+      }
+      return;
+    }
+
     if (!isDrawingRef.current || !activeElementRef.current) return;
 
-    const { x, y } = getCanvasCoords(e);
     const current = activeElementRef.current;
 
     // Freehand drawing tools: Draw incrementally directly onto mainCanvas without clearing anything
@@ -578,8 +1076,34 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     }
   };
 
-  // 3. Pointer Up / Cancel: Commit active element to elements list
+  // 3. Pointer Up / Cancel: Commit active element to elements list or complete drag/resize
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activeTool === 'select') {
+      try {
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch {}
+
+      if (hasMovedRef.current && snapshotBeforeActionRef.current) {
+        const beforeSnapshot = snapshotBeforeActionRef.current;
+        setUndoStack((prev) => [...prev, beforeSnapshot]);
+        setRedoStack([]);
+        setElements([...elementsRef.current]);
+
+        if (onSave) {
+          const canvas = mainCanvasRef.current;
+          if (canvas) {
+            onSave(canvas.toDataURL('image/png'), elementsRef.current);
+          }
+        }
+      }
+
+      dragActionRef.current = null;
+      resizeHandleRef.current = null;
+      snapshotBeforeActionRef.current = null;
+      hasMovedRef.current = false;
+      return;
+    }
+
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
     lastPointRef.current = null;
@@ -614,11 +1138,20 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       }
     }
 
-    setElements((prev) => {
-      const updated = [...prev, current];
-      elementsRef.current = updated;
-      return updated;
-    });
+    const beforeSnapshot = cloneElements(elementsRef.current);
+    setUndoStack((prev) => [...prev, beforeSnapshot]);
+    setRedoStack([]);
+
+    const updated = [...elementsRef.current, current];
+    setElements(updated);
+    elementsRef.current = updated;
+
+    if (onSave) {
+      const canvas = mainCanvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'), updated);
+      }
+    }
   };
 
   // Commit text element
@@ -638,6 +1171,14 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       width: strokeWidth,
     };
 
+    const beforeSnapshot = cloneElements(elementsRef.current);
+    setUndoStack((prev) => [...prev, beforeSnapshot]);
+    setRedoStack([]);
+
+    const updated = [...elementsRef.current, newEl];
+    setElements(updated);
+    elementsRef.current = updated;
+
     const mainCanvas = mainCanvasRef.current;
     if (mainCanvas) {
       const ctx = mainCanvas.getContext('2d');
@@ -646,41 +1187,109 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       }
     }
 
-    setElements((prev) => {
-      const updated = [...prev, newEl];
-      elementsRef.current = updated;
-      return updated;
-    });
     setTextInput(null);
+
+    if (onSave) {
+      const canvas = mainCanvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'), updated);
+      }
+    }
   };
 
-  const handleUndo = () => {
-    if (elements.length === 0) return;
-    const last = elements[elements.length - 1];
-    const newElements = elements.slice(0, elements.length - 1);
-    setRedoStack((prev) => [[last], ...prev]);
-    setElements(newElements);
-    elementsRef.current = newElements;
-    renderAllElements(newElements);
-  };
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) {
+      // Fallback if elements exist but undoStack is empty
+      if (elementsRef.current.length > 0) {
+        const beforeSnapshot = cloneElements(elementsRef.current);
+        const remaining = elementsRef.current.slice(0, -1);
+        setRedoStack((prev) => [...prev, beforeSnapshot]);
+        setElements(remaining);
+        elementsRef.current = remaining;
+        setSelectedElementId(null);
+        selectedElementIdRef.current = null;
+        renderSelectionOverlay(null);
+        renderAllElements(remaining);
+        if (onSave) {
+          const canvas = mainCanvasRef.current;
+          if (canvas) onSave(canvas.toDataURL('image/png'), remaining);
+        }
+      }
+      return;
+    }
 
-  const handleRedo = () => {
+    const prevSnapshot = undoStack[undoStack.length - 1];
+    const currentSnapshot = cloneElements(elementsRef.current);
+    setUndoStack((prev) => prev.slice(0, prev.length - 1));
+    setRedoStack((prev) => [...prev, currentSnapshot]);
+
+    setElements(prevSnapshot);
+    elementsRef.current = prevSnapshot;
+    renderAllElements(prevSnapshot);
+
+    if (selectedElementIdRef.current && prevSnapshot.some((el) => el.id === selectedElementIdRef.current)) {
+      renderSelectionOverlay(selectedElementIdRef.current, prevSnapshot);
+    } else {
+      setSelectedElementId(null);
+      selectedElementIdRef.current = null;
+      renderSelectionOverlay(null);
+    }
+
+    if (onSave) {
+      const canvas = mainCanvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'), prevSnapshot);
+      }
+    }
+  }, [undoStack, onSave, renderAllElements, renderSelectionOverlay]);
+
+  const handleRedo = useCallback(() => {
     if (redoStack.length === 0) return;
-    const next = redoStack[0];
-    const newElements = [...elements, ...next];
-    setRedoStack((prev) => prev.slice(1));
-    setElements(newElements);
-    elementsRef.current = newElements;
-    renderAllElements(newElements);
-  };
+
+    const nextSnapshot = redoStack[redoStack.length - 1];
+    const currentSnapshot = cloneElements(elementsRef.current);
+    setRedoStack((prev) => prev.slice(0, prev.length - 1));
+    setUndoStack((prev) => [...prev, currentSnapshot]);
+
+    setElements(nextSnapshot);
+    elementsRef.current = nextSnapshot;
+    renderAllElements(nextSnapshot);
+
+    if (selectedElementIdRef.current && nextSnapshot.some((el) => el.id === selectedElementIdRef.current)) {
+      renderSelectionOverlay(selectedElementIdRef.current, nextSnapshot);
+    } else {
+      setSelectedElementId(null);
+      selectedElementIdRef.current = null;
+      renderSelectionOverlay(null);
+    }
+
+    if (onSave) {
+      const canvas = mainCanvasRef.current;
+      if (canvas) {
+        onSave(canvas.toDataURL('image/png'), nextSnapshot);
+      }
+    }
+  }, [redoStack, onSave, renderAllElements, renderSelectionOverlay]);
 
   const handleClear = () => {
-    if (elements.length === 0) return;
+    if (elementsRef.current.length === 0) return;
     if (window.confirm('Clear the entire whiteboard canvas?')) {
-      setRedoStack((prev) => [elements, ...prev]);
+      const currentSnapshot = cloneElements(elementsRef.current);
+      setUndoStack((prev) => [...prev, currentSnapshot]);
+      setRedoStack([]);
       setElements([]);
       elementsRef.current = [];
+      setSelectedElementId(null);
+      selectedElementIdRef.current = null;
+      renderSelectionOverlay(null);
       renderAllElements([]);
+
+      if (onSave) {
+        const canvas = mainCanvasRef.current;
+        if (canvas) {
+          onSave(canvas.toDataURL('image/png'), []);
+        }
+      }
     }
   };
 
@@ -718,6 +1327,14 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           width: 1,
         };
 
+        const beforeSnapshot = cloneElements(elementsRef.current);
+        setUndoStack((prev) => [...prev, beforeSnapshot]);
+        setRedoStack([]);
+
+        const updated = [...elementsRef.current, imgEl];
+        setElements(updated);
+        elementsRef.current = updated;
+
         const mainCanvas = mainCanvasRef.current;
         if (mainCanvas) {
           const ctx = mainCanvas.getContext('2d');
@@ -726,17 +1343,56 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           }
         }
 
-        setElements((prev) => {
-          const updated = [...prev, imgEl];
-          elementsRef.current = updated;
-          return updated;
-        });
+        setActiveTool('select');
+        setSelectedElementId(imgEl.id);
+        selectedElementIdRef.current = imgEl.id;
+        renderSelectionOverlay(imgEl.id, updated);
+
+        if (onSave) {
+          const canvas = mainCanvasRef.current;
+          if (canvas) {
+            onSave(canvas.toDataURL('image/png'), updated);
+          }
+        }
       };
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
+
+  // Keyboard shortcuts (Delete, Backspace, Escape, V for select, P for pen)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        textInput !== null
+      ) {
+        return;
+      }
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedElementIdRef.current) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+      } else if (e.key === 'Escape') {
+        if (selectedElementIdRef.current) {
+          setSelectedElementId(null);
+          selectedElementIdRef.current = null;
+          renderSelectionOverlay(null);
+        }
+      } else if (e.key === 'v' || e.key === 'V') {
+        handleSelectTool('select');
+      } else if (e.key === 'p' || e.key === 'P') {
+        handleSelectTool('pen');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [textInput, handleDeleteSelected, renderSelectionOverlay]);
 
   const handleExport = () => {
     const mainCanvas = mainCanvasRef.current;
@@ -773,11 +1429,21 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     >
       {/* Top Floating Whiteboard Toolbar */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-lg transition-all flex-wrap max-w-[95%]">
-        {/* Drawing Tools */}
+        {/* Drawing & Selection Tools */}
         <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
           <button
-            onClick={() => setActiveTool('pen')}
-            title="Pen Tool"
+            onClick={() => handleSelectTool('select')}
+            title="Select & Move (V)"
+            className={`p-2 rounded-xl transition-all cursor-pointer ${
+              activeTool === 'select' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <MousePointer2 className="w-4 h-4" />
+          </button>
+
+          <button
+            onClick={() => handleSelectTool('pen')}
+            title="Pen Tool (P)"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'pen' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
             }`}
@@ -786,7 +1452,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('highlighter')}
+            onClick={() => handleSelectTool('highlighter')}
             title="Highlighter Tool"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'highlighter' ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -796,7 +1462,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('eraser')}
+            onClick={() => handleSelectTool('eraser')}
             title="Eraser Tool"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'eraser' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -806,7 +1472,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('text')}
+            onClick={() => handleSelectTool('text')}
             title="Text Tool"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'text' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -819,7 +1485,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
         {/* Shapes */}
         <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
           <button
-            onClick={() => setActiveTool('rect')}
+            onClick={() => handleSelectTool('rect')}
             title="Rectangle"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'rect' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -829,7 +1495,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('circle')}
+            onClick={() => handleSelectTool('circle')}
             title="Circle"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'circle' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -839,7 +1505,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('line')}
+            onClick={() => handleSelectTool('line')}
             title="Line"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'line' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -849,7 +1515,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           </button>
 
           <button
-            onClick={() => setActiveTool('arrow')}
+            onClick={() => handleSelectTool('arrow')}
             title="Arrow"
             className={`p-2 rounded-xl transition-all cursor-pointer ${
               activeTool === 'arrow' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
@@ -890,11 +1556,21 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           ))}
         </div>
 
-        {/* Actions: Undo, Redo, Image, Clear, Export, Fullscreen */}
+        {/* Actions: Delete Selected, Undo, Redo, Image, Clear, Export, Fullscreen */}
         <div className="flex items-center gap-1">
+          {selectedElementId && (
+            <button
+              onClick={handleDeleteSelected}
+              title="Delete Selected Object (Del / Backspace)"
+              className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 bg-rose-50/70 border border-rose-200 transition-all cursor-pointer animate-in fade-in"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={handleUndo}
-            disabled={elements.length === 0}
+            disabled={undoStack.length === 0 && elements.length === 0}
             title="Undo"
             className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
           >
@@ -960,7 +1636,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          className="absolute inset-0 w-full h-full cursor-crosshair touch-none"
+          style={{ cursor: canvasCursor }}
+          className="absolute inset-0 w-full h-full touch-none"
         />
 
         {/* Layer 2: Shape & Tool Active Preview Canvas (Transparent, clears only active preview) */}
