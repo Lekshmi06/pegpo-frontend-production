@@ -1649,8 +1649,17 @@ export default function AssessmentStudio() {
           </p>
 
           {/* File input */}
-          <div className="border-2 border-dashed border-slate-300 hover:border-[#0091ff] rounded-xl p-6 text-center transition-colors bg-slate-50/50">
-            <UploadCloud className="w-10 h-10 text-slate-400 mx-auto mb-2" />
+          <label
+            htmlFor="assessment-file-upload"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const f = e.dataTransfer.files?.[0];
+              if (f) setUploadFile(f);
+            }}
+            className="block border-2 border-dashed border-slate-300 hover:border-[#0091ff] rounded-xl p-6 text-center transition-colors bg-slate-50/50 cursor-pointer group"
+          >
+            <UploadCloud className="w-10 h-10 text-slate-400 group-hover:text-[#0091ff] mx-auto mb-2 transition-colors" />
             <input
               type="file"
               accept=".pdf,.docx,.doc,.txt"
@@ -1658,16 +1667,13 @@ export default function AssessmentStudio() {
               className="hidden"
               id="assessment-file-upload"
             />
-            <label
-              htmlFor="assessment-file-upload"
-              className="cursor-pointer text-xs font-semibold text-[#0091ff] hover:underline"
-            >
+            <span className="text-xs font-semibold text-[#0091ff] group-hover:underline">
               {uploadFile ? uploadFile.name : 'Click to select PDF or DOCX file'}
-            </label>
+            </span>
             <p className="text-[11px] text-slate-400 mt-1">
               Supports PDF, DOCX, DOC, TXT (Maximum file size: 25 MB)
             </p>
-          </div>
+          </label>
 
           {/* Teaching Context Selector */}
           <div>

@@ -64,6 +64,7 @@ export default function TeacherClasses() {
     section: 'A',
     board: 'CBSE',
     academicYear: '2026-2027',
+    subject: 'General',
     type: 'institution' as 'institution' | 'tuition',
   });
 
@@ -607,6 +608,17 @@ export default function TeacherClasses() {
               value={createForm.section}
               onChange={(e) => setCreateForm({ ...createForm, section: e.target.value })}
               placeholder="e.g. A, B, or Batch 1"
+              className="w-full bg-[#f8fcff] border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 outline-none focus:border-[#254b73]"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Subject</label>
+            <input
+              type="text"
+              value={createForm.subject}
+              onChange={(e) => setCreateForm({ ...createForm, subject: e.target.value })}
+              placeholder="e.g. Mathematics, Science, General"
               className="w-full bg-[#f8fcff] border border-slate-200 rounded-xl p-2.5 text-xs text-slate-800 outline-none focus:border-[#254b73]"
             />
           </div>

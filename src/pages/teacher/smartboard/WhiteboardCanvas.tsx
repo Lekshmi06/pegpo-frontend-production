@@ -121,7 +121,16 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       ctx.lineJoin = 'round';
     }
 
-    if ((el.tool === 'pen' || el.tool === 'highlighter' || el.tool === 'eraser') && el.points && el.points.length > 0) {
+    // If element contains an image, prioritize drawing the image over basic shape outlines
+    if (el.image && el.x !== undefined && el.y !== undefined && el.widthBox !== undefined && el.heightBox !== undefined) {
+      try {
+        if (el.image instanceof HTMLImageElement && el.image.complete && el.image.naturalWidth > 0) {
+          ctx.drawImage(el.image, el.x, el.y, el.widthBox, el.heightBox);
+        }
+      } catch (err) {
+        console.warn('Failed to draw image element:', err);
+      }
+    } else if ((el.tool === 'pen' || el.tool === 'highlighter' || el.tool === 'eraser') && el.points && el.points.length > 0) {
       if (el.points.length === 1) {
         // Draw single dot
         ctx.beginPath();
@@ -156,31 +165,32 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       const fromY = el.points[0].y;
       const toX = el.points[1].x;
       const toY = el.points[1].y;
-      const angle = Math.atan2(toY - fromY, toX - fromX);
-      const headLength = Math.max(12, el.width * 3);
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const distance = Math.hypot(dx, dy);
 
-      ctx.beginPath();
-      ctx.moveTo(fromX, fromY);
-      ctx.lineTo(toX, toY);
-      ctx.stroke();
+      if (distance >= 2) {
+        const angle = Math.atan2(dy, dx);
+        // Clamp head length so short arrows don't invert
+        const headLength = Math.min(Math.max(12, el.width * 3), distance * 0.6);
+        const shaftEndX = toX - (headLength * 0.6) * Math.cos(angle);
+        const shaftEndY = toY - (headLength * 0.6) * Math.sin(angle);
 
-      ctx.beginPath();
-      ctx.moveTo(toX, toY);
-      ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
-      ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
-      ctx.closePath();
-      ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        ctx.lineTo(shaftEndX, shaftEndY);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(toX, toY);
+        ctx.lineTo(toX - headLength * Math.cos(angle - Math.PI / 6), toY - headLength * Math.sin(angle - Math.PI / 6));
+        ctx.lineTo(toX - headLength * Math.cos(angle + Math.PI / 6), toY - headLength * Math.sin(angle + Math.PI / 6));
+        ctx.closePath();
+        ctx.fill();
+      }
     } else if (el.tool === 'text' && el.text && el.x !== undefined && el.y !== undefined) {
       ctx.font = `bold ${Math.max(16, el.width * 4)}px sans-serif`;
       ctx.fillText(el.text, el.x, el.y);
-    } else if (el.image && el.x !== undefined && el.y !== undefined && el.widthBox && el.heightBox) {
-      try {
-        if (el.image instanceof HTMLImageElement && el.image.complete && el.image.naturalWidth > 0) {
-          ctx.drawImage(el.image, el.x, el.y, el.widthBox, el.heightBox);
-        }
-      } catch (err) {
-        console.warn('Failed to draw image element:', err);
-      }
     }
 
     ctx.restore();
@@ -262,6 +272,9 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       const safeElements = (newElements || []).map((el) => {
         if (el.imageDataUrl && !(el.image instanceof HTMLImageElement)) {
           const img = new window.Image();
+          img.onload = () => {
+            renderAllElements();
+          };
           img.src = el.imageDataUrl;
           return { ...el, image: img };
         }
@@ -309,6 +322,9 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       const safeElements = (newElements || []).map((el) => {
         if (el.imageDataUrl && !(el.image instanceof HTMLImageElement)) {
           const img = new window.Image();
+          img.onload = () => {
+            renderAllElements();
+          };
           img.src = el.imageDataUrl;
           return { ...el, image: img };
         }

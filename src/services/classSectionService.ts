@@ -62,6 +62,7 @@ export const classSectionService = {
     academicYear?: string;
     type?: 'institution' | 'tuition';
     name?: string;
+    subject?: string;
   }): Promise<ClassSection> => {
     const res = await apiRequest<{ success: boolean; data: ClassSection }>(
       '/class-sections',

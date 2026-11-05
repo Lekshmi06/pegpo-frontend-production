@@ -43,6 +43,7 @@ const Tests = lazy(() => import('../pages/student/Tests'));
 const Practice = lazy(() => import('../pages/student/Practice'));
 const QuizHub = lazy(() => import('../pages/student/QuizHub'));
 const GenericStudentPage = lazy(() => import('../pages/student/GenericStudentPage'));
+const StudentAssignments = lazy(() => import('../pages/student/assignments/StudentAssignments'));
 
 // Teacher Layout & Pages
 const TeacherLayout = lazy(() => import('../layouts/TeacherLayout'));
@@ -61,6 +62,7 @@ const IntegratedSmartBoard = lazy(() => import('../pages/teacher/smartboard/Inte
 const AssessmentStudio = lazy(() => import('../pages/teacher/assessment/AssessmentStudio'));
 const TeacherClasses = lazy(() => import('../pages/teacher/classes/TeacherClasses'));
 const TeacherUpload = lazy(() => import('../pages/teacher/Upload'));
+const TeacherAssignments = lazy(() => import('../pages/teacher/assignments/TeacherAssignments'));
 
 // Research Layout & Pages
 const ResearchLayout = lazy(() => import('../layouts/ResearchLayout'));
@@ -178,7 +180,8 @@ export default function AppRoutes() {
           <Route path="revision" element={<Practice />} />
           <Route path="exercise" element={<Practice />} />
           <Route path="workbook" element={<Practice />} />
-          <Route path="homework" element={<Practice />} />
+          <Route path="assignments" element={<StudentAssignments />} />
+          <Route path="homework" element={<StudentAssignments />} />
           <Route path="quiz" element={<QuizHub />} />
           <Route path="tests" element={<Tests />} />
           <Route path="history" element={<GenericStudentPage title="Performance History" desc="Graph your mock grade history and study sessions." />} />
@@ -218,11 +221,14 @@ export default function AppRoutes() {
           <Route path="test" element={<AssessmentStudio />} />
           <Route path="examination" element={<GenericTeacherPage title="Term Examinations" desc="Manage midterm/final examination schedules." />} />
           <Route path="assessment" element={<AssessmentStudio />} />
+          <Route path="assignments" element={<TeacherAssignments />} />
+          <Route path="homework" element={<TeacherAssignments />} />
           <Route path="new-folder" element={<GenericTeacherPage title="New Folder" desc="Configure resource folders and sync pathways." />} />
           <Route path="bookshelf" element={<GenericTeacherPage title="Class Bookshelf" desc="Selected reading lists and textbooks for classes." />} />
           <Route path="collaboration" element={<TeacherBlankWorkspace />} />
           <Route path="classes" element={<TeacherClasses />} />
           <Route path="tuition" element={<TeacherClasses />} />
+          <Route path="recorded" element={<GenericTeacherPage title="Recorded Classes" desc="Manage lecture recordings, video archives, and audio transcripts." />} />
           <Route path="smartboard" element={<SmartBoardHome />} />
           <Route path="project" element={<GenericTeacherPage title="Class Projects" desc="Track group tasks and assignments." />} />
           <Route path="3d-lab" element={<GenericTeacherPage title="3D Interactive Lab" desc="Explore physics simulations." />} />

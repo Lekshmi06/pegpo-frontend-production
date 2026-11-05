@@ -38,31 +38,19 @@ export const curriculumService = {
   },
 
   createCurriculumWithFile: async (formData: FormData): Promise<Curriculum> => {
-    const headers = getAuthHeaders();
-    // Do NOT set Content-Type header when sending FormData; browser sets multipart/form-data with boundary
-    const token = localStorage.getItem('token') || '';
-    const teacherProfileId = localStorage.getItem('teacherProfileId') || '';
-    const rawHeaders: Record<string, string> = {};
-    if (token) {
-      rawHeaders['Authorization'] = `Bearer ${token}`;
-      rawHeaders['x-user-id'] = token;
-    }
-    if (teacherProfileId) {
-      rawHeaders['x-teacher-profile-id'] = teacherProfileId;
-    }
+    const res = await apiRequest<{ success: boolean; data: Curriculum; message?: string }>(
+      '/curriculums',
+      {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: formData,
+      }
+    );
 
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-    const response = await fetch(`${baseUrl}/curriculums`, {
-      method: 'POST',
-      headers: rawHeaders,
-      body: formData,
-    });
-
-    const json = await response.json();
-    if (!response.ok || !json.success) {
-      throw new Error(json.message || 'Failed to upload curriculum');
+    if (!res.success) {
+      throw new Error(res.message || 'Failed to upload curriculum');
     }
-    return json.data;
+    return res.data;
   },
 
   createCurriculumManual: async (data: {

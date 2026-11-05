@@ -3,7 +3,8 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, Library, Upload, Calendar,
   Tv, Layers, LineChart, NotebookPen, FlaskConical, Gamepad2, ShoppingCart,
-  Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare
+  Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare,
+  FileCheck
 } from 'lucide-react';
 import logoImg from '../assets/logo.png';
 import userImg from '../assets/user.png';
@@ -30,7 +31,7 @@ export default function StudentLayout() {
     { path: '/student/courses', label: 'My Courses', icon: Layers },
     { path: '/student/calendar', label: 'Calendar', icon: Calendar },
     { path: '/student/projects', label: 'Projects', icon: LineChart },
-    { path: '/student/homework', label: 'New Folder', icon: FolderPlus },
+    { path: '/student/homework', label: 'Homework', icon: FileCheck },
     { path: '/student/bookshelf', label: 'Book shelf', icon: BookMarked },
     { path: '/student/explore', label: 'Tuition', icon: GraduationCap },
     { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
@@ -52,6 +53,7 @@ export default function StudentLayout() {
     location.pathname === '/student/calendar' ||
     location.pathname === '/student/projects' ||
     location.pathname === '/student/homework' ||
+    location.pathname === '/student/assignments' ||
     location.pathname === '/student/bookshelf' ||
     location.pathname === '/student/tests' ||
     location.pathname.startsWith('/student/practice') ||

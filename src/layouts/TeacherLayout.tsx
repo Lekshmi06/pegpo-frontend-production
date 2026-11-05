@@ -35,6 +35,7 @@ const menuGroups: TeacherMenuGroup[] = [
   {
     color: '#246a9e',
     items: [
+      { label: 'Assignments', icon: BookOpen, path: '/teacher/assignments' },
       { label: 'Test', icon: ClipboardList, path: '/teacher/test' },
       { label: 'Examination', icon: FileText, path: '/teacher/examination' },
       { label: 'Assessment', icon: LineChart, path: '/teacher/assessment' },

@@ -205,7 +205,13 @@ export default function Practice() {
                   return (
                     <button
                       key={m.id}
-                      onClick={() => setActiveMode(m.id)}
+                      onClick={() => {
+                        if (m.id === 'homework') {
+                          navigate('/student/homework');
+                        } else {
+                          setActiveMode(m.id);
+                        }
+                      }}
                       className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                         isActive
                           ? 'bg-[#e6f4f2] border-[#28bca6] shadow-2xs ring-1 ring-[#28bca6]'

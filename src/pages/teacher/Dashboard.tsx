@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Plus, X, CalendarDays, Settings, Bold, Italic, Underline, AlignLeft, AlignCenter, ListChecks, ListOrdered, List, PenLine, Eraser, Trash2, Edit3, CheckCircle2, Circle } from 'lucide-react';
 import KanbanBoard from './KanbanBoard';
 import TeacherCalendar from './TeacherCalendar';
 import LessonPlanner from './LessonPlanner';
 import TeacherClasses from './classes/TeacherClasses';
 import TeacherUpload from './Upload';
+import AssessmentStudio from './assessment/AssessmentStudio';
 import { TeacherTask } from '../../types/teacherTask';
 import { teacherTaskService } from '../../services/teacherTaskService';
 import TeacherTaskModal from '../../components/teacher/TeacherTaskModal';
@@ -249,6 +250,12 @@ export default function TeacherDashboard() {
   const content =
     activeSubjectTab === 'Classes' ? (
       <TeacherClasses />
+    ) : activeSubjectTab === 'Lessons' ? (
+      <LessonPlanner />
+    ) : activeSubjectTab === 'Test' || activeSubjectTab === 'Quiz' ? (
+      <AssessmentStudio />
+    ) : activeSubjectTab === 'Notes' ? (
+      <ProjectWorkspace />
     ) : activeTab === 'Task List' ? (
       taskList
     ) : activeTab === 'Kanban board' ? (
@@ -287,11 +294,14 @@ export default function TeacherDashboard() {
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 bg-[#d6e8f6] px-4 py-3 border-b border-[#cbe2fc]">
           {workspaceTabs.map((tab) => {
-            const isSelected = activeTab === tab;
+            const isSelected = activeTab === tab && activeSubjectTab === 'Subject';
             return (
               <button
                 key={tab}
-                onClick={() => setActiveTab(tab)}
+                onClick={() => {
+                  setActiveTab(tab);
+                  setActiveSubjectTab('Subject');
+                }}
                 className={`flex-1 min-h-[44px] rounded-2xl px-3 py-2 text-xs text-center font-extrabold transition-all cursor-pointer shadow-2xs ${
                   isSelected ? 'bg-white text-[#1c3352] ring-2 ring-[#0091ff]/30' : 'bg-white/80 text-slate-700 hover:bg-white'
                 }`}
@@ -451,64 +461,236 @@ function TaskCalendar({ onSelect }: { onSelect: (d: Date | null) => void }) {
   );
 }
 
+interface ProjectDoc {
+  id: string;
+  name: string;
+  title: string;
+  content: string;
+}
+
+const DEFAULT_PROJECT_DOCS: ProjectDoc[] = [
+  { id: 'proj-1', name: 'Science Fair Plan', title: 'Science Fair 2026 Guidelines', content: '<p>Outline classroom requirements and milestone submission dates for students.</p>' },
+  { id: 'proj-2', name: 'Unit 1 Assignment', title: 'Unit 1 Research Presentation', content: '<p>Student group project objectives and evaluation rubrics.</p>' },
+];
+
 function ProjectWorkspace() {
-  const [projects, setProjects] = useState(['Project name']);
-  const [activeProject, setActiveProject] = useState('Project name');
-  const addProject = () => {
-    const project = `Project ${projects.length + 1}`;
-    setProjects((items) => [...items, project]);
-    setActiveProject(project);
+  const [projects, setProjects] = useState<ProjectDoc[]>(() => {
+    try {
+      const saved = localStorage.getItem('edupye_teacher_projects');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // Fallback
+    }
+    return DEFAULT_PROJECT_DOCS;
+  });
+
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => projects[0]?.id || 'proj-1');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState<string>('');
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  const activeProject = projects.find((p) => p.id === activeProjectId) || projects[0] || {
+    id: 'proj-1',
+    name: 'Default Project',
+    title: 'Project Title',
+    content: '',
   };
-  const toolbarButtons = [Bold, Italic, Underline, AlignLeft, AlignCenter, ListChecks, ListOrdered, List, Plus, PenLine, Eraser];
+
+  // Persist to local storage
+  useEffect(() => {
+    try {
+      localStorage.setItem('edupye_teacher_projects', JSON.stringify(projects));
+    } catch {
+      // Ignored
+    }
+  }, [projects]);
+
+  // Sync content into DOM editor when active project changes
+  useEffect(() => {
+    if (editorRef.current) {
+      if (editorRef.current.innerHTML !== (activeProject.content || '')) {
+        editorRef.current.innerHTML = activeProject.content || '';
+      }
+    }
+  }, [activeProject.id]);
+
+  const addProject = () => {
+    const newId = `proj-${Date.now()}`;
+    const newProj: ProjectDoc = {
+      id: newId,
+      name: `Project ${projects.length + 1}`,
+      title: `Project ${projects.length + 1} Title`,
+      content: '<p>Start drafting project guidelines...</p>',
+    };
+    setProjects((prev) => [...prev, newProj]);
+    setActiveProjectId(newId);
+  };
+
+  const updateTitle = (newTitle: string) => {
+    setProjects((prev) =>
+      prev.map((p) => (p.id === activeProject.id ? { ...p, title: newTitle } : p))
+    );
+  };
+
+  const handleEditorInput = () => {
+    if (editorRef.current) {
+      const html = editorRef.current.innerHTML;
+      setProjects((prev) =>
+        prev.map((p) => (p.id === activeProject.id ? { ...p, content: html } : p))
+      );
+    }
+  };
+
+  const startRename = (p: ProjectDoc) => {
+    setEditingId(p.id);
+    setEditingName(p.name);
+  };
+
+  const commitRename = (id: string) => {
+    const trimmed = editingName.trim();
+    if (trimmed) {
+      setProjects((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, name: trimmed } : p))
+      );
+    }
+    setEditingId(null);
+  };
+
+  const executeCommand = (cmd: string, val: string | undefined = undefined) => {
+    editorRef.current?.focus();
+    document.execCommand(cmd, false, val);
+    handleEditorInput();
+  };
+
+  const toolbarActions = [
+    { icon: Bold, label: 'Bold', action: () => executeCommand('bold') },
+    { icon: Italic, label: 'Italic', action: () => executeCommand('italic') },
+    { icon: Underline, label: 'Underline', action: () => executeCommand('underline') },
+    { icon: AlignLeft, label: 'Align Left', action: () => executeCommand('justifyLeft') },
+    { icon: AlignCenter, label: 'Align Center', action: () => executeCommand('justifyCenter') },
+    { icon: List, label: 'Bullet List', action: () => executeCommand('insertUnorderedList') },
+    { icon: ListOrdered, label: 'Numbered List', action: () => executeCommand('insertOrderedList') },
+    { icon: PenLine, label: 'Highlight', action: () => executeCommand('hiliteColor', '#fef08a') },
+    { icon: Eraser, label: 'Clear Formatting', action: () => executeCommand('removeFormat') },
+  ];
 
   return (
     <div className="flex min-h-[600px] bg-[#f8fcff] p-0">
-      <aside className="w-[218px] shrink-0 border-r border-[#dce9f3] bg-white">
+      {/* Projects Sidebar */}
+      <aside className="w-[220px] shrink-0 border-r border-[#dce9f3] bg-white flex flex-col">
         <div className="flex h-14 items-center justify-between bg-[#214d7d] px-4 text-[#b6c6d7] font-bold">
-          <span className="flex items-center gap-1 text-sm">
+          <span className="flex items-center gap-1 text-sm text-white">
             <ChevronDown className="h-4 w-4" />
             Projects
           </span>
-          <button onClick={addProject} aria-label="Add project" className="cursor-pointer">
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-        {projects.map((project) => (
           <button
-            key={project}
-            onClick={() => setActiveProject(project)}
-            className={`block w-full px-5 py-3 text-left text-sm font-bold ${
-              activeProject === project ? 'bg-[#d6e8f6] text-[#171f2b]' : 'hover:bg-[#f1f7fc]'
-            }`}
+            onClick={addProject}
+            aria-label="Add project"
+            className="p-1 hover:bg-[#2d629c] rounded-md transition-colors cursor-pointer text-white"
+            title="Create new project"
           >
-            {project}
+            <Plus className="h-4 w-4" />
           </button>
-        ))}
-      </aside>
-      <section className="m-0 flex min-w-0 flex-1 flex-col bg-white">
-        <div className="flex flex-wrap items-center gap-3 border border-[#dce9f3] px-5 py-2 text-[#9aa8b9]">
-          <button className="flex items-center gap-1 text-sm font-bold text-[#1c3352]">
-            Normal Text <ChevronDown className="h-4 w-4" />
-          </button>
-          <span className="h-6 w-px bg-[#dce9f3]" />
-          {toolbarButtons.map((Icon, index) => (
-            <button key={`btn-${index}`} className="hover:text-[#214d7d] cursor-pointer" aria-label="Editor tool">
-              <Icon className="h-5 w-5" />
-            </button>
-          ))}
         </div>
-        <div className="flex-1 p-6">
+
+        <div className="flex-1 overflow-y-auto">
+          {projects.map((project) => {
+            const isSelected = activeProject.id === project.id;
+            const isEditingThis = editingId === project.id;
+
+            return (
+              <div
+                key={project.id}
+                className={`flex items-center justify-between px-3 py-2.5 text-xs font-bold border-b border-slate-100 transition-colors ${
+                  isSelected ? 'bg-[#d6e8f6] text-[#171f2b]' : 'hover:bg-[#f1f7fc] text-slate-700'
+                }`}
+              >
+                {isEditingThis ? (
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={() => commitRename(project.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename(project.id);
+                      if (e.key === 'Escape') setEditingId(null);
+                    }}
+                    autoFocus
+                    className="w-full bg-white border border-[#214d7d] rounded px-1.5 py-0.5 text-xs text-slate-800 outline-none"
+                  />
+                ) : (
+                  <button
+                    onClick={() => setActiveProjectId(project.id)}
+                    className="flex-1 text-left truncate cursor-pointer py-1"
+                    title={project.name}
+                  >
+                    {project.name}
+                  </button>
+                )}
+
+                {!isEditingThis && (
+                  <button
+                    onClick={() => startRename(project)}
+                    className="p-1 text-slate-400 hover:text-[#214d7d] rounded cursor-pointer shrink-0 ml-1"
+                    title="Rename project"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* Editor Section */}
+      <section className="m-0 flex min-w-0 flex-1 flex-col bg-white">
+        {/* Formatting Toolbar */}
+        <div className="flex flex-wrap items-center gap-1 sm:gap-2 border-b border-[#dce9f3] px-4 py-2 bg-slate-50/70">
+          <span className="text-xs font-bold text-slate-500 mr-2 uppercase tracking-wider">
+            Format:
+          </span>
+          {toolbarActions.map((tool, idx) => {
+            const Icon = tool.icon;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault(); // Prevent losing text selection
+                  tool.action();
+                }}
+                className="p-1.5 rounded-lg text-slate-600 hover:text-[#214d7d] hover:bg-white hover:shadow-2xs transition-all cursor-pointer"
+                title={tool.label}
+                aria-label={tool.label}
+              >
+                <Icon className="h-4 w-4" />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Title and Content Inputs */}
+        <div className="flex-1 p-6 flex flex-col">
           <input
-            defaultValue="Title"
+            type="text"
+            value={activeProject.title}
+            onChange={(e) => updateTitle(e.target.value)}
             aria-label="Project title"
-            className="block w-full bg-transparent text-[26px] font-extrabold text-[#b5b5b5] outline-none"
+            placeholder="Project Title..."
+            className="block w-full bg-transparent text-2xl font-black text-slate-800 placeholder-slate-300 outline-none pb-2 border-b border-slate-100"
           />
           <div
+            ref={editorRef}
             contentEditable
             suppressContentEditableWarning
+            onInput={handleEditorInput}
             aria-label="Project content"
-            data-placeholder="Write your text here....."
-            className="project-editor mt-3 min-h-[430px] text-[15px] text-[#777] outline-none font-medium"
+            data-placeholder="Write your project details and assignment instructions here..."
+            className="project-editor mt-4 flex-1 min-h-[400px] text-sm text-slate-700 outline-none leading-relaxed"
           />
         </div>
       </section>

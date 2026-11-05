@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload,
@@ -27,6 +27,8 @@ import {
 } from 'lucide-react';
 import { useStudentAnalytics } from '../../hooks/useStudentData';
 import { studentService } from '../../services/studentService';
+import { assignmentService } from '../../services/assignmentService';
+import { StudentAssignmentItem } from '../../types/assignment';
 import { useToast } from '../../hooks/useToast';
 import { Loader } from '../../components/ui/Loader';
 import { ErrorState } from '../../components/ui/StateViews';
@@ -52,6 +54,23 @@ export default function StudentDashboard() {
   >('reading');
   const [sessionNotes, setSessionNotes] = useState('');
   const [isLoggingSession, setIsLoggingSession] = useState(false);
+
+  // Real student assignments integration
+  const [realAssignments, setRealAssignments] = useState<StudentAssignmentItem[]>([]);
+  useEffect(() => {
+    let isMounted = true;
+    assignmentService
+      .getStudentAssignments({ status: 'pending' })
+      .then((items) => {
+        if (isMounted) setRealAssignments(items);
+      })
+      .catch((err) => {
+        console.warn('Could not load real student assignments for dashboard:', err);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Time-of-day greeting
   const getGreeting = () => {
@@ -166,6 +185,25 @@ export default function StudentDashboard() {
   }
 
   const { student, summaryCards, weeklyStudyActivity, subjectProgress, recentAssessments, recentActivity, upcomingTasks, continueLearning, aiStudyRecommendations } = analytics;
+
+  const mergedUpcomingTasks = useMemo(() => {
+    const existingTitles = new Set(upcomingTasks.map((t) => t.title.toLowerCase().trim()));
+    const converted = realAssignments
+      .filter((a) => !existingTitles.has(a.assignment.title.toLowerCase().trim()))
+      .map((a) => ({
+        id: a.assignment._id,
+        title: a.assignment.title,
+        dueDate: new Date(a.assignment.dueDate).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        }),
+        time: a.assignment.dueTime,
+        eventType: a.assignment.type === 'homework' ? 'Homework' : 'Assignment',
+        isOverdue: a.submissionStatus === 'overdue',
+        isRealAssignment: true,
+      }));
+    return [...converted, ...upcomingTasks];
+  }, [upcomingTasks, realAssignments]);
 
   // Max minutes calculation for weekly chart scale
   const maxWeeklyMinutes = Math.max(
@@ -706,23 +744,39 @@ export default function StudentDashboard() {
               <h2 className="text-base font-extrabold text-[#111827] tracking-tight">
                 Upcoming Tasks
               </h2>
-              <button
-                onClick={() => navigate('/student/calendar')}
-                className="text-xs font-bold text-[#0091ff] hover:underline cursor-pointer"
-              >
-                Calendar
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate('/student/homework')}
+                  className="text-xs font-bold text-[#0d9488] hover:underline cursor-pointer"
+                >
+                  Homework &rarr;
+                </button>
+                <span className="text-slate-300">?</span>
+                <button
+                  onClick={() => navigate('/student/calendar')}
+                  className="text-xs font-bold text-[#0091ff] hover:underline cursor-pointer"
+                >
+                  Calendar
+                </button>
+              </div>
             </div>
 
             <div className="space-y-3">
-              {upcomingTasks.length > 0 ? (
-                upcomingTasks.map((task) => (
+              {mergedUpcomingTasks.length > 0 ? (
+                mergedUpcomingTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl transition-all space-y-1"
+                    onClick={() => {
+                      if ((task as any).isRealAssignment) {
+                        navigate('/student/homework');
+                      } else {
+                        navigate('/student/calendar');
+                      }
+                    }}
+                    className="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 rounded-2xl transition-all space-y-1 cursor-pointer group"
                   >
                     <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold text-slate-900 truncate max-w-[180px]">
+                      <h4 className="text-xs font-bold text-slate-900 group-hover:text-[#0d9488] transition-colors truncate max-w-[180px]">
                         {task.title}
                       </h4>
                       {task.isOverdue ? (
