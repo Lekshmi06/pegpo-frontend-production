@@ -55,6 +55,10 @@ export function getActionCategory(actionType: AIActionType): ActionPermissionCat
     case 'NEXT_QUESTION':
     case 'SET_DIFFICULTY':
     case 'NAVIGATE':
+    case 'FIND_PYQ':
+    case 'SELECT_EXAM':
+    case 'CHANGE_TOPIC':
+    case 'OPEN_TEST_ANALYSIS':
       return 'AUTO';
 
     case 'CREATE_NOTE':
@@ -64,6 +68,15 @@ export function getActionCategory(actionType: AIActionType): ActionPermissionCat
     case 'GENERATE_TEST':
     case 'START_QUIZ':
     case 'START_TEST':
+    case 'GENERATE_MOCK':
+    case 'START_MOCK':
+    case 'EDIT_NOTE':
+    case 'SUMMARIZE_NOTE':
+    case 'UPDATE_CALENDAR_EVENT':
+    case 'MARK_CALENDAR_EVENT_COMPLETE':
+    case 'DELETE_CALENDAR_EVENT':
+    case 'CREATE_PROJECT':
+    case 'UPDATE_PROJECT_STATUS':
       return 'CONFIRM';
 
     case 'DELETE_STUDENT_DATA':
@@ -94,8 +107,8 @@ export function evaluateActionPermission(
 
   // 1. MANUAL MODE: Advisory companion only. Automated actions are paused.
   if (mode === 'manual') {
-    // Non-mutating advisory queries (explaining, hints) are allowed text responses
-    if (actionType === 'EXPLAIN_TOPIC' || actionType === 'SHOW_HINT') {
+    // Non-mutating advisory queries (explaining, hints, PYQs) are allowed educational responses
+    if (actionType === 'EXPLAIN_TOPIC' || actionType === 'SHOW_HINT' || actionType === 'FIND_PYQ') {
       return { allowed: true, requiresConfirmation: false, category: 'AUTO' };
     }
     return {

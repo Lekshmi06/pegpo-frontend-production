@@ -301,8 +301,8 @@ export default function ExamCracker() {
           examCode: selectedExam.examCode || selectedExam.id,
         });
 
-        // 2. Start attempt session in backend
-        const session = await testService.startTest(generated.testId);
+        // 2. Start attempt session in backend as self-study practice CBT mock
+        const session = await testService.startTest(generated.testId, 'practice');
 
         // 3. Fetch masked test questions in 'take' mode
         const testData = await testService.fetchTestById(generated.testId, 'take');

@@ -249,11 +249,8 @@ export function useAudioRecorder() {
           mediaRecorderRef.current = null;
 
           // Build final transcript: if live speech recognition captured lines, use them;
-          // otherwise assemble an initial timestamped marker
-          let finalTranscript = transcriptBufferRef.current.trim();
-          if (!finalTranscript) {
-            finalTranscript = `[00:00 - ${formatTimestamp(elapsedSec)}] Teacher: Classroom lecture recording session. Reviewing key concepts and formulas.`;
-          }
+          // otherwise leave empty so server-side Gemini audio transcription extracts authentic spoken words.
+          const finalTranscript = transcriptBufferRef.current.trim();
 
           resolve({
             audioBlob: blob,
@@ -271,7 +268,7 @@ export function useAudioRecorder() {
         resolve({
           audioBlob: dummyBlob,
           audioFile: dummyFile,
-          transcript: transcriptBufferRef.current || `[00:00 - ${formatTimestamp(elapsedSec)}] Teacher: Lecture audio session.`,
+          transcript: transcriptBufferRef.current.trim(),
           durationSec: elapsedSec,
         });
       }
