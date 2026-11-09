@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Clock,
   EyeOff,
+  BookOpen,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import { testService } from '../../services/testService';
@@ -87,8 +88,10 @@ export default function Tests() {
   const urlTestId = searchParams.get('testId');
   const toast = useToast();
   const { profile } = useStudentProfile();
+  const activeTrack = (profile?.learningPath || profile?.education?.level || 'school').toLowerCase().trim();
 
   const [activeSubTab, setActiveSubTab] = useState('Test');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [tests, setTests] = useState<TestItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -114,9 +117,9 @@ export default function Tests() {
     { label: 'Subject', path: '/student/learn' },
     { label: 'Practice', path: '/student/practice' },
     { label: 'Test', path: '/student/tests' },
-    { label: 'Games', path: '/student/tests' },
+    { label: 'Games', path: '/student/learn?tab=Game' },
     { label: 'Quiz', path: '/student/quiz' },
-    { label: 'Combine Study', path: '/student/learn' },
+    { label: 'Combine Study', path: '/student/learn?tab=Combine Study' },
   ];
 
   // Restore active test session on page refresh if one exists
@@ -150,11 +153,14 @@ export default function Tests() {
       const studentBoard = profile?.education?.board || profile?.schoolDetails?.board;
       const studentClass = profile?.education?.classLevel || profile?.schoolDetails?.classLevel;
 
-      const data = await testService.fetchTests({
-        board: studentBoard,
-        classLevel: studentClass,
-      });
+      // Pass board & classLevel only for school track to prevent fetching school tests for UG/PG
+      const queryParams: Record<string, string> = {};
+      if (activeTrack === 'school') {
+        if (studentBoard) queryParams.board = studentBoard;
+        if (studentClass) queryParams.classLevel = studentClass;
+      }
 
+      const data = await testService.fetchTests(queryParams);
       setTests(data);
     } catch (err) {
       console.error('Failed to load tests from backend:', err);
@@ -162,7 +168,7 @@ export default function Tests() {
     } finally {
       setIsLoading(false);
     }
-  }, [profile]);
+  }, [profile, activeTrack]);
 
   useEffect(() => {
     loadTests();
@@ -495,8 +501,54 @@ export default function Tests() {
     );
   }
 
-  const unlocked = tests.filter((t) => !t.isLocked);
-  const locked = tests.filter((t) => t.isLocked);
+  // Track-aware filtering and live search
+  const filteredTests = useMemo(() => {
+    let list = tests;
+
+    // A. Track Awareness: Do not display school or competitive entrance tests to Higher Education (UG/PG) students
+    if (activeTrack === 'undergraduate' || activeTrack === 'postgraduate') {
+      list = list.filter((t) => {
+        const isSchoolBoard =
+          t.board === 'CBSE' || t.board === 'State Board' || t.board === 'ICSE';
+        const isSchoolClass = /Class\s*\d+|Grade\s*\d+/i.test(t.classLevel || '');
+        const isCompetitive = Boolean(t.isCompetitiveExam);
+        return !isSchoolBoard && !isSchoolClass && !isCompetitive;
+      });
+    } else if (activeTrack === 'competitive_exam') {
+      list = list.filter((t) => t.isCompetitiveExam);
+    }
+
+    // B. Live Search Filtering: title, description, subject
+    if (!searchQuery.trim()) return list;
+
+    const query = searchQuery.toLowerCase().trim();
+    return list.filter((t) => {
+      const titleMatch = t.title ? t.title.toLowerCase().includes(query) : false;
+      const descMatch = t.description ? t.description.toLowerCase().includes(query) : false;
+      const subjectMatch = t.subject ? t.subject.toLowerCase().includes(query) : false;
+      return titleMatch || descMatch || subjectMatch;
+    });
+  }, [tests, activeTrack, searchQuery]);
+
+  const unlocked = useMemo(() => filteredTests.filter((t) => !t.isLocked), [filteredTests]);
+  const locked = useMemo(() => filteredTests.filter((t) => t.isLocked), [filteredTests]);
+
+  const getSubscriptionModalTitle = () => {
+    if (activeTrack === 'undergraduate') {
+      const degree = profile?.undergraduateDetails?.degree || 'College';
+      return `Unlock All Premium ${degree} Mock Papers`;
+    }
+    if (activeTrack === 'postgraduate') {
+      const degree = profile?.postgraduateDetails?.degree || 'Postgraduate';
+      return `Unlock All Premium ${degree} Mock Papers`;
+    }
+    if (activeTrack === 'competitive_exam') {
+      const target = profile?.competitiveExamDetails?.targetExam || 'Competitive Exam';
+      return `Unlock All Premium ${target} Mock Papers`;
+    }
+    const classLevel = profile?.education?.classLevel || profile?.schoolDetails?.classLevel || 'Class 10';
+    return `Unlock All Premium ${classLevel} Mock Papers`;
+  };
 
   return (
     <div className="flex h-full w-full bg-[#f8fbfe] overflow-hidden text-slate-800">
@@ -512,21 +564,21 @@ export default function Tests() {
           </div>
           <div className="space-y-1">
             <h3 className="text-base font-extrabold text-[#111827]">
-              Unlock All Premium Class 10 Mock Papers
+              {getSubscriptionModalTitle()}
             </h3>
             <p className="text-xs text-slate-500 font-medium max-w-sm mx-auto leading-relaxed">
-              Get unlimited access to solved board test papers, timed exam drills, and AI-powered performance diagnostics.
+              Get unlimited access to solved model test papers, timed exam drills, and AI-powered performance diagnostics.
             </p>
           </div>
 
           <div className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-2xl p-4 text-left space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>50+ Full-length CBSE Class 10 Model Papers</span>
+              <span>Full-length curriculum-grounded model papers</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Step-by-step verified NCERT solution keys</span>
+              <span>Step-by-step verified question solution keys</span>
             </div>
             <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -583,7 +635,9 @@ export default function Tests() {
               </span>
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search tests by title, subject..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-[#f8fafc] text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0d9488]"
               />
             </div>
@@ -622,6 +676,37 @@ export default function Tests() {
               </button>
             </div>
 
+            {/* Competitive Exam Track Shortcut Banner */}
+            {activeTrack === 'competitive_exam' && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
+                <div className="space-y-2 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-2">
+                    <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-800 text-xs font-bold uppercase tracking-wider">
+                      Competitive Exam Track Active
+                    </span>
+                    {profile?.competitiveExamDetails?.targetExam && (
+                      <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold">
+                        Target: {profile.competitiveExamDetails.targetExam}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-slate-800">
+                    Looking for Competitive Exam Mocks &amp; PYQs?
+                  </h2>
+                  <p className="text-xs text-slate-600 font-medium max-w-xl">
+                    Full-length National Pattern CBT Mocks (JEE Main, NEET UG, SSC CGL, Banking, UPSC CSE) and authentic Previous-Year Questions are located in the dedicated <strong>Exam Cracker</strong> module.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => navigate('/student/exam-cracker')}
+                  className="bg-[#0091ff] hover:bg-[#007cdb] text-white font-bold text-xs px-6 py-3 shrink-0 rounded-2xl shadow-sm flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Go to Exam Cracker</span>
+                  <span>&rarr;</span>
+                </Button>
+              </div>
+            )}
+
             {/* Loading State */}
             {isLoading ? (
               <div className="py-16 text-center space-y-3">
@@ -638,10 +723,53 @@ export default function Tests() {
                   Retry Connection
                 </Button>
               </div>
-            ) : tests.length === 0 ? (
-              <div className="py-16 text-center text-slate-400 font-medium text-xs">
-                No tests found available at this time.
-              </div>
+            ) : filteredTests.length === 0 ? (
+              searchQuery.trim() ? (
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+                  <Search className="w-10 h-10 text-slate-300 mx-auto" />
+                  <h3 className="text-base font-extrabold text-slate-800">
+                    No tests matching &quot;{searchQuery}&quot;
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                    Try searching with a different test title, subject, or description.
+                  </p>
+                  <Button
+                    size="sm"
+                    onClick={() => setSearchQuery('')}
+                    className="text-xs font-bold bg-[#0d9488] hover:bg-[#0f766e] text-white cursor-pointer"
+                  >
+                    Clear Search
+                  </Button>
+                </div>
+              ) : activeTrack === 'undergraduate' ? (
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+                  <BookOpen className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h3 className="text-base font-extrabold text-slate-800">
+                    No Undergraduate Tests Available
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    No collegiate examination papers are cataloged for your course{profile?.undergraduateDetails?.degree ? ` (${profile.undergraduateDetails.degree})` : ''} at this time. Standard curriculum tests are currently configured for school tracks.
+                  </p>
+                </div>
+              ) : activeTrack === 'postgraduate' ? (
+                <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+                  <BookOpen className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h3 className="text-base font-extrabold text-slate-800">
+                    No Postgraduate Tests Available
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+                    No postgraduate examination papers are cataloged for your specialization{profile?.postgraduateDetails?.degree ? ` (${profile.postgraduateDetails.degree})` : ''} at this time. Standard curriculum tests are currently configured for school tracks.
+                  </p>
+                </div>
+              ) : activeTrack === 'competitive_exam' ? (
+                <div className="py-12 text-center text-slate-400 font-medium text-xs">
+                  Standard school curriculum tests are hidden for the Competitive Exam track. Use the shortcut above to launch Exam Cracker.
+                </div>
+              ) : (
+                <div className="py-16 text-center text-slate-400 font-medium text-xs">
+                  No tests found available for {profile?.education?.classLevel || 'your class'} at this time.
+                </div>
+              )
             ) : (
               <>
                 {/* Row 1: Unlocked Tests */}
@@ -655,10 +783,10 @@ export default function Tests() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toast.success(`"${test.title}" added to your revision shelf!`);
+                          toast.info('Revision shelf bookmarking is not available yet.');
                         }}
                         className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-                        title="Add test to study list"
+                        title="Save test (Coming Soon)"
                       >
                         <Plus className="w-4 h-4 stroke-[2.5]" />
                       </button>

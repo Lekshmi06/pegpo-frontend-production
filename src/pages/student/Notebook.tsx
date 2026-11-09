@@ -106,6 +106,7 @@ export default function Notebook() {
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [linkInputText, setLinkInputText] = useState('');
   const [linkInputUrl, setLinkInputUrl] = useState('');
+  const [savedSelection, setSavedSelection] = useState<{ start: number; end: number } | null>(null);
 
   // Delete Confirmation Modal state
   const [noteToDelete, setNoteToDelete] = useState<NoteItem | null>(null);
@@ -448,26 +449,64 @@ export default function Notebook() {
 
   // Open Link modal
   const handleOpenLinkModal = () => {
+    if (isPreviewMode) {
+      setIsPreviewMode(false);
+    }
     const textarea = textareaRef.current;
-    const selected = textarea
-      ? activeNoteContent.substring(textarea.selectionStart, textarea.selectionEnd)
-      : '';
-    setLinkInputText(selected || 'Resource Link');
+    if (textarea) {
+      setSavedSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
+      const selected = activeNoteContent.substring(textarea.selectionStart, textarea.selectionEnd);
+      setLinkInputText(selected || 'Resource Link');
+    } else {
+      setSavedSelection(null);
+      setLinkInputText('Resource Link');
+    }
     setLinkInputUrl('');
     setIsLinkModalOpen(true);
   };
 
-  // Insert sanitized link into content
+  // Insert sanitized link into content with robust focus management
   const handleInsertLink = () => {
     const safeUrl = sanitizeUrl(linkInputUrl);
     if (!safeUrl) {
-      toast.error('Please enter a valid HTTP or HTTPS URL');
+      toast.error('Please enter a valid HTTP or HTTPS URL (e.g. https://example.com)');
       return;
     }
 
     const textToUse = linkInputText.trim() || 'Link';
-    insertFormatting('[', `](${safeUrl})`, textToUse);
+    const linkMarkdown = `[${textToUse}](${safeUrl})`;
+
+    const textarea = textareaRef.current;
+    let start = savedSelection?.start;
+    let end = savedSelection?.end;
+
+    if (start === undefined || end === undefined) {
+      if (textarea) {
+        start = textarea.selectionStart;
+        end = textarea.selectionEnd;
+      } else {
+        start = activeNoteContent.length;
+        end = activeNoteContent.length;
+      }
+    }
+
+    const newContent =
+      activeNoteContent.substring(0, start) +
+      linkMarkdown +
+      activeNoteContent.substring(end);
+
+    setActiveNoteContent(newContent);
     setIsLinkModalOpen(false);
+
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.setSelectionRange(
+          start + linkMarkdown.length,
+          start + linkMarkdown.length
+        );
+      }
+    }, 50);
   };
 
   // Interactive checklist toggle in Preview mode
@@ -572,6 +611,7 @@ export default function Notebook() {
               type="text"
               value={linkInputText}
               onChange={(e) => setLinkInputText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleInsertLink(); }}
               placeholder="e.g. Official Syllabus"
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0091ff]/30 font-medium"
             />
@@ -581,8 +621,10 @@ export default function Notebook() {
             <label className="text-[11px] font-bold text-slate-600 block mb-1">Web Address (URL)</label>
             <input
               type="text"
+              autoFocus
               value={linkInputUrl}
               onChange={(e) => setLinkInputUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleInsertLink(); }}
               placeholder="https://example.com"
               className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0091ff]/30 font-medium"
             />
@@ -604,18 +646,18 @@ export default function Notebook() {
         {activeModal === 'action' && (
           <div className="space-y-4">
             <p className="text-xs text-slate-600 font-medium">
-              Generate an instant AI-powered <strong>{selectedActionLabel}</strong> into your active notebook.
+              Insert a structured study template for <strong>{selectedActionLabel}</strong> into your active note.
             </p>
             <Button
               onClick={() => {
-                const promptSnippet = `\n\n### [AI Generated ${selectedActionLabel}]\n- Key point: Study concept review.\n- Action item: Revise corresponding textbook chapter.\n`;
-                setActiveNoteContent((prev) => prev + promptSnippet);
-                toast.success(`${selectedActionLabel} appended to active note!`);
+                const templateSnippet = `\n\n### [Study Notes: ${selectedActionLabel}]\n- Core Concepts:\n- Key Formulas & Principles:\n- Important Examples:\n- Practice Follow-Up:\n`;
+                setActiveNoteContent((prev) => prev + templateSnippet);
+                toast.info(`${selectedActionLabel} template inserted into note`);
                 setActiveModal(null);
               }}
               className="w-full py-2.5"
             >
-              Generate {selectedActionLabel}
+              Insert {selectedActionLabel} Template
             </Button>
           </div>
         )}
@@ -626,14 +668,17 @@ export default function Notebook() {
               <img src={selectedGraphicCard.img} alt={selectedGraphicCard.title} className="max-h-full max-w-full object-contain" />
             </div>
             <p className="text-xs text-slate-600 font-medium leading-relaxed">{selectedGraphicCard.desc}</p>
+            <div className="rounded-xl bg-sky-50 border border-sky-200/80 p-3 text-[11px] text-sky-800 font-medium">
+              Interactive workspace integration for {selectedGraphicCard.title} is currently under development.
+            </div>
             <Button
+              variant="outline"
               onClick={() => {
-                toast.info(`Launched ${selectedGraphicCard.title}!`);
                 setActiveModal(null);
               }}
               className="w-full py-2.5"
             >
-              Launch Workspace
+              Close Preview
             </Button>
           </div>
         )}

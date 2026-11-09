@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   RotateCcw,
   Sparkles,
@@ -45,6 +45,33 @@ export const RevisionDeck: React.FC<RevisionDeckProps> = ({
     setIsFlipped(false);
     setCardIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
   };
+
+  // Keyboard navigation: ArrowLeft/ArrowRight to cycle cards, Space/Enter to flip
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) {
+        return;
+      }
+      if (filteredCards.length === 0) return;
+
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        setIsFlipped(false);
+        setCardIndex((prev) => (prev + 1) % filteredCards.length);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setIsFlipped(false);
+        setCardIndex((prev) => (prev - 1 + filteredCards.length) % filteredCards.length);
+      } else if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        setIsFlipped((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredCards.length]);
 
   const handleToggleMastered = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();

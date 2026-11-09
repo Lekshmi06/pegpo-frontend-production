@@ -54,6 +54,8 @@ export default function ExamCracker() {
   const toast = useToast();
   const { profile } = useStudentProfile();
 
+  const ACTIVE_CBT_STORAGE_KEY = 'edupye_active_cbt_session';
+
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [activeCatalogTab, setActiveCatalogTab] = useState<'mocks' | 'pyqs'>('mocks');
   const [activeGoalTab, setActiveGoalTab] = useState<string>('Choose your goal');
@@ -212,23 +214,78 @@ export default function ExamCracker() {
     };
   }, []);
 
-  // Requirement 8: If student profile has competitiveExamDetails.targetExam, make that the natural default
+  // Check for in-flight active CBT exam session to recover from accidental page reload
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(ACTIVE_CBT_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.selectedExam) {
+          setSelectedExam(parsed.selectedExam);
+          setActiveExamStage('running');
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(ACTIVE_CBT_STORAGE_KEY);
+    }
+  }, []);
+
+  // Explicit mapping from UI target goals to exact backend catalog exam codes
+  const GOAL_TO_EXAM_MAP: Record<string, string> = {
+    'Engineering': 'JEE_MAIN',
+    'Medical': 'NEET_UG',
+    'Government / Staff Selection': 'SSC_CGL',
+    'Banking': 'BANKING_IBPS_PO',
+    'Civil Services': 'UPSC_CSE',
+    'SSC & Bank Exam': 'SSC_CGL',
+  };
+
+  const handleSelectGoal = (goal: string) => {
+    setActiveGoalTab(goal);
+    if (goal === 'Choose your goal') {
+      setPyqExamFilter('');
+    } else if (GOAL_TO_EXAM_MAP[goal]) {
+      setPyqExamFilter(GOAL_TO_EXAM_MAP[goal]);
+    } else {
+      // Unmapped goals (e.g. Railway Exam, CBSE Board Mocks)
+      setPyqExamFilter(`__UNMAPPED__:${goal}`);
+    }
+  };
+
+  // If student profile has competitiveExamDetails.targetExam, make that the natural default
   useEffect(() => {
     if (profile?.competitiveExamDetails?.targetExam) {
       const target = profile.competitiveExamDetails.targetExam.toUpperCase();
-      if (target.includes('JEE')) setActiveGoalTab('Engineering');
-      else if (target.includes('NEET')) setActiveGoalTab('Medical');
-      else if (target.includes('SSC')) setActiveGoalTab('Government / Staff Selection');
-      else if (target.includes('BANK')) setActiveGoalTab('Banking');
-      else if (target.includes('UPSC')) setActiveGoalTab('Civil Services');
-
-      setPyqExamFilter(target);
+      if (target.includes('JEE')) {
+        setActiveGoalTab('Engineering');
+        setPyqExamFilter('JEE_MAIN');
+      } else if (target.includes('NEET')) {
+        setActiveGoalTab('Medical');
+        setPyqExamFilter('NEET_UG');
+      } else if (target.includes('SSC')) {
+        setActiveGoalTab('Government / Staff Selection');
+        setPyqExamFilter('SSC_CGL');
+      } else if (target.includes('BANK')) {
+        setActiveGoalTab('Banking');
+        setPyqExamFilter('BANKING_IBPS_PO');
+      } else if (target.includes('UPSC')) {
+        setActiveGoalTab('Civil Services');
+        setPyqExamFilter('UPSC_CSE');
+      } else {
+        setPyqExamFilter(target);
+      }
     }
   }, [profile]);
 
   // Load authentic PYQs when PYQ tab or filters change
   useEffect(() => {
     if (activeCatalogTab !== 'pyqs') return;
+
+    if (pyqExamFilter.startsWith('__UNMAPPED__:')) {
+      setPyqs([]);
+      setIsLoadingPYQs(false);
+      return;
+    }
 
     let isMounted = true;
     const loadPYQs = async () => {
@@ -368,16 +425,26 @@ export default function ExamCracker() {
           }));
         }
 
-        setSelectedExam({
+        const runningExam = {
           ...selectedExam,
           generatedTestId: generated.testId,
           attemptId: session.attemptId,
           sections: updatedSections,
           totalQuestions: testData.questions?.length || selectedExam.totalQuestions,
-        });
-
+        };
+        try {
+          sessionStorage.setItem(ACTIVE_CBT_STORAGE_KEY, JSON.stringify({ selectedExam: runningExam }));
+        } catch {
+          // ignore
+        }
+        setSelectedExam(runningExam);
         setActiveExamStage('running');
       } else {
+        try {
+          sessionStorage.setItem(ACTIVE_CBT_STORAGE_KEY, JSON.stringify({ selectedExam }));
+        } catch {
+          // ignore
+        }
         setActiveExamStage('running');
       }
     } catch (err: any) {
@@ -389,6 +456,11 @@ export default function ExamCracker() {
   };
 
   const handleFinishExam = (result: MockExamSessionResult) => {
+    try {
+      sessionStorage.removeItem(ACTIVE_CBT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     setExamResult(result);
     setActiveExamStage('analysis');
     toast.success('Examination submitted and evaluated successfully!');
@@ -400,6 +472,11 @@ export default function ExamCracker() {
   };
 
   const handleBackToCatalog = () => {
+    try {
+      sessionStorage.removeItem(ACTIVE_CBT_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
     setSelectedExam(null);
     setExamResult(null);
     setActiveExamStage('catalog');
@@ -476,17 +553,18 @@ export default function ExamCracker() {
       <Modal isOpen={!!activeModal} onClose={() => setActiveModal(null)} title={modalTitle}>
         {activeModal === 'action' && (
           <div className="space-y-4">
-            <p className="text-xs text-slate-600 font-medium">
-              Generate an instant AI-powered <strong>{selectedActionLabel}</strong> for {activeGoalTab}.
-            </p>
+            <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 leading-relaxed font-medium space-y-2">
+              <span className="font-bold text-slate-800 block">Feature in Development</span>
+              <p>
+                AI-powered <strong>{selectedActionLabel}</strong> generation tailored for {activeGoalTab} is currently in development and will be available in an upcoming release.
+              </p>
+            </div>
             <Button
-              onClick={() => {
-                toast.success(`${selectedActionLabel} created for Exam Cracker!`);
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5"
+              variant="outline"
+              onClick={() => setActiveModal(null)}
+              className="w-full py-2.5 text-xs font-bold"
             >
-              Generate {selectedActionLabel}
+              Close
             </Button>
           </div>
         )}
@@ -500,17 +578,16 @@ export default function ExamCracker() {
                 className="max-h-full max-w-full object-contain"
               />
             </div>
-            <p className="text-xs text-slate-600 font-medium leading-relaxed">
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 leading-relaxed font-medium">
+              <span className="font-bold text-slate-800 block mb-1">Coming Soon</span>
               {selectedGraphicCard.desc}
-            </p>
+            </div>
             <Button
-              onClick={() => {
-                toast.info(`Launched ${selectedGraphicCard.title}!`);
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5"
+              variant="outline"
+              onClick={() => setActiveModal(null)}
+              className="w-full py-2.5 text-xs font-bold"
             >
-              Launch Workspace
+              Close
             </Button>
           </div>
         )}
@@ -528,7 +605,7 @@ export default function ExamCracker() {
             {goals.map((g) => (
               <button
                 key={g}
-                onClick={() => setActiveGoalTab(g)}
+                onClick={() => handleSelectGoal(g)}
                 className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   activeGoalTab === g
                     ? 'bg-white text-[#0091ff] shadow-xs'
@@ -576,7 +653,7 @@ export default function ExamCracker() {
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => toast.info('Language switched to English')}
+              onClick={() => toast.info('Additional language options are coming soon.')}
               className="p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer hidden sm:block"
               title="Select Language"
             >
@@ -601,7 +678,7 @@ export default function ExamCracker() {
             </div>
 
             <button
-              onClick={() => toast.info('Viewing National Rankings')}
+              onClick={() => toast.info('All India National Rankings leaderboard is coming soon.')}
               className="p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer hidden sm:block"
               title="Leaderboard & Rankings"
             >
@@ -626,8 +703,11 @@ export default function ExamCracker() {
                   {['Help & Tools', 'Feed Back', 'Quick Guide', 'Settings'].map((pill) => (
                     <button
                       key={pill}
-                      onClick={() => setShowProfileMenu(false)}
-                      className="w-full text-left px-3.5 py-2 bg-[#e3edf7] hover:bg-[#d5e6f5] text-[#1c3352] rounded-xl text-xs font-bold transition-colors"
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        toast.info(`${pill} will be available in an upcoming release.`);
+                      }}
+                      className="w-full text-left px-3.5 py-2 bg-[#e3edf7] hover:bg-[#d5e6f5] text-[#1c3352] rounded-xl text-xs font-bold transition-colors cursor-pointer"
                     >
                       {pill}
                     </button>
@@ -700,11 +780,13 @@ export default function ExamCracker() {
                         No examination mocks found
                       </h3>
                       <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                        No competitive examinations match the selected category &quot;{activeGoalTab}&quot;. Select &quot;Choose your goal&quot; to view all available national examinations.
+                        {activeGoalTab === 'Railway Exam' || activeGoalTab === 'CBSE Board Mocks'
+                          ? `No competitive examination mocks are cataloged for "${activeGoalTab}". Official pattern CBT mocks are available for Engineering, Medical, Government / Staff Selection, Banking, and Civil Services.`
+                          : `No competitive examinations match the selected category "${activeGoalTab}". Select "Choose your goal" to view all available national examinations.`}
                       </p>
                       <Button
                         size="sm"
-                        onClick={() => setActiveGoalTab('Choose your goal')}
+                        onClick={() => handleSelectGoal('Choose your goal')}
                         className="text-xs font-bold"
                       >
                         Reset Filter
@@ -734,10 +816,10 @@ export default function ExamCracker() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                toast.success(`"${exam.title}" pinned to your revision schedule!`);
+                                toast.info(`Revision pinning for "${exam.title}" will be available in an upcoming release.`);
                               }}
                               className="absolute top-4 right-4 w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors cursor-pointer"
-                              title="Pin Exam"
+                              title="Pin Exam (Coming Soon)"
                             >
                               <Plus className="w-4 h-4 stroke-[2.5]" />
                             </button>
@@ -822,6 +904,15 @@ export default function ExamCracker() {
                     </span>
                   </div>
 
+                  {/* Study & Archive Mode Banner */}
+                  <div className="bg-[#eef6fc] border border-[#bcd7ef] rounded-2xl p-4 flex items-start gap-3 shadow-2xs">
+                    <BookOpen className="w-5 h-5 text-[#0091ff] shrink-0 mt-0.5" />
+                    <div className="text-xs text-[#1c3352] leading-relaxed font-medium">
+                      <strong className="font-extrabold text-[#0091ff]">Study &amp; Archive Mode:</strong>{' '}
+                      Browse authentic past questions with step-by-step solutions. To practice under timed exam conditions, launch a test in the <strong>CBT Mock Tests</strong> tab.
+                    </div>
+                  </div>
+
                   {/* PYQ Filter Bar */}
                   <div className="bg-white rounded-3xl border border-[#e2ebf4] p-4 shadow-2xs flex flex-wrap items-center gap-3">
                     {/* Exam Filter */}
@@ -830,8 +921,17 @@ export default function ExamCracker() {
                         Examination
                       </label>
                       <select
-                        value={pyqExamFilter}
-                        onChange={(e) => setPyqExamFilter(e.target.value)}
+                        value={pyqExamFilter.startsWith('__UNMAPPED__') ? '' : pyqExamFilter}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setPyqExamFilter(val);
+                          if (val === 'JEE_MAIN') setActiveGoalTab('Engineering');
+                          else if (val === 'NEET_UG') setActiveGoalTab('Medical');
+                          else if (val === 'SSC_CGL') setActiveGoalTab('Government / Staff Selection');
+                          else if (val === 'BANKING_IBPS_PO') setActiveGoalTab('Banking');
+                          else if (val === 'UPSC_CSE') setActiveGoalTab('Civil Services');
+                          else if (!val) setActiveGoalTab('Choose your goal');
+                        }}
                         className="w-full text-xs font-bold bg-[#f8fafc] border border-slate-200 rounded-xl px-3 py-2 text-slate-700 outline-none focus:border-[#0091ff]"
                       >
                         <option value="">All Exams</option>
@@ -924,15 +1024,34 @@ export default function ExamCracker() {
                       </p>
                     </div>
                   ) : pyqs.length === 0 ? (
-                    <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
-                      <FileText className="w-12 h-12 text-slate-300 mx-auto" />
-                      <h3 className="text-base font-extrabold text-slate-800">
-                        No previous-year questions found
-                      </h3>
-                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                        Try resetting your exam or year filters to view all available official PYQs.
-                      </p>
-                    </div>
+                    pyqExamFilter.startsWith('__UNMAPPED__:') ? (
+                      <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+                        <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+                        <h3 className="text-base font-extrabold text-slate-800">
+                          No Question Papers Available for {pyqExamFilter.replace('__UNMAPPED__:', '')}
+                        </h3>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+                          No official previous-year papers are cataloged for {pyqExamFilter.replace('__UNMAPPED__:', '')} at this time. Sourced question papers are currently available for Engineering (JEE Main), Medical (NEET UG), Staff Selection (SSC CGL), Banking (IBPS PO), and Civil Services (UPSC CSE).
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => handleSelectGoal('Choose your goal')}
+                          className="text-xs font-bold"
+                        >
+                          View All Official Papers
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="py-16 text-center bg-white rounded-3xl border border-slate-200 p-8 space-y-3">
+                        <FileText className="w-12 h-12 text-slate-300 mx-auto" />
+                        <h3 className="text-base font-extrabold text-slate-800">
+                          No previous-year questions found
+                        </h3>
+                        <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                          Try resetting your exam or year filters to view all available official PYQs.
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-4">
                       {pyqs.map((q, idx) => {

@@ -18,6 +18,12 @@ const LANG_KEY = 'userLanguage';
 const PROFILE_ID_KEY = 'studentProfileId';
 const TOKEN_KEY = 'token';
 
+export const EDUPYE_TRACK_CHANGE_EVENT = 'edupye:learning-track-changed';
+
+export interface TrackChangeEventDetail {
+  learningPath: LearningPath;
+}
+
 export const authService = {
   signUp: async (email: string, password?: string, name?: string, userType?: UserRole): Promise<UserSession> => {
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -546,12 +552,57 @@ export const authService = {
   },
 
   setLearningPath: async (learningPath: LearningPath): Promise<UserSession> => {
+    const cleanTrack: LearningPath =
+      learningPath === 'undergraduate'
+        ? 'undergraduate'
+        : learningPath === 'postgraduate'
+        ? 'postgraduate'
+        : learningPath === 'competitive_exam' || (learningPath as string) === 'competitive'
+        ? 'competitive_exam'
+        : 'school';
+
     const current = authService.getCurrentUser() || { email: 'student@edupye.com' };
+    const profileId = localStorage.getItem(PROFILE_ID_KEY);
+
+    // If student has a persisted profile ID on the backend, update backend first
+    if (profileId && profileId !== 'local_profile_id') {
+      const authHeaders = authService.getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/students/${profileId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders,
+        },
+        body: JSON.stringify({
+          learningPath: cleanTrack,
+          education: {
+            level: cleanTrack,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        const errMsg = errJson?.message || `Failed to update learning track on server (${res.status})`;
+        throw new Error(errMsg);
+      }
+
+      const json = await res.json().catch(() => null);
+      if (!json?.success) {
+        throw new Error(json?.message || 'Server rejected learning track update');
+      }
+    }
+
+    // Only update local session after backend confirms success
     const updated: UserSession = {
       ...current,
-      learningPath,
+      learningPath: cleanTrack,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // Dispatch reactive track change event to all active UI subscribers
+    authService.dispatchTrackChange(cleanTrack);
+
     return updated;
   },
 
@@ -565,15 +616,17 @@ export const authService = {
         ...details,
       },
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     // Sync to backend MongoDB
     const profileId = localStorage.getItem(PROFILE_ID_KEY);
-    if (profileId) {
+    if (profileId && profileId !== 'local_profile_id') {
       try {
-        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+        const res = await fetch(`${API_BASE_URL}/students/${profileId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify({
             learningPath: 'school',
             schoolDetails: details,
@@ -585,11 +638,17 @@ export const authService = {
             },
           }),
         });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          console.warn('Backend rejected school details update:', errJson?.message || res.status);
+        }
       } catch (err) {
         console.warn('Could not sync school details to backend:', err);
       }
     }
 
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    authService.dispatchTrackChange('school');
     return updated;
   },
 
@@ -603,14 +662,16 @@ export const authService = {
         ...details,
       },
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     const profileId = localStorage.getItem(PROFILE_ID_KEY);
-    if (profileId) {
+    if (profileId && profileId !== 'local_profile_id') {
       try {
-        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+        const res = await fetch(`${API_BASE_URL}/students/${profileId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify({
             learningPath: 'undergraduate',
             undergraduateDetails: details,
@@ -622,10 +683,17 @@ export const authService = {
             },
           }),
         });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          console.warn('Backend rejected UG details update:', errJson?.message || res.status);
+        }
       } catch (err) {
         console.warn('Could not sync UG details to backend:', err);
       }
     }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    authService.dispatchTrackChange('undergraduate');
     return updated;
   },
 
@@ -639,14 +707,16 @@ export const authService = {
         ...details,
       },
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     const profileId = localStorage.getItem(PROFILE_ID_KEY);
-    if (profileId) {
+    if (profileId && profileId !== 'local_profile_id') {
       try {
-        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+        const res = await fetch(`${API_BASE_URL}/students/${profileId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify({
             learningPath: 'postgraduate',
             postgraduateDetails: details,
@@ -658,10 +728,17 @@ export const authService = {
             },
           }),
         });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          console.warn('Backend rejected PG details update:', errJson?.message || res.status);
+        }
       } catch (err) {
         console.warn('Could not sync PG details to backend:', err);
       }
     }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    authService.dispatchTrackChange('postgraduate');
     return updated;
   },
 
@@ -675,14 +752,16 @@ export const authService = {
         ...details,
       },
     };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
     const profileId = localStorage.getItem(PROFILE_ID_KEY);
-    if (profileId) {
+    if (profileId && profileId !== 'local_profile_id') {
       try {
-        await fetch(`${API_BASE_URL}/students/${profileId}`, {
+        const res = await fetch(`${API_BASE_URL}/students/${profileId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authService.getAuthHeaders(),
+          },
           body: JSON.stringify({
             learningPath: 'competitive_exam',
             competitiveExamDetails: details,
@@ -693,10 +772,17 @@ export const authService = {
             },
           }),
         });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          console.warn('Backend rejected competitive exam details update:', errJson?.message || res.status);
+        }
       } catch (err) {
         console.warn('Could not sync competitive exam details to backend:', err);
       }
     }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    authService.dispatchTrackChange('competitive_exam');
     return updated;
   },
 
@@ -781,7 +867,51 @@ export const authService = {
 
   getAuthHeaders: (): Record<string, string> => {
     const token = localStorage.getItem(TOKEN_KEY);
-    return token ? { Authorization: `Bearer ${token}` } : {};
+    const profileId = localStorage.getItem(PROFILE_ID_KEY);
+    const userJson = localStorage.getItem(STORAGE_KEY);
+    let userId = '';
+    if (userJson) {
+      try {
+        const u = JSON.parse(userJson);
+        userId = u.id || u._id || '';
+      } catch {
+        // Continue
+      }
+    }
+    const effectiveToken = token || userId;
+    const headers: Record<string, string> = {};
+    if (effectiveToken) {
+      headers['Authorization'] = `Bearer ${effectiveToken}`;
+      headers['x-user-id'] = effectiveToken;
+    }
+    if (profileId) {
+      headers['x-student-profile-id'] = profileId;
+    }
+    return headers;
+  },
+
+  dispatchTrackChange: (learningPath: LearningPath) => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent<TrackChangeEventDetail>(EDUPYE_TRACK_CHANGE_EVENT, {
+          detail: { learningPath },
+        })
+      );
+    }
+  },
+
+  onTrackChange: (callback: (track: LearningPath) => void): (() => void) => {
+    if (typeof window === 'undefined') return () => {};
+    const handler = (e: Event) => {
+      const customEvent = e as CustomEvent<TrackChangeEventDetail>;
+      if (customEvent.detail?.learningPath) {
+        callback(customEvent.detail.learningPath);
+      }
+    };
+    window.addEventListener(EDUPYE_TRACK_CHANGE_EVENT, handler);
+    return () => {
+      window.removeEventListener(EDUPYE_TRACK_CHANGE_EVENT, handler);
+    };
   },
 
   getCurrentUser: (): UserSession | null => {

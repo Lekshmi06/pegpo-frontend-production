@@ -92,6 +92,31 @@ export default function TestTakingView({
 
   const isExitingRef = React.useRef(false);
 
+  // Active test navigation guard: prevent accidental browser back or reload
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isExitingRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Push state marker so browser back button triggers confirmation modal
+    window.history.pushState({ activeTestSession: true }, document.title);
+    const handlePopState = () => {
+      if (isExitingRef.current) return;
+      window.history.pushState({ activeTestSession: true }, document.title);
+      setShowExitConfirm(true);
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   // Live timer
   useEffect(() => {
     if (isPaused) return;
@@ -223,7 +248,7 @@ export default function TestTakingView({
   };
 
   return (
-    <div className="flex h-full w-full bg-[#f8fafc] overflow-hidden text-slate-800">
+    <div className="flex h-full w-full bg-[#f8fafc] overflow-hidden text-slate-800 fixed inset-0 z-50">
       {/* Exit Confirmation Modal */}
       <Modal
         isOpen={showExitConfirm}

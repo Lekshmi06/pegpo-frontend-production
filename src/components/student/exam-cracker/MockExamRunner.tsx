@@ -47,12 +47,30 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
     });
   });
 
+  const examIdKey = exam.generatedTestId || exam.id || exam.examCode || 'active_cbt_exam';
+  const cbtAnswersKey = `edupye_cbt_answers_${examIdKey}`;
+  const cbtStatusKey = `edupye_cbt_status_${examIdKey}`;
+  const cbtTimeKey = `edupye_cbt_time_${examIdKey}`;
+
   const [activeSectionId, setActiveSectionId] = useState<string>(
     exam.sections[0]?.id || ''
   );
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [answers, setAnswers] = useState<Record<string | number, string>>({});
+  const [answers, setAnswers] = useState<Record<string | number, string>>(() => {
+    try {
+      const saved = sessionStorage.getItem(cbtAnswersKey);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [statusMap, setStatusMap] = useState<Record<string | number, CbtQuestionStatus>>(() => {
+    try {
+      const saved = sessionStorage.getItem(cbtStatusKey);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
     const initial: Record<string | number, CbtQuestionStatus> = {};
     allQuestions.forEach((q, idx) => {
       initial[q.id] = idx === 0 ? 'not_answered' : 'not_visited';
@@ -61,10 +79,67 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
   });
 
   const [isPaused, setIsPaused] = useState<boolean>(false);
-  const [timeSpentSeconds, setTimeSpentSeconds] = useState<number>(0);
+  const [timeSpentSeconds, setTimeSpentSeconds] = useState<number>(() => {
+    try {
+      const saved = sessionStorage.getItem(cbtTimeKey);
+      return saved ? Number(saved) : 0;
+    } catch {
+      return 0;
+    }
+  });
   const [showSubmitModal, setShowSubmitModal] = useState<boolean>(false);
   const [showExitModal, setShowExitModal] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  const isExitingRef = React.useRef(false);
+
+  // Synchronize in-flight attempt progress to sessionStorage for refresh tolerance
+  useEffect(() => {
+    if (isExitingRef.current) return;
+    try {
+      sessionStorage.setItem(cbtAnswersKey, JSON.stringify(answers));
+      sessionStorage.setItem(cbtStatusKey, JSON.stringify(statusMap));
+      sessionStorage.setItem(cbtTimeKey, String(timeSpentSeconds));
+    } catch {
+      // ignore quota issues
+    }
+  }, [answers, statusMap, timeSpentSeconds, cbtAnswersKey, cbtStatusKey, cbtTimeKey]);
+
+  // Active CBT navigation protection: intercept tab reload, window close, and browser back button
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isExitingRef.current) return;
+      e.preventDefault();
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Push state marker so browser back button triggers confirmation modal
+    window.history.pushState({ cbtActiveSession: true }, document.title);
+    const handlePopState = () => {
+      if (isExitingRef.current) return;
+      window.history.pushState({ cbtActiveSession: true }, document.title);
+      setShowExitModal(true);
+    };
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  const clearCbtSession = () => {
+    isExitingRef.current = true;
+    try {
+      sessionStorage.removeItem(cbtAnswersKey);
+      sessionStorage.removeItem(cbtStatusKey);
+      sessionStorage.removeItem(cbtTimeKey);
+    } catch {
+      // ignore
+    }
+  };
 
   const activeQuestion = allQuestions[currentQuestionIndex] || allQuestions[0];
 
@@ -235,6 +310,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
           isEstimatedPercentile: true,
         };
 
+        clearCbtSession();
         setIsSubmitting(false);
         onFinishExam(result);
         return;
@@ -368,6 +444,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
       isEstimatedPercentile: true,
     };
 
+    clearCbtSession();
     setIsSubmitting(false);
     onFinishExam(result);
   };
@@ -452,7 +529,7 @@ export const MockExamRunner: React.FC<MockExamRunnerProps> = ({
             <Button variant="outline" size="sm" onClick={() => setShowExitModal(false)}>
               Continue Exam
             </Button>
-            <Button size="sm" onClick={onExit} className="bg-rose-600 hover:bg-rose-700 text-white">
+            <Button size="sm" onClick={() => { clearCbtSession(); onExit(); }} className="bg-rose-600 hover:bg-rose-700 text-white">
               Exit Without Saving
             </Button>
           </div>

@@ -5,6 +5,7 @@ import {
   X,
   Send,
   RotateCcw,
+  ChevronLeft,
   ChevronRight,
   Lightbulb,
   Check,
@@ -509,6 +510,16 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
   const recognitionControllerRef = useRef<{ stop: () => void } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const quickActionsRef = useRef<HTMLDivElement | null>(null);
+
+  const scrollQuickActions = (direction: 'left' | 'right') => {
+    if (quickActionsRef.current) {
+      quickActionsRef.current.scrollBy({
+        left: direction === 'left' ? -160 : 160,
+        behavior: 'smooth',
+      });
+    }
+  };
   const context = getPageContext(location.pathname, customContext);
 
   // Initialize Speech capabilities & cleanup on unmount
@@ -1753,11 +1764,33 @@ export default function EduPyeAIChat({ customContext, className = '' }: EduPyeAI
 
           {/* Suggested Quick Prompt Chips */}
           <div className="px-3 py-2 bg-white border-t border-[#e2ebf4]/60 flex-shrink-0">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 mb-1.5">
-              <Lightbulb className="w-3 h-3 text-amber-500" />
-              <span>Quick Actions & PYQs:</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400">
+                <Lightbulb className="w-3 h-3 text-amber-500" />
+                <span>Quick Actions & PYQs:</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => scrollQuickActions('left')}
+                  className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  title="Scroll suggestions left"
+                  aria-label="Scroll left"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollQuickActions('right')}
+                  className="p-1 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors cursor-pointer"
+                  title="Scroll suggestions right"
+                  aria-label="Scroll right"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
             </div>
-            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <div ref={quickActionsRef} className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none scroll-smooth">
               {context.suggestions.map((suggestion, idx) => (
                 <button
                   key={idx}

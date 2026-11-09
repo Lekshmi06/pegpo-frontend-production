@@ -388,9 +388,19 @@ export const studentService = {
 
       const json = await safeParseResponse(res);
       if (res.ok && json.success && json.data) {
-        return mergeProfileWithExtended(json.data);
+        const merged = mergeProfileWithExtended(json.data);
+        if (data.learningPath) {
+          authService.dispatchTrackChange(data.learningPath);
+        }
+        return merged;
+      }
+      if (!res.ok) {
+        throw new Error(json?.message || `Failed to update profile (${res.status})`);
       }
     } catch (err) {
+      if (err instanceof Error && err.message.includes('Failed to update profile')) {
+        throw err;
+      }
       console.warn('Backend updateProfile unreachable, saved locally:', err);
     }
 

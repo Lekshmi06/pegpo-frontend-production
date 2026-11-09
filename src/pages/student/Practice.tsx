@@ -54,9 +54,9 @@ export default function Practice() {
     { label: 'Subject', path: '/student/learn' },
     { label: 'Practice', path: '/student/practice' },
     { label: 'Test', path: '/student/tests' },
-    { label: 'Games', path: '/student/tests' },
+    { label: 'Games', path: '/student/learn?tab=Game' },
     { label: 'Quiz', path: '/student/quiz' },
-    { label: 'Combine Study', path: '/student/learn' },
+    { label: 'Combine Study', path: '/student/learn?tab=Combine Study' },
   ];
 
   const practiceModes = [

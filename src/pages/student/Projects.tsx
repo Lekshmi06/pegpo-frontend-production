@@ -210,18 +210,18 @@ export default function Projects() {
         {activeModal === 'action' && (
           <div className="space-y-4">
             <p className="text-xs text-slate-600 font-medium">
-              Generate an instant AI-powered <strong>{selectedActionLabel}</strong> for your active project.
+              Insert a structured project template for <strong>{selectedActionLabel}</strong> into your project workspace.
             </p>
             <Button
               onClick={() => {
-                const promptSnippet = `\n\n### [Project ${selectedActionLabel}]\n- Objective: Detailed research and milestone review.\n- Deliverable: Documented findings.\n`;
-                setProjectContent((prev) => prev + promptSnippet);
-                toast.success(`${selectedActionLabel} added to project!`);
+                const templateSnippet = `\n\n### [Project Plan: ${selectedActionLabel}]\n- Objective & Scope:\n- Research Methodology:\n- Key Milestones:\n- Deliverables & Findings:\n`;
+                setProjectContent((prev) => prev + templateSnippet);
+                toast.info(`${selectedActionLabel} template added to project`);
                 setActiveModal(null);
               }}
               className="w-full py-2.5"
             >
-              Generate {selectedActionLabel}
+              Insert {selectedActionLabel} Template
             </Button>
           </div>
         )}
@@ -232,14 +232,17 @@ export default function Projects() {
               <img src={selectedGraphicCard.img} alt={selectedGraphicCard.title} className="max-h-full max-w-full object-contain" />
             </div>
             <p className="text-xs text-slate-600 font-medium leading-relaxed">{selectedGraphicCard.desc}</p>
+            <div className="rounded-xl bg-sky-50 border border-sky-200/80 p-3 text-[11px] text-sky-800 font-medium">
+              Interactive workspace integration for {selectedGraphicCard.title} is currently under development.
+            </div>
             <Button
+              variant="outline"
               onClick={() => {
-                toast.info(`Launched ${selectedGraphicCard.title}!`);
                 setActiveModal(null);
               }}
               className="w-full py-2.5"
             >
-              Launch Workspace
+              Close Preview
             </Button>
           </div>
         )}

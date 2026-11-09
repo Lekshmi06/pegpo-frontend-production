@@ -106,6 +106,23 @@ export function useStudentProfile() {
 
   useEffect(() => {
     fetchOrCreateProfile();
+
+    const unsubscribe = authService.onTrackChange((newTrack) => {
+      setProfile((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          learningPath: newTrack,
+          education: {
+            ...prev.education,
+            level: newTrack,
+          },
+        };
+      });
+      fetchOrCreateProfile();
+    });
+
+    return unsubscribe;
   }, [fetchOrCreateProfile]);
 
   const updateProfile = useCallback(

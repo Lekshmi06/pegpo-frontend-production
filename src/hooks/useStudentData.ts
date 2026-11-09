@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { StudentDashboardData, StudentAnalyticsData, Course } from '../types/student';
 import { studentService } from '../services/studentService';
+import { authService } from '../services/authService';
+import { LearningPath } from '../types/auth';
 import { AsyncStatus } from '../types/common';
+
+export { useStudentProfile } from './useStudentProfile';
 
 export function useStudentAnalytics() {
   const [analytics, setAnalytics] = useState<StudentAnalyticsData | null>(null);
@@ -64,11 +68,11 @@ export function useStudentCourses() {
   const [status, setStatus] = useState<AsyncStatus>('idle');
   const [error, setError] = useState<string | null>(null);
 
-  const fetchCourses = useCallback(async () => {
+  const fetchCourses = useCallback(async (trackOverride?: LearningPath) => {
     setStatus('loading');
     setError(null);
     try {
-      const res = await studentService.getCourses();
+      const res = await studentService.getCourses(trackOverride);
       setCourses(res);
       setStatus('success');
     } catch (err) {
@@ -79,6 +83,13 @@ export function useStudentCourses() {
 
   useEffect(() => {
     fetchCourses();
+
+    // Subscribe to track changes and reload courses reactively
+    const unsubscribe = authService.onTrackChange((newTrack) => {
+      fetchCourses(newTrack);
+    });
+
+    return unsubscribe;
   }, [fetchCourses]);
 
   return { courses, status, error, refetch: fetchCourses, isLoading: status === 'loading' };

@@ -191,6 +191,7 @@ export default function AppRoutes() {
           <Route path="live-classes" element={<LiveClasses />} />
           <Route path="profile" element={<Profile />} />
           <Route path="bookmarks" element={<GenericStudentPage title="Bookmarks Shelf" desc="Saved notes, clips, maps, and specific bookmarks." />} />
+          <Route path="3d-lab" element={<GenericStudentPage title="3D Science & STEM Lab" desc="Interactive 3D molecular structures, physics sandboxes, and anatomy simulations are currently under development." />} />
           <Route path="calendar" element={<StudentCalendar />} />
           <Route path="projects" element={<Projects />} />
           <Route path="bookshelf" element={<Bookshelf />} />
