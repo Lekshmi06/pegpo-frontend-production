@@ -7,6 +7,7 @@ import {
   Building2,
   Video,
   Compass,
+  Award,
   ArrowRight,
   CheckCircle2,
 } from 'lucide-react';
@@ -56,6 +57,13 @@ export const JOURNEY_OPTIONS: JourneyOption[] = [
     badge: 'Creator Studio',
     description: 'Create, publish, and manage courses, learners, and course sales.',
     icon: Video,
+  },
+  {
+    id: 'tuition_provider',
+    title: 'Tuition Provider',
+    badge: '1:1 & Cohort Tutoring',
+    description: 'Offer private 1:1 or group tuition, schedule live batches, and mentor students.',
+    icon: Award,
   },
   {
     id: 'learner',

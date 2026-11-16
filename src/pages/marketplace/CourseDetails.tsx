@@ -15,10 +15,21 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Star,
+  CreditCard,
+  Lock,
+  Award,
 } from 'lucide-react';
 import { courseService } from '../../services/courseService';
-import { ICourse, IEnrollment } from '../../types/course';
+import {
+  ICourse,
+  IEnrollment,
+  ICourseReview,
+  PaymentPlanType,
+  ReviewEligibilityResult,
+} from '../../types/course';
 import { Loader } from '../../components/ui/Loader';
+import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../hooks/useToast';
 import { authService } from '../../services/authService';
 import logoImg from '../../assets/logo.png';
@@ -35,7 +46,35 @@ export default function CourseDetails() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
+  // Reviews & Ratings State
+  const [reviews, setReviews] = useState<ICourseReview[]>([]);
+  const [eligibility, setEligibility] = useState<ReviewEligibilityResult | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Payment Plan Modal State
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [selectedPlanType, setSelectedPlanType] = useState<PaymentPlanType>('full');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   const currentUser = authService.getCurrentUser();
+
+  const loadReviewsAndEligibility = async (courseId: string) => {
+    try {
+      const revs = await courseService.getCourseReviews(courseId);
+      setReviews(revs);
+
+      if (currentUser) {
+        const elig = await courseService.checkReviewEligibility(courseId);
+        setEligibility(elig);
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -65,6 +104,8 @@ export default function CourseDetails() {
             // Non-blocking
           }
         }
+
+        await loadReviewsAndEligibility(id);
       } catch (err: any) {
         toast.error(err.message || 'Course not found');
         navigate('/marketplace');
@@ -83,7 +124,7 @@ export default function CourseDetails() {
     }));
   };
 
-  const handleEnroll = async () => {
+  const handleEnrollClick = () => {
     if (!currentUser) {
       toast.info('Please log in or register to enroll in courses');
       navigate('/login');
@@ -92,6 +133,17 @@ export default function CourseDetails() {
 
     if (!course) return;
 
+    if (course.price > 0) {
+      // Open Payment Plan selection modal
+      setSelectedPlanType(course.allowInstalments ? 'instalment' : 'full');
+      setPaymentModalOpen(true);
+    } else {
+      handleDirectEnroll();
+    }
+  };
+
+  const handleDirectEnroll = async () => {
+    if (!course) return;
     try {
       setIsEnrolling(true);
       const res = await courseService.enrollInCourse(course._id);
@@ -106,6 +158,68 @@ export default function CourseDetails() {
       toast.error(err.message || 'Failed to complete enrollment');
     } finally {
       setIsEnrolling(false);
+    }
+  };
+
+  const handleProcessPayment = async () => {
+    if (!course) return;
+    try {
+      setIsProcessingPayment(true);
+      // 1. Create Payment Order (Full or Instalments)
+      const orderRes = await courseService.createPaymentOrder({
+        courseId: course._id,
+        planType: selectedPlanType,
+        numberOfInstalments: course.maxInstalments || 3,
+      });
+
+      // 2. Server-side payment verification
+      const verifyRes = await courseService.verifyPayment({
+        paymentPlanId: orderRes.paymentPlanId,
+        instalmentNumber: 1,
+        orderId: orderRes.orderId,
+        gatewayTransactionId: orderRes.simulationTransactionId || `TXN-EDUPYE-${Date.now()}`,
+        signature: orderRes.simulationToken,
+        gatewayProvider: 'edupye_secure_gateway',
+      });
+
+      toast.success(
+        selectedPlanType === 'instalment'
+          ? `First instalment paid ($${orderRes.amountDueNow})! Milestone 1 unlocked.`
+          : `Full course payment completed ($${orderRes.totalAmount})! All modules unlocked.`
+      );
+
+      setPaymentModalOpen(false);
+      setIsEnrolled(true);
+      navigate(`/learn/${course._id}`);
+    } catch (err: any) {
+      toast.error(err.message || 'Payment processing failed');
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!course || !reviewComment.trim()) {
+      toast.error('Please enter a review comment');
+      return;
+    }
+
+    try {
+      setIsSubmittingReview(true);
+      await courseService.submitCourseReview(course._id, {
+        rating: reviewRating,
+        title: reviewTitle.trim() || undefined,
+        comment: reviewComment.trim(),
+      });
+      toast.success('Thank you! Your verified graduate review has been published.');
+      setReviewModalOpen(false);
+      setReviewComment('');
+      setReviewTitle('');
+      if (id) await loadReviewsAndEligibility(id);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit review');
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -208,14 +322,24 @@ export default function CourseDetails() {
 
             <div className="space-y-1">
               <span className="text-xs text-slate-400 font-medium block">Enrollment Price</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-black text-[#111827]">
-                  {course.price === 0 ? 'Free' : `$${course.price}`}
-                </span>
-                {course.price > 0 && (
-                  <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
-                    Instant Access
+              <div className="flex flex-col gap-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-[#111827]">
+                    {course.price === 0 ? 'Free' : `$${course.price}`}
                   </span>
+                  {course.price > 0 && (
+                    <span className="text-xs text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-md">
+                      Instant Access
+                    </span>
+                  )}
+                </div>
+                {course.allowInstalments && course.price > 0 && (
+                  <div className="flex items-center gap-1.5 text-xs text-[#0091ff] font-bold">
+                    <CreditCard className="w-3.5 h-3.5 shrink-0" />
+                    <span>
+                      or ${(course.price / (course.maxInstalments || 3)).toFixed(2)}/mo ({course.maxInstalments || 3}x instalments)
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -250,7 +374,7 @@ export default function CourseDetails() {
               </div>
             ) : (
               <button
-                onClick={handleEnroll}
+                onClick={handleEnrollClick}
                 disabled={isEnrolling}
                 className="w-full py-3.5 rounded-2xl bg-[#0091ff] hover:bg-[#0080e6] text-white text-xs font-black shadow-md transition-all cursor-pointer"
               >
@@ -258,6 +382,8 @@ export default function CourseDetails() {
                   ? 'Enrolling...'
                   : course.price === 0
                   ? 'Enroll Now for Free'
+                  : course.allowInstalments
+                  ? `Choose Payment Plan ($${course.price})`
                   : `Enroll in Course ($${course.price})`}
               </button>
             )}
@@ -318,7 +444,15 @@ export default function CourseDetails() {
                             {sIdx + 1}
                           </span>
                           <div>
-                            <h3 className="text-xs font-bold text-[#111827]">{section.title}</h3>
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-xs font-bold text-[#111827]">{section.title}</h3>
+                              {section.requiredInstalmentNumber && section.requiredInstalmentNumber > 1 && (
+                                <span className="px-2 py-0.5 rounded-md bg-blue-50 text-[#0091ff] font-extrabold text-[9px] border border-blue-100 flex items-center gap-1">
+                                  <Lock className="w-2.5 h-2.5" />
+                                  Milestone #{section.requiredInstalmentNumber}
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[10px] text-slate-400 font-medium">
                               {section.lessons?.length || 0} lessons
                             </span>
@@ -398,8 +532,291 @@ export default function CourseDetails() {
               </div>
             </div>
           </section>
+
+          {/* Course Reviews & Ratings Section */}
+          <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+              <div>
+                <h2 className="text-lg font-black text-[#111827]">Verified Reviews & Ratings</h2>
+                <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center text-amber-400">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`w-4 h-4 ${
+                          star <= Math.round(course.averageRating || 5)
+                            ? 'fill-amber-400 text-amber-400'
+                            : 'text-slate-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-extrabold text-[#111827]">
+                    {course.averageRating ? course.averageRating.toFixed(1) : '5.0'}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">
+                    ({course.reviewCount || reviews.length} verified reviews)
+                  </span>
+                </div>
+              </div>
+
+              {/* Review CTA if eligible */}
+              {eligibility?.eligible ? (
+                <button
+                  onClick={() => setReviewModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 self-start sm:self-auto"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  <span>Write a Verified Review</span>
+                </button>
+              ) : currentUser && isEnrolled ? (
+                <div className="text-[11px] text-slate-400 font-medium flex items-center gap-1">
+                  <Lock className="w-3 h-3 text-slate-400" />
+                  <span>Complete course & receive certificate to review</span>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Reviews List */}
+            {reviews.length > 0 ? (
+              <div className="divide-y divide-slate-100 space-y-4">
+                {reviews.map((rev) => (
+                  <div key={rev._id} className="pt-4 first:pt-0 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                          {rev.learnerName[0]?.toUpperCase() || 'L'}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-[#111827]">
+                              {rev.learnerName}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-md bg-emerald-50 text-emerald-700 text-[9px] font-extrabold border border-emerald-200">
+                              <CheckCircle2 className="w-2.5 h-2.5" />
+                              Graduate
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {new Date(rev.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center text-amber-400">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-3.5 h-3.5 ${
+                              s <= rev.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-200'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {rev.title && (
+                      <h4 className="text-xs font-bold text-[#111827]">{rev.title}</h4>
+                    )}
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                      {rev.comment}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-xs text-slate-400 font-medium space-y-1">
+                <Star className="w-8 h-8 text-slate-300 mx-auto" />
+                <p>No reviews yet. Be the first verified graduate to review this course!</p>
+              </div>
+            )}
+          </section>
         </div>
       </main>
+
+      {/* Payment Plan Selection Modal */}
+      <Modal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        title="Select Your Enrollment Payment Plan"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-slate-500 font-medium">
+            Choose how you would like to invest in "{course.title}". Both plans unlock verified certificate eligibility upon completion.
+          </p>
+
+          <div className="space-y-3">
+            {/* Option 1: Full Payment */}
+            <div
+              onClick={() => setSelectedPlanType('full')}
+              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                selectedPlanType === 'full'
+                  ? 'border-[#0091ff] bg-blue-50/40 shadow-xs'
+                  : 'border-slate-200 hover:border-slate-300 bg-white'
+              }`}
+            >
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-[#111827]">Full One-Time Payment</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-black">
+                    Best Value
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Instant full access to all course sections and downloadable resources.
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-lg font-black text-[#111827]">${course.price}</span>
+                <span className="text-[10px] text-slate-400 block font-medium">One-time</span>
+              </div>
+            </div>
+
+            {/* Option 2: Instalment Plan (if enabled) */}
+            {course.allowInstalments && (
+              <div
+                onClick={() => setSelectedPlanType('instalment')}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                  selectedPlanType === 'instalment'
+                    ? 'border-[#0091ff] bg-blue-50/40 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                }`}
+              >
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-[#111827]">
+                      {course.maxInstalments || 3}-Part Instalment Plan
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-[#0091ff] text-[9px] font-black">
+                      Flexible
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Pay instalment #1 now to unlock Milestone 1. Pay subsequent instalments to unlock remaining modules.
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-lg font-black text-[#0091ff]">
+                    ${((course.price) / (course.maxInstalments || 3)).toFixed(2)}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-medium">
+                    Due today (Part 1 of {course.maxInstalments || 3})
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              Secure transaction verified server-side with 80:20 provider revenue ledger.
+            </span>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setPaymentModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleProcessPayment}
+              disabled={isProcessingPayment}
+              className="px-6 py-2.5 rounded-xl bg-[#0091ff] hover:bg-[#0080e6] text-white text-xs font-black shadow-md cursor-pointer transition-colors"
+            >
+              {isProcessingPayment
+                ? 'Processing...'
+                : selectedPlanType === 'instalment'
+                ? `Pay First Instalment ($${((course.price) / (course.maxInstalments || 3)).toFixed(2)})`
+                : `Complete Full Payment ($${course.price})`}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Review Submission Modal */}
+      <Modal
+        isOpen={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        title="Write a Verified Graduate Review"
+      >
+        <div className="space-y-4">
+          <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 font-medium">
+            <Award className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>
+              Certificate #{eligibility?.certificateNumber || 'VERIFIED'} confirmed. Your review will display as a verified course graduate.
+            </span>
+          </div>
+
+          {/* Star Rating Select */}
+          <div className="space-y-1">
+            <label className="block text-xs font-bold text-slate-700">Rating *</label>
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setReviewRating(star)}
+                  className="p-1 cursor-pointer focus:outline-none"
+                >
+                  <Star
+                    className={`w-6 h-6 transition-colors ${
+                      star <= reviewRating
+                        ? 'fill-amber-400 text-amber-400'
+                        : 'text-slate-300 hover:text-amber-200'
+                    }`}
+                  />
+                </button>
+              ))}
+              <span className="text-xs font-extrabold text-slate-700 ml-2">
+                {reviewRating} of 5 Stars
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-700">Review Headline</label>
+            <input
+              type="text"
+              value={reviewTitle}
+              onChange={(e) => setReviewTitle(e.target.value)}
+              placeholder="e.g. Excellent curriculum and pacing!"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-700">Detailed Feedback *</label>
+            <textarea
+              rows={4}
+              value={reviewComment}
+              onChange={(e) => setReviewComment(e.target.value)}
+              placeholder="Share what you learned, how the projects helped, and advice for future students..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
+            />
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setReviewModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitReview}
+              disabled={isSubmittingReview}
+              className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
+            >
+              {isSubmittingReview ? 'Submitting...' : 'Publish Verified Review'}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Public Footer */}
       <footer className="bg-white border-t border-slate-200 py-8 px-4 text-center text-xs text-slate-500 space-y-2 mt-12">

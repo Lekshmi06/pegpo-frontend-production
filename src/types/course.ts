@@ -13,6 +13,7 @@ export interface ILesson {
   resourceFileName?: string;
   isPreviewFree?: boolean;
   order: number;
+  isLocked?: boolean;
 }
 
 export interface ICourseSection {
@@ -20,6 +21,8 @@ export interface ICourseSection {
   title: string;
   description?: string;
   order: number;
+  requiredInstalmentNumber?: number; // Progressive milestone requirement
+  isLocked?: boolean;
   lessons: ILesson[];
 }
 
@@ -37,6 +40,11 @@ export interface ICourse {
   language: string;
   price: number;
   currency: string;
+  allowInstalments?: boolean;
+  maxInstalments?: number;
+  instalmentFrequencyDays?: number;
+  averageRating?: number;
+  reviewCount?: number;
   status: CourseStatus;
   sections: ICourseSection[];
   totalLessons: number;
@@ -57,6 +65,108 @@ export interface IEnrollment {
   completedLessons: string[];
   lastAccessedLesson?: string;
   progressPercentage: number;
+  completedAt?: string;
+}
+
+export type PaymentPlanType = 'full' | 'instalment';
+export type PaymentPlanStatus = 'pending' | 'active' | 'completed' | 'defaulted' | 'cancelled';
+export type InstalmentStatus = 'pending' | 'paid' | 'overdue' | 'failed';
+
+export interface IInstalmentItem {
+  instalmentNumber: number;
+  amount: number;
+  dueDate: string;
+  status: InstalmentStatus;
+  paidAt?: string;
+  transactionId?: string;
+  gatewayPaymentId?: string;
+}
+
+export interface ICoursePaymentPlan {
+  _id: string;
+  learner: string;
+  course: string | ICourse;
+  planType: PaymentPlanType;
+  totalAmount: number;
+  currency: string;
+  totalInstalments: number;
+  paidInstalmentsCount: number;
+  status: PaymentPlanStatus;
+  schedule: IInstalmentItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IFinancialTransaction {
+  _id: string;
+  transactionId: string;
+  course: {
+    _id: string;
+    title: string;
+    thumbnail?: string;
+    price?: number;
+  };
+  learner: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  instalmentNumber: number;
+  grossAmount: number;
+  currency: string;
+  providerShare: number;
+  platformShare: number;
+  providerSharePercentage: number;
+  platformSharePercentage: number;
+  settlementStatus: 'pending' | 'settled' | 'held' | 'refunded';
+  paymentStatus: 'success' | 'failed' | 'refunded';
+  gatewayProvider: string;
+  gatewayTransactionId: string;
+  createdAt: string;
+}
+
+export interface ProviderFinancialSummary {
+  summary: {
+    totalGrossRevenue: number;
+    totalProviderEarnings: number;
+    totalPlatformCommission: number;
+    pendingSettlements: number;
+    settledEarnings: number;
+    totalTransactions: number;
+    fullPaymentsCount: number;
+    totalInstalmentPaymentsCount: number;
+    activeInstalmentPlansCount: number;
+    revenueShareRule: string;
+  };
+  transactions: IFinancialTransaction[];
+}
+
+export interface ICourseReview {
+  _id: string;
+  course: string;
+  learner: string;
+  learnerName: string;
+  rating: number;
+  title?: string;
+  comment: string;
+  createdAt: string;
+}
+
+export interface ICertificate {
+  _id: string;
+  certificateNumber: string;
+  course: string | ICourse;
+  learner: string;
+  recipientName: string;
+  courseTitle: string;
+  providerName?: string;
+  issueDate: string;
+}
+
+export interface ReviewEligibilityResult {
+  eligible: boolean;
+  reason?: string;
+  certificateNumber?: string;
   completedAt?: string;
 }
 

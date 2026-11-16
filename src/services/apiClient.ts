@@ -1,5 +1,16 @@
 const getApiBaseUrl = (): string => {
   const envUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+
+  // If running locally in development or test preview on localhost, ensure we communicate with local backend
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ) {
+    if (envUrl && envUrl.includes('onrender.com')) {
+      return 'http://localhost:5000/api';
+    }
+  }
+
   if (!envUrl) {
     return '/api';
   }

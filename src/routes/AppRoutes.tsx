@@ -101,7 +101,6 @@ const CompanySettings = lazy(() => import('../pages/institution/CompanySettings'
 const InstitutionJoin = lazy(() => import('../pages/institution/InstitutionJoin'));
 
 // Course Marketplace & LMS Modules
-// Course Marketplace & LMS Modules
 const ProviderLayout = lazy(() => import('../layouts/ProviderLayout'));
 const ProviderDashboard = lazy(() => import('../pages/provider/ProviderDashboard'));
 const CourseBuilder = lazy(() => import('../pages/provider/CourseBuilder'));
@@ -112,11 +111,27 @@ const CourseDetails = lazy(() => import('../pages/marketplace/CourseDetails'));
 const CourseLearningPlayer = lazy(() => import('../pages/learner/CourseLearningPlayer'));
 const EmbeddedWorkspace = lazy(() => import('../pages/workspace/EmbeddedWorkspace'));
 
+// Tuition Marketplace & Scheduling Modules
+const TuitionMarketplace = lazy(() => import('../pages/tuition/TuitionMarketplace'));
+const TuitionProviderPublicProfile = lazy(() => import('../pages/tuition/TuitionProviderPublicProfile'));
+const TuitionStudentDashboard = lazy(() => import('../pages/student/tuition/TuitionStudentDashboard'));
+const TuitionProviderLayout = lazy(() => import('../layouts/TuitionProviderLayout'));
+const TuitionProviderDashboard = lazy(() => import('../pages/tuition-provider/TuitionProviderDashboard'));
+const TuitionProviderOnboarding = lazy(() => import('../pages/tuition-provider/TuitionProviderOnboarding'));
+const TuitionProviderOfferings = lazy(() => import('../pages/tuition-provider/TuitionProviderOfferings'));
+const TuitionProviderRequests = lazy(() => import('../pages/tuition-provider/TuitionProviderRequests'));
+const TuitionProviderSchedule = lazy(() => import('../pages/tuition-provider/TuitionProviderSchedule'));
+const TuitionProviderStudents = lazy(() => import('../pages/tuition-provider/TuitionProviderStudents'));
+const TuitionProviderFinancials = lazy(() => import('../pages/tuition-provider/TuitionProviderFinancials'));
+
 // Public Informational & Legal Pages
 const HelpFaq = lazy(() => import('../pages/public/HelpFaq'));
 const PrivacyPolicy = lazy(() => import('../pages/public/PrivacyPolicy'));
 const TermsOfService = lazy(() => import('../pages/public/TermsOfService'));
 const CookieSettings = lazy(() => import('../pages/public/CookieSettings'));
+
+// Native Live Classroom (WebRTC)
+const NativeLiveClassroom = lazy(() => import('../components/classroom/NativeLiveClassroom'));
 
 // Security & Authorization Route Guard
 import ProtectedRoute from '../components/common/ProtectedRoute';
@@ -154,6 +169,8 @@ export default function AppRoutes() {
         <Route path="/onboarding/postgraduate" element={<PostgraduateOnboarding />} />
         <Route path="/onboarding/competitive" element={<CompetitiveExamOnboarding />} />
         <Route path="/onboarding/teacher" element={<TeacherOnboarding />} />
+        <Route path="/onboarding/tuition" element={<Navigate to="/tuition-provider/onboarding" replace />} />
+        <Route path="/onboarding/tuition-provider" element={<Navigate to="/tuition-provider/onboarding" replace />} />
         <Route path="/onboarding/researcher" element={<ResearcherOnboarding />} />
         <Route path="/onboarding/company" element={<CompanyOnboarding />} />
         <Route path="/company/setup" element={<CompanyOnboarding />} />
@@ -195,6 +212,7 @@ export default function AppRoutes() {
           <Route path="calendar" element={<StudentCalendar />} />
           <Route path="projects" element={<Projects />} />
           <Route path="bookshelf" element={<Bookshelf />} />
+          <Route path="tuition" element={<TuitionStudentDashboard />} />
         </Route>
 
         {/* Teacher Portal (Protected) */}
@@ -251,6 +269,24 @@ export default function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={['teacher']}>
               <IntegratedSmartBoard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Native Live Classroom (WebRTC Real-Time) */}
+        <Route
+          path="/live/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'learner', 'personal', 'teacher', 'tuition_provider', 'provider', 'institution', 'company']}>
+              <NativeLiveClassroom />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/classroom/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'learner', 'personal', 'teacher', 'tuition_provider', 'provider', 'institution', 'company']}>
+              <NativeLiveClassroom />
             </ProtectedRoute>
           }
         />
@@ -330,6 +366,31 @@ export default function AppRoutes() {
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/courses" element={<Marketplace />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
+
+        {/* Tuition Marketplace (Public Discovery & Mentors) */}
+        <Route path="/tuition" element={<TuitionMarketplace />} />
+        <Route path="/tuition/marketplace" element={<TuitionMarketplace />} />
+        <Route path="/tuition/provider/:id" element={<TuitionProviderPublicProfile />} />
+
+        {/* Tuition Provider Studio Portal (Protected) */}
+        <Route
+          path="/tuition-provider"
+          element={
+            <ProtectedRoute allowedRoles={['tuition_provider', 'teacher', 'provider']}>
+              <TuitionProviderLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<TuitionProviderDashboard />} />
+          <Route path="dashboard" element={<TuitionProviderDashboard />} />
+          <Route path="profile" element={<TuitionProviderOnboarding />} />
+          <Route path="onboarding" element={<TuitionProviderOnboarding />} />
+          <Route path="offerings" element={<TuitionProviderOfferings />} />
+          <Route path="requests" element={<TuitionProviderRequests />} />
+          <Route path="schedule" element={<TuitionProviderSchedule />} />
+          <Route path="students" element={<TuitionProviderStudents />} />
+          <Route path="financials" element={<TuitionProviderFinancials />} />
+        </Route>
 
         {/* Protected Learning Player */}
         <Route

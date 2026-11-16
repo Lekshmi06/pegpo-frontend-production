@@ -7,7 +7,8 @@ export type UserRole =
   | 'work'
   | 'personal'
   | 'provider'
-  | 'learner';
+  | 'learner'
+  | 'tuition_provider';
 
 export type LearningPath =
   | 'school'
@@ -74,6 +75,8 @@ export interface UserSession {
   gender?: string;
   avatar?: string;
   role?: UserRole;
+  activeRole?: UserRole;
+  roles?: UserRole[];
   learningPath?: LearningPath;
   goal?: string;
   language?: string;

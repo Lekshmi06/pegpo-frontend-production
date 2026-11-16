@@ -113,6 +113,28 @@ export const ChooseJourneySection: React.FC<ChooseJourneySectionProps> = ({ onOp
       secondaryCta: 'Request Demo',
       secondaryAction: onOpenDemo,
     },
+    {
+      id: 'tuition_provider',
+      title: 'Tuition Providers & Mentors',
+      subtitle: 'Build your independent tutoring practice with verified diamond tiers, automated scheduling, and live WebRTC classrooms.',
+      badge: 'Tuition Marketplace & Studio',
+      badgeColor: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+      icon: Award,
+      accentBorder: 'hover:border-amber-500/60',
+      glowColor: 'from-amber-600/20 to-orange-500/10',
+      metric: '100% Direct Student Reach',
+      metricSub: 'with instant booking requests and scheduled live classrooms',
+      features: [
+        'Points-based transparent tier evaluation (Standard to Diamond)',
+        'Custom 1:1, 1:2 duo, and group cohort offerings with automated capacity',
+        'Native WebRTC Live Classroom with interactive SmartBoard dock',
+        'Direct booking approvals, simulated escrow payment & student reviews',
+      ],
+      primaryCta: 'Join as Tuition Provider',
+      primaryAction: () => navigate('/signup?type=tuition_provider'),
+      secondaryCta: 'Provider Sign In',
+      secondaryAction: () => navigate('/login'),
+    },
   ];
 
   return (

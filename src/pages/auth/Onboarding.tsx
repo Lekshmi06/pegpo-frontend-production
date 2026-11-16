@@ -19,6 +19,7 @@ import {
   Award,
   FolderPlus,
   FileCheck,
+  Calendar,
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { Button } from '../../components/ui/Button';
@@ -242,6 +243,41 @@ export const ROLE_GOAL_MAP: Record<string, GoalItem[]> = {
       description: 'Monitor course views, ratings, enrollment trends, and revenue metrics.',
       icon: BarChart3,
       route: '/provider',
+    },
+  ],
+
+  tuition_provider: [
+    {
+      id: 'tuition_onboarding_profile',
+      title: 'Tutor Verification & Profile Setup',
+      badge: 'Step 1: Verification',
+      description: 'Submit your educational qualifications, degrees, experience, and subjects for diamond-tier rating.',
+      icon: Award,
+      route: '/tuition-provider/onboarding',
+    },
+    {
+      id: 'tuition_offerings_setup',
+      title: 'Tuition Offerings & Batches',
+      badge: 'Step 2: Offerings',
+      description: 'Create 1:1, 1:2 duo, and group cohort batches with custom schedules, pricing, and live links.',
+      icon: BookOpen,
+      route: '/tuition-provider/offerings',
+    },
+    {
+      id: 'tuition_schedule_setup',
+      title: 'Interactive Schedule & Calendar',
+      badge: 'Step 3: Schedule',
+      description: 'Manage upcoming classes, take student attendance, and conduct live WebRTC classrooms.',
+      icon: Calendar,
+      route: '/tuition-provider/schedule',
+    },
+    {
+      id: 'tuition_dashboard_overview',
+      title: 'Tuition Provider Studio',
+      badge: 'Studio Hub',
+      description: 'Access your full analytics, booking requests, student reviews, and financial earnings.',
+      icon: Layers,
+      route: '/tuition-provider/dashboard',
     },
   ],
 

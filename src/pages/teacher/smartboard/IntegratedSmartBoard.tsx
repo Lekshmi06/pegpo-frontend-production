@@ -23,11 +23,13 @@ import {
   Presentation,
   Download,
   Trash2,
+  Radio,
 } from 'lucide-react';
 import { WhiteboardCanvas, WhiteboardCanvasRef, CanvasElement } from './WhiteboardCanvas';
 import { lessonPlanService } from '../../../services/lessonPlanService';
 import { LessonPlan, LessonSession, LessonResource } from '../../../types/lessonPlan';
 import { Button } from '../../../components/ui/Button';
+import { SmartBoardLiveDock } from '../../../components/classroom/SmartBoardLiveDock';
 import { Loader } from '../../../components/ui/Loader';
 import { useToast } from '../../../hooks/useToast';
 
@@ -60,6 +62,8 @@ export default function IntegratedSmartBoard() {
   const canvasRef = useRef<WhiteboardCanvasRef>(null);
   const [savedBoards, setSavedBoards] = useState<SavedBoardSnapshot[]>([]);
   const [previewBoardModal, setPreviewBoardModal] = useState<SavedBoardSnapshot | null>(null);
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [liveSessionId, setLiveSessionId] = useState('');
 
   // Interactive teaching states
   const [completedObjectives, setCompletedObjectives] = useState<Record<number, boolean>>({});
@@ -314,6 +318,39 @@ export default function IntegratedSmartBoard() {
 
         {/* Right header controls */}
         <div className="flex items-center gap-2">
+          {/* Live Broadcast Trigger */}
+          <button
+            onClick={() => {
+              if (!isLiveActive) {
+                const sid = `smartboard-integrated-${plan?._id || 'plan'}-${currentSession?.sessionNumber || 1}`;
+                setLiveSessionId(sid);
+                setIsLiveActive(true);
+                toast.success('Live classroom broadcast started!');
+              } else {
+                setIsLiveActive(false);
+                toast.info('Live classroom broadcast closed');
+              }
+            }}
+            title={isLiveActive ? 'Live broadcast active' : 'Start Live Broadcast'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+              isLiveActive
+                ? 'bg-rose-600 hover:bg-rose-500 text-white animate-pulse'
+                : 'bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 border border-emerald-500/40'
+            }`}
+          >
+            {isLiveActive ? (
+              <>
+                <Radio className="w-3.5 h-3.5 text-white" />
+                <span>Broadcasting Live</span>
+              </>
+            ) : (
+              <>
+                <Video className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Go Live</span>
+              </>
+            )}
+          </button>
+
           {/* Save Board Snapshot Button */}
           <button
             onClick={handleSaveBoardSnapshot}
@@ -923,6 +960,16 @@ export default function IntegratedSmartBoard() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Live Classroom Video Dock */}
+      {isLiveActive && liveSessionId && (
+        <SmartBoardLiveDock
+          sessionId={liveSessionId}
+          sessionTitle={`${plan?.chapterTitle || 'Lesson'} • Session ${currentSession?.sessionNumber || 1}`}
+          onClose={() => setIsLiveActive(false)}
+          onOpenFullClassroom={() => navigate(`/live/${liveSessionId}`)}
+        />
       )}
     </div>
   );

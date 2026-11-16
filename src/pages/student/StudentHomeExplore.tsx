@@ -6,10 +6,12 @@ import userImg from '../../assets/user.png';
 import exploreRobot from '../../assets/explore-robot.png';
 import explorePaper from '../../assets/explore-paper.png';
 import exploreMan from '../../assets/explore-man.png';
+import { ProfileDropdownMenu } from '../../components/common/ProfileDropdownMenu';
 
 export default function StudentHomeExplore() {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('For You');
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const categories = [
     'For You',
@@ -67,7 +69,7 @@ export default function StudentHomeExplore() {
 
           <div className="relative">
             <button
-              onClick={() => navigate('/student/profile')}
+              onClick={() => setShowProfileMenu((prev) => !prev)}
               className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
               title="Student Profile"
             >
@@ -77,6 +79,11 @@ export default function StudentHomeExplore() {
                 className="w-9 h-9 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs cursor-pointer"
               />
             </button>
+            <ProfileDropdownMenu
+              isOpen={showProfileMenu}
+              onClose={() => setShowProfileMenu(false)}
+              align="right"
+            />
           </div>
         </div>
       </header>

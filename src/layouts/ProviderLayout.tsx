@@ -15,11 +15,13 @@ import {
 import logoImg from '../assets/logo.png';
 import userImg from '../assets/user.png';
 import { authService } from '../services/authService';
+import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
 
 export default function ProviderLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const currentUser = authService.getCurrentUser();
 
   const navItems = [
@@ -153,6 +155,25 @@ export default function ProviderLayout() {
               <PlusCircle className="w-4 h-4" />
               <span>New Course</span>
             </Link>
+
+            <div className="relative">
+              <button
+                onClick={() => setShowProfileMenu((prev) => !prev)}
+                className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
+                title="User Workspace Menu"
+              >
+                <img
+                  src={userImg}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs"
+                />
+              </button>
+              <ProfileDropdownMenu
+                isOpen={showProfileMenu}
+                onClose={() => setShowProfileMenu(false)}
+                align="right"
+              />
+            </div>
           </div>
         </header>
 

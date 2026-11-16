@@ -70,6 +70,15 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
               </span>
             </Link>
             <Link
+              to="/tuition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
+            >
+              <span>Find Tutors</span>
+              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 rounded border border-emerald-500/30">
+                1:1 Live
+              </span>
+            </Link>
+            <Link
               to="/institution"
               className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
             >

@@ -58,6 +58,7 @@ export default function CourseBuilder() {
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [sectionTitle, setSectionTitle] = useState('');
   const [sectionDescription, setSectionDescription] = useState('');
+  const [sectionInstalmentMilestone, setSectionInstalmentMilestone] = useState(1);
 
   // Lesson Modal State
   const [lessonModalOpen, setLessonModalOpen] = useState(false);
@@ -112,6 +113,9 @@ export default function CourseBuilder() {
           level: course.level || 'All Levels',
           language: course.language || 'English',
           price: course.price || 0,
+          allowInstalments: Boolean(course.allowInstalments),
+          maxInstalments: course.maxInstalments || 3,
+          instalmentFrequencyDays: course.instalmentFrequencyDays || 30,
         });
         toast.success('Course created! Now you can build your curriculum.');
         navigate(`/provider/courses/${created._id}/builder`);
@@ -135,6 +139,7 @@ export default function CourseBuilder() {
     setEditingSectionId(null);
     setSectionTitle('');
     setSectionDescription('');
+    setSectionInstalmentMilestone((course.sections?.length || 0) + 1);
     setSectionModalOpen(true);
   };
 
@@ -142,6 +147,7 @@ export default function CourseBuilder() {
     setEditingSectionId(sec._id || null);
     setSectionTitle(sec.title);
     setSectionDescription(sec.description || '');
+    setSectionInstalmentMilestone(sec.requiredInstalmentNumber || 1);
     setSectionModalOpen(true);
   };
 
@@ -163,14 +169,16 @@ export default function CourseBuilder() {
           course._id,
           editingSectionId,
           sectionTitle,
-          sectionDescription
+          sectionDescription,
+          sectionInstalmentMilestone
         );
         toast.success('Section updated');
       } else {
         updated = await courseService.addSection(
           course._id,
           sectionTitle,
-          sectionDescription
+          sectionDescription,
+          sectionInstalmentMilestone
         );
         toast.success('Section added to curriculum');
       }
@@ -729,23 +737,115 @@ export default function CourseBuilder() {
             </div>
 
             {Number(course.price) > 0 && (
-              <div className="space-y-1.5 animate-in fade-in duration-150">
-                <label className="block text-xs font-bold text-slate-700">Course Price (USD)</label>
-                <div className="relative">
-                  <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-xs">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={course.price || ''}
-                    onChange={(e) => setCourse({ ...course, price: Number(e.target.value) })}
-                    placeholder="29.99"
-                    className="w-full pl-8 pr-4 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
-                  />
+              <>
+                <div className="space-y-1.5 animate-in fade-in duration-150">
+                  <label className="block text-xs font-bold text-slate-700">Course Price (USD)</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 font-bold text-xs">
+                      $
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={course.price || ''}
+                      onChange={(e) => setCourse({ ...course, price: Number(e.target.value) })}
+                      placeholder="29.99"
+                      className="w-full pl-8 pr-4 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-[#111827] focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
+                    />
+                  </div>
                 </div>
-              </div>
+
+                {/* Instalment Payment Option */}
+                <div className="pt-2 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-blue-50/50 border border-blue-100">
+                    <input
+                      type="checkbox"
+                      id="allowInstalments"
+                      checked={Boolean(course.allowInstalments)}
+                      onChange={(e) =>
+                        setCourse({
+                          ...course,
+                          allowInstalments: e.target.checked,
+                          maxInstalments: course.maxInstalments || 3,
+                          instalmentFrequencyDays: course.instalmentFrequencyDays || 30,
+                        })
+                      }
+                      className="w-4 h-4 rounded text-[#0091ff] focus:ring-[#0091ff] cursor-pointer"
+                    />
+                    <div>
+                      <label
+                        htmlFor="allowInstalments"
+                        className="text-xs font-bold text-[#1c3352] cursor-pointer block"
+                      >
+                        Enable Instalment Payment Plans
+                      </label>
+                      <p className="text-[10px] text-slate-500">
+                        Allow learners to pay in modular instalments and unlock curriculum milestones progressively.
+                      </p>
+                    </div>
+                  </div>
+
+                  {course.allowInstalments && (
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 animate-in fade-in duration-150">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">
+                            Number of Instalments
+                          </label>
+                          <select
+                            value={course.maxInstalments || 3}
+                            onChange={(e) =>
+                              setCourse({ ...course, maxInstalments: Number(e.target.value) })
+                            }
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white"
+                          >
+                            <option value={2}>2 Instalments</option>
+                            <option value={3}>3 Instalments</option>
+                            <option value={4}>4 Instalments</option>
+                            <option value={6}>6 Instalments</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-[11px] font-bold text-slate-700">
+                            Frequency (Days)
+                          </label>
+                          <select
+                            value={course.instalmentFrequencyDays || 30}
+                            onChange={(e) =>
+                              setCourse({
+                                ...course,
+                                instalmentFrequencyDays: Number(e.target.value),
+                              })
+                            }
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 bg-white"
+                          >
+                            <option value={14}>Every 14 Days (Bi-weekly)</option>
+                            <option value={30}>Every 30 Days (Monthly)</option>
+                            <option value={60}>Every 60 Days (Bi-monthly)</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Live Calculation Preview */}
+                      <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs space-y-1">
+                        <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">
+                          Learner Plan Preview:
+                        </span>
+                        <div className="font-extrabold text-[#111827]">
+                          ${((course.price || 0) / (course.maxInstalments || 3)).toFixed(2)} /{' '}
+                          {course.instalmentFrequencyDays === 14 ? 'bi-week' : 'month'} ×{' '}
+                          {course.maxInstalments || 3} instalments
+                        </div>
+                        <p className="text-[10px] text-emerald-600 font-bold">
+                          ✓ Provider Receives 80% (${(((course.price || 0) * 0.8) / (course.maxInstalments || 3)).toFixed(2)} / instalment)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
 
             <div className="pt-4 flex justify-between">
@@ -858,6 +958,27 @@ export default function CourseBuilder() {
               placeholder="What this section covers"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-bold text-slate-700">
+              Instalment Milestone Requirement
+            </label>
+            <p className="text-[10px] text-slate-400">
+              Students on instalment plans unlock this module only after paying this instalment number.
+            </p>
+            <select
+              value={sectionInstalmentMilestone}
+              onChange={(e) => setSectionInstalmentMilestone(Number(e.target.value))}
+              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0091ff]/20 focus:border-[#0091ff]"
+            >
+              <option value={1}>Instalment #1 (Initial Enrollment)</option>
+              <option value={2}>Instalment #2</option>
+              <option value={3}>Instalment #3</option>
+              <option value={4}>Instalment #4</option>
+              <option value={5}>Instalment #5</option>
+              <option value={6}>Instalment #6</option>
+            </select>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

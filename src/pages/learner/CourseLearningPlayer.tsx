@@ -18,10 +18,19 @@ import {
   Award,
   ExternalLink,
   AlertCircle,
+  Lock,
+  CreditCard,
 } from 'lucide-react';
 import { courseService } from '../../services/courseService';
-import { ICourse, IEnrollment, ILesson } from '../../types/course';
+import {
+  ICourse,
+  IEnrollment,
+  ILesson,
+  ICoursePaymentPlan,
+  ICertificate,
+} from '../../types/course';
 import { Loader } from '../../components/ui/Loader';
+import { Modal } from '../../components/ui/Modal';
 import { useToast } from '../../hooks/useToast';
 import { validateLessonVideoUrl } from '../../utils/youtubeUtils';
 import logoImg from '../../assets/logo.png';
@@ -34,55 +43,100 @@ export default function CourseLearningPlayer() {
   const [course, setCourse] = useState<ICourse | null>(null);
   const [enrollment, setEnrollment] = useState<IEnrollment | null>(null);
   const [currentLesson, setCurrentLesson] = useState<ILesson | null>(null);
+  const [paymentPlan, setPaymentPlan] = useState<ICoursePaymentPlan | null>(null);
+  const [certificate, setCertificate] = useState<ICertificate | null>(null);
+  const [certModalOpen, setCertModalOpen] = useState(false);
+  const [isPayingInstalment, setIsPayingInstalment] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingProgress, setIsUpdatingProgress] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Flattened list of all lessons in course for linear navigation
-  const [allLessons, setAllLessons] = useState<{ lesson: ILesson; sectionTitle: string }[]>([]);
+  const [allLessons, setAllLessons] = useState<{ lesson: ILesson; sectionTitle: string; sectionInstalment?: number }[]>([]);
+
+  const loadPlayerData = async (courseId: string) => {
+    try {
+      setIsLoading(true);
+      const data: any = await courseService.getLearnerCourseLearningState(courseId);
+      setCourse(data.course);
+      setEnrollment(data.enrollment);
+      if (data.paymentPlan) {
+        setPaymentPlan(data.paymentPlan);
+      }
+
+      // Build flat array of lessons
+      const flat: { lesson: ILesson; sectionTitle: string; sectionInstalment?: number }[] = [];
+      data.course.sections?.forEach((sec: any) => {
+        sec.lessons?.forEach((les: any) => {
+          flat.push({
+            lesson: { ...les, isLocked: sec.isLocked && !les.isPreviewFree },
+            sectionTitle: sec.title,
+            sectionInstalment: sec.requiredInstalmentNumber || 1,
+          });
+        });
+      });
+      setAllLessons(flat);
+
+      // Check certificate if completed
+      if (data.enrollment?.progressPercentage >= 100 || data.enrollment?.status === 'completed') {
+        try {
+          const cert = await courseService.getCourseCertificate(courseId);
+          setCertificate(cert);
+        } catch {
+          // Certificate generation in progress
+        }
+      }
+
+      // Resume at lastAccessedLesson, or first incomplete lesson, or first lesson
+      if (flat.length > 0) {
+        const lastId = data.enrollment?.lastAccessedLesson;
+        let target = flat.find((item) => item.lesson._id === lastId);
+
+        if (!target) {
+          // Find first incomplete unlocked lesson
+          const completedSet = new Set(data.enrollment?.completedLessons || []);
+          target = flat.find((item) => item.lesson._id && !completedSet.has(item.lesson._id) && !item.lesson.isLocked);
+        }
+
+        setCurrentLesson(target ? target.lesson : flat[0].lesson);
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load course player');
+      navigate(`/courses/${courseId}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!id) return;
-
-    const loadPlayer = async () => {
-      try {
-        setIsLoading(true);
-        const data = await courseService.getLearnerCourseLearningState(id);
-        setCourse(data.course);
-        setEnrollment(data.enrollment);
-
-        // Build flat array of lessons
-        const flat: { lesson: ILesson; sectionTitle: string }[] = [];
-        data.course.sections?.forEach((sec) => {
-          sec.lessons?.forEach((les) => {
-            flat.push({ lesson: les, sectionTitle: sec.title });
-          });
-        });
-        setAllLessons(flat);
-
-        // Resume at lastAccessedLesson, or first incomplete lesson, or first lesson
-        if (flat.length > 0) {
-          const lastId = data.enrollment?.lastAccessedLesson;
-          let target = flat.find((item) => item.lesson._id === lastId);
-
-          if (!target) {
-            // Find first incomplete lesson
-            const completedSet = new Set(data.enrollment?.completedLessons || []);
-            target = flat.find((item) => item.lesson._id && !completedSet.has(item.lesson._id));
-          }
-
-          setCurrentLesson(target ? target.lesson : flat[0].lesson);
-        }
-      } catch (err: any) {
-        toast.error(err.message || 'Failed to load course player');
-        navigate(`/courses/${id}`);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadPlayer();
+    loadPlayerData(id);
   }, [id, navigate]);
+
+  const handlePayNextInstalment = async () => {
+    if (!paymentPlan?._id || !id) return;
+    try {
+      setIsPayingInstalment(true);
+      const nextOrder = await courseService.createNextInstalmentOrder(paymentPlan._id);
+
+      // Server-side verification with simulation signature
+      await courseService.verifyPayment({
+        paymentPlanId: paymentPlan._id,
+        instalmentNumber: nextOrder.instalmentNumber,
+        orderId: nextOrder.orderId,
+        gatewayTransactionId: nextOrder.simulationTransactionId || `TXN-INST-${Date.now()}`,
+        signature: nextOrder.simulationToken,
+        gatewayProvider: 'edupye_secure_gateway',
+      });
+
+      toast.success(`Instalment #${nextOrder.instalmentNumber} payment confirmed! Next milestone unlocked.`);
+      await loadPlayerData(id);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to process instalment payment');
+    } finally {
+      setIsPayingInstalment(false);
+    }
+  };
 
   const currentLessonIdx = allLessons.findIndex(
     (item) => item.lesson._id === currentLesson?._id
@@ -125,8 +179,13 @@ export default function CourseLearningPlayer() {
     }
   };
 
-  const handleSelectLesson = (les: ILesson) => {
-    setCurrentLesson(les);
+  const handleSelectLesson = (les: ILesson, secIsLocked?: boolean) => {
+    const match = allLessons.find((item) => item.lesson._id === les._id);
+    if (match) {
+      setCurrentLesson(match.lesson);
+    } else {
+      setCurrentLesson({ ...les, isLocked: Boolean(secIsLocked && !les.isPreviewFree) });
+    }
   };
 
   const handlePrevLesson = () => {
@@ -195,10 +254,13 @@ export default function CourseLearningPlayer() {
           </div>
 
           {progress >= 100 && (
-            <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+            <button
+              onClick={() => setCertModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all cursor-pointer shadow-xs"
+            >
               <Award className="w-4 h-4" />
-              <span>Completed</span>
-            </div>
+              <span>View Certificate</span>
+            </button>
           )}
 
           <button
@@ -218,8 +280,45 @@ export default function CourseLearningPlayer() {
           {currentLesson ? (
             <div className="max-w-4xl mx-auto w-full p-4 sm:p-8 space-y-6 flex-1 flex flex-col justify-between">
               <div className="space-y-6">
-                {/* Media Player Box */}
-                {currentLesson.contentType === 'video' ? (
+                {/* Media Player Box or Locked Milestone Banner */}
+                {currentLesson.isLocked ? (
+                  <div className="bg-[#1e293b] rounded-3xl p-8 sm:p-12 border border-amber-500/30 text-center space-y-5 shadow-2xl">
+                    <div className="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/20">
+                      <Lock className="w-8 h-8" />
+                    </div>
+                    <div className="space-y-1.5 max-w-md mx-auto">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-black uppercase">
+                        Milestone Content Locked
+                      </div>
+                      <h3 className="text-xl font-black text-white">
+                        {currentLesson.title}
+                      </h3>
+                      <p className="text-xs text-slate-300 font-normal leading-relaxed">
+                        This module requires payment of the next instalment milestone to unlock full video lectures, interactive reading materials, and curriculum resources.
+                      </p>
+                    </div>
+
+                    {paymentPlan && paymentPlan.status !== 'completed' && (
+                      <div className="pt-2">
+                        <button
+                          onClick={handlePayNextInstalment}
+                          disabled={isPayingInstalment}
+                          className="px-6 py-3 rounded-2xl bg-[#0091ff] hover:bg-[#0080e6] text-white text-xs font-black shadow-lg transition-all cursor-pointer inline-flex items-center gap-2"
+                        >
+                          <CreditCard className="w-4 h-4" />
+                          <span>
+                            {isPayingInstalment
+                              ? 'Processing Payment...'
+                              : `Pay Next Instalment ($${
+                                  paymentPlan.schedule?.find((s) => s.status === 'pending')?.amount ||
+                                  ((course.price || 0) / (course.maxInstalments || 3)).toFixed(2)
+                                })`}
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ) : currentLesson.contentType === 'video' ? (
                   (() => {
                     const validation = currentLesson.videoUrl
                       ? validateLessonVideoUrl(currentLesson.videoUrl)
@@ -449,11 +548,12 @@ export default function CourseLearningPlayer() {
                     {sec.lessons?.map((les, lIdx) => {
                       const isSelected = currentLesson?._id === les._id;
                       const isCompleted = les._id ? completedLessonsSet.has(les._id) : false;
+                      const isLocked = Boolean(les.isLocked || (sec.isLocked && !les.isPreviewFree));
 
                       return (
                         <button
                           key={les._id || lIdx}
-                          onClick={() => handleSelectLesson(les)}
+                          onClick={() => handleSelectLesson(les, sec.isLocked)}
                           className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left text-xs transition-colors cursor-pointer ${
                             isSelected
                               ? 'bg-[#0091ff] text-white shadow-xs font-bold'
@@ -461,7 +561,9 @@ export default function CourseLearningPlayer() {
                           }`}
                         >
                           <div className="flex items-center gap-2.5 min-w-0">
-                            {isCompleted ? (
+                            {isLocked ? (
+                              <Lock className="w-4 h-4 shrink-0 text-amber-400" />
+                            ) : isCompleted ? (
                               <CheckCircle2
                                 className={`w-4 h-4 shrink-0 ${
                                   isSelected ? 'text-white' : 'text-emerald-400'
@@ -472,7 +574,7 @@ export default function CourseLearningPlayer() {
                             ) : (
                               <Circle className="w-4 h-4 shrink-0 text-slate-500" />
                             )}
-                            <span className="truncate">{les.title}</span>
+                            <span className={`truncate ${les.isLocked ? 'text-slate-400' : ''}`}>{les.title}</span>
                           </div>
 
                           <span
@@ -492,6 +594,78 @@ export default function CourseLearningPlayer() {
           </aside>
         )}
       </div>
+      {/* Certificate of Completion Modal */}
+      <Modal
+        isOpen={certModalOpen}
+        onClose={() => setCertModalOpen(false)}
+        title="Official Certificate of Completion"
+      >
+        <div className="space-y-6 text-center py-2">
+          <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-2 border-emerald-200 shadow-sm">
+            <Award className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">
+              Verified Credential
+            </span>
+            <h3 className="text-xl font-black text-[#111827]">
+              Certificate of Mastery
+            </h3>
+            <p className="text-xs text-slate-500 font-medium">
+              This certifies that
+            </p>
+            <p className="text-base font-extrabold text-[#1c3352]">
+              {certificate?.recipientName || 'Verified Learner'}
+            </p>
+            <p className="text-xs text-slate-500 font-medium">
+              has successfully completed all required modules and milestone assessments in
+            </p>
+            <p className="text-sm font-black text-[#111827]">
+              "{course.title}"
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-left space-y-2 text-xs">
+            <div className="flex justify-between text-slate-600">
+              <span className="text-slate-400 font-medium">Certificate ID:</span>
+              <span className="font-mono font-bold text-[#111827]">
+                {certificate?.certificateNumber || 'CERT-VERIFIED'}
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span className="text-slate-400 font-medium">Issued On:</span>
+              <span className="font-bold text-[#111827]">
+                {certificate?.issueDate ? new Date(certificate.issueDate).toLocaleDateString() : 'Today'}
+              </span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span className="text-slate-400 font-medium">Authorized Provider:</span>
+              <span className="font-bold text-[#111827]">
+                {course.providerName || 'EduPye Academy'}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                setCertModalOpen(false);
+                navigate(`/courses/${course._id}`);
+              }}
+              className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs cursor-pointer"
+            >
+              Write Graduate Review
+            </button>
+            <button
+              onClick={() => setCertModalOpen(false)}
+              className="px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -5,6 +5,12 @@ import {
   ProviderDashboardStats,
   CourseFilterQuery,
   ILesson,
+  ICoursePaymentPlan,
+  ProviderFinancialSummary,
+  ICourseReview,
+  ICertificate,
+  ReviewEligibilityResult,
+  PaymentPlanType,
 } from '../types/course';
 
 export const courseService = {
@@ -58,6 +64,9 @@ export const courseService = {
     language?: string;
     price?: number;
     currency?: string;
+    allowInstalments?: boolean;
+    maxInstalments?: number;
+    instalmentFrequencyDays?: number;
   }): Promise<ICourse> => {
     const res = await apiRequest<{ success: boolean; data: ICourse }>('/courses', {
       method: 'POST',
@@ -104,13 +113,14 @@ export const courseService = {
   addSection: async (
     courseId: string,
     title: string,
-    description?: string
+    description?: string,
+    requiredInstalmentNumber?: number
   ): Promise<ICourse> => {
     const res = await apiRequest<{ success: boolean; data: ICourse }>(
       `/courses/${courseId}/sections`,
       {
         method: 'POST',
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, requiredInstalmentNumber }),
       }
     );
     return res.data;
@@ -120,13 +130,14 @@ export const courseService = {
     courseId: string,
     sectionId: string,
     title?: string,
-    description?: string
+    description?: string,
+    requiredInstalmentNumber?: number
   ): Promise<ICourse> => {
     const res = await apiRequest<{ success: boolean; data: ICourse }>(
       `/courses/${courseId}/sections/${sectionId}`,
       {
         method: 'PUT',
-        body: JSON.stringify({ title, description }),
+        body: JSON.stringify({ title, description, requiredInstalmentNumber }),
       }
     );
     return res.data;
@@ -266,6 +277,132 @@ export const courseService = {
         body: JSON.stringify({ lessonId, completed }),
       }
     );
+    return res.data;
+  },
+
+  // ================= PAYMENTS & INSTALMENTS =================
+  createPaymentOrder: async (data: {
+    courseId: string;
+    planType: PaymentPlanType;
+    numberOfInstalments?: number;
+  }) => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: {
+        orderId: string;
+        paymentPlanId: string;
+        courseTitle: string;
+        planType: PaymentPlanType;
+        amountDueNow: number;
+        totalAmount: number;
+        currency: string;
+        instalmentNumber: number;
+        totalInstalments: number;
+        schedule: any[];
+        simulationToken: string;
+        simulationTransactionId?: string;
+      };
+    }>('/payments/create-order', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  verifyPayment: async (data: {
+    paymentPlanId: string;
+    instalmentNumber: number;
+    orderId: string;
+    gatewayTransactionId: string;
+    signature?: string;
+    gatewayProvider?: string;
+  }) => {
+    const res = await apiRequest<{
+      success: boolean;
+      message: string;
+      data: {
+        success: boolean;
+        transactionId: string;
+        paymentPlan: ICoursePaymentPlan;
+        enrollment: IEnrollment;
+        unlockedInstalments: number;
+      };
+    }>('/payments/verify', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  createNextInstalmentOrder: async (paymentPlanId: string) => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: {
+        orderId: string;
+        paymentPlanId: string;
+        courseTitle: string;
+        planType: PaymentPlanType;
+        amountDueNow: number;
+        totalAmount: number;
+        currency: string;
+        instalmentNumber: number;
+        totalInstalments: number;
+        schedule: any[];
+        simulationToken: string;
+        simulationTransactionId?: string;
+      };
+    }>('/payments/next-instalment', {
+      method: 'POST',
+      body: JSON.stringify({ paymentPlanId }),
+    });
+    return res.data;
+  },
+
+  getProviderFinancials: async (): Promise<ProviderFinancialSummary> => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: ProviderFinancialSummary;
+    }>('/payments/provider/financials');
+    return res.data;
+  },
+
+  // ================= REVIEWS & CERTIFICATES =================
+  getCourseReviews: async (courseId: string): Promise<ICourseReview[]> => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: ICourseReview[];
+    }>(`/courses/${courseId}/reviews`);
+    return res.data;
+  },
+
+  checkReviewEligibility: async (courseId: string): Promise<ReviewEligibilityResult> => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: ReviewEligibilityResult;
+    }>(`/courses/${courseId}/review-eligibility`);
+    return res.data;
+  },
+
+  submitCourseReview: async (
+    courseId: string,
+    data: { rating: number; comment: string; title?: string }
+  ): Promise<ICourseReview> => {
+    const res = await apiRequest<{
+      success: boolean;
+      message: string;
+      data: ICourseReview;
+    }>(`/courses/${courseId}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    return res.data;
+  },
+
+  getCourseCertificate: async (courseId: string): Promise<ICertificate> => {
+    const res = await apiRequest<{
+      success: boolean;
+      data: ICertificate;
+    }>(`/courses/${courseId}/certificate`);
     return res.data;
   },
 };

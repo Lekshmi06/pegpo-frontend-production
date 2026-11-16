@@ -27,6 +27,7 @@ const SUBTITLES: Record<string, string> = {
   institution: 'Join EduPye to manage your campus, staff, training, and student progress.',
   company: 'Join EduPye to organize corporate training and track workforce learning.',
   provider: 'Join EduPye to publish, sell, and manage courses in our marketplace.',
+  tuition_provider: 'Join EduPye as a verified tuition educator to offer 1:1 and group batches.',
   learner: 'Join EduPye to develop in-demand skills and earn career certificates.',
 };
 
@@ -37,6 +38,7 @@ const USER_TYPE_LABELS: Record<string, string> = {
   institution: 'Institution Management',
   company: 'Company / Organization',
   provider: 'Course Provider',
+  tuition_provider: 'Tuition Provider',
   learner: 'Online Learner',
 };
 
@@ -112,7 +114,11 @@ export default function SignUp() {
       toast.success('Account created! Welcome to EduPye.');
       
       // Page Two to Page Three: navigate to goal selection and profile setup
-      navigate('/onboarding');
+      if (userType === 'tuition_provider') {
+        navigate('/tuition-provider/onboarding');
+      } else {
+        navigate('/onboarding');
+      }
     } catch (err: any) {
       const msg =
         err instanceof Error ? err.message : 'Registration failed. Please try again.';
@@ -183,10 +189,15 @@ export default function SignUp() {
             onSuccess={(session) => {
               if (session.isNewUser) {
                 toast.success('Account created! Welcome to EduPye.');
-                navigate('/onboarding');
+                if (userType === 'tuition_provider' || session.role === 'tuition_provider') {
+                  navigate('/tuition-provider/onboarding');
+                } else {
+                  navigate('/onboarding');
+                }
               } else {
                 toast.success(`Welcome back, ${session.name || 'User'}!`);
-                if (session.role === 'teacher') navigate('/teacher');
+                if (session.role === 'tuition_provider') navigate('/tuition-provider/dashboard');
+                else if (session.role === 'teacher') navigate('/teacher');
                 else if (session.role === 'provider') navigate('/provider');
                 else if (session.role === 'researcher') navigate('/research');
                 else if (session.role === 'learner') navigate('/learner');

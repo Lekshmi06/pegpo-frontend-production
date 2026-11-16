@@ -56,6 +56,7 @@ import {
   useResearchActiveProject,
 } from '../context/ResearchActiveProjectContext';
 import SaveResearchNoteModal from '../components/research/SaveResearchNoteModal';
+import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
 
 export interface ResearchLayoutProps {
   children?: ReactNode;
@@ -736,36 +737,11 @@ function ResearchLayoutInner({ children }: ResearchLayoutProps) {
                 </div>
               </button>
 
-              {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-1.5 z-50 animate-in fade-in duration-100 text-xs">
-                  <div className="px-3 py-2 border-b border-slate-100">
-                    <p className="font-bold text-slate-800 truncate">{researcherName}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{researcherDomain}</p>
-                  </div>
-                  <Link
-                    to="/research/notebook"
-                    onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-xl"
-                  >
-                    <BookOpen className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Research Notebook</span>
-                  </Link>
-                  <Link
-                    to="/research/projects"
-                    onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-2 px-3 py-2 text-slate-700 hover:bg-slate-50 rounded-xl"
-                  >
-                    <FolderKanban className="w-3.5 h-3.5 text-slate-400" />
-                    <span>All Projects</span>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left flex items-center gap-2 px-3 py-2 text-rose-600 hover:bg-rose-50 rounded-xl mt-1 font-semibold cursor-pointer"
-                  >
-                    <span>Sign Out</span>
-                  </button>
-                </div>
-              )}
+              <ProfileDropdownMenu
+                isOpen={showProfileMenu}
+                onClose={() => setShowProfileMenu(false)}
+                align="right"
+              />
             </div>
           </div>
         </header>

@@ -11,9 +11,12 @@ import {
   X,
   RotateCw,
   ExternalLink,
+  Radio,
+  Video,
 } from 'lucide-react';
 import { WhiteboardCanvas, WhiteboardCanvasRef, CanvasElement } from './WhiteboardCanvas';
 import { useToast } from '../../../hooks/useToast';
+import { SmartBoardLiveDock } from '../../../components/classroom/SmartBoardLiveDock';
 
 interface SavedStandardBoard {
   id: string;
@@ -33,6 +36,8 @@ export default function StandardSmartBoard() {
   const [isSavedDrawerOpen, setIsSavedDrawerOpen] = useState(false);
   const [savedBoards, setSavedBoards] = useState<SavedStandardBoard[]>([]);
   const [previewModal, setPreviewModal] = useState<SavedStandardBoard | null>(null);
+  const [isLiveActive, setIsLiveActive] = useState(false);
+  const [liveSessionId, setLiveSessionId] = useState('');
 
   const storageKey = 'edupye_smartboard_standard_saved';
 
@@ -153,6 +158,39 @@ export default function StandardSmartBoard() {
             <span className="hidden sm:inline">Save Board</span>
           </button>
 
+          {/* Live Broadcast Trigger */}
+          <button
+            onClick={() => {
+              if (!isLiveActive) {
+                const sid = `smartboard-live-${Date.now().toString(36)}`;
+                setLiveSessionId(sid);
+                setIsLiveActive(true);
+                toast.success('Live classroom broadcast started!');
+              } else {
+                setIsLiveActive(false);
+                toast.info('Live broadcast closed');
+              }
+            }}
+            title={isLiveActive ? 'Live broadcast active' : 'Start Live Broadcast'}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-2xs ${
+              isLiveActive
+                ? 'bg-rose-600 hover:bg-rose-500 text-white'
+                : 'bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-200 border border-emerald-500/40'
+            }`}
+          >
+            {isLiveActive ? (
+              <>
+                <Radio className="w-3.5 h-3.5 text-white animate-pulse" />
+                <span>Broadcasting Live</span>
+              </>
+            ) : (
+              <>
+                <Video className="w-3.5 h-3.5 text-emerald-300" />
+                <span>Go Live</span>
+              </>
+            )}
+          </button>
+
           {/* View Saved Boards Drawer Trigger */}
           <button
             onClick={() => setIsSavedDrawerOpen(true)}
@@ -178,6 +216,16 @@ export default function StandardSmartBoard() {
       <main className="flex-1 w-full relative overflow-hidden bg-white">
         <WhiteboardCanvas ref={canvasRef} className="w-full h-full" />
       </main>
+
+      {/* Live Classroom Video Dock */}
+      {isLiveActive && liveSessionId && (
+        <SmartBoardLiveDock
+          sessionId={liveSessionId}
+          sessionTitle={boardTitle}
+          onClose={() => setIsLiveActive(false)}
+          onOpenFullClassroom={() => navigate(`/live/${liveSessionId}`)}
+        />
+      )}
 
       {/* Saved Boards Slide-Over Drawer */}
       {isSavedDrawerOpen && (

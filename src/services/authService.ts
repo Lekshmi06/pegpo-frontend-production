@@ -19,6 +19,28 @@ const PROFILE_ID_KEY = 'studentProfileId';
 const TOKEN_KEY = 'token';
 
 export const EDUPYE_TRACK_CHANGE_EVENT = 'edupye:learning-track-changed';
+export const EDUPYE_ROLE_CHANGE_EVENT = 'edupye:role-changed';
+
+export function getDashboardPathForRole(role?: UserRole): string {
+  switch (role) {
+    case 'teacher':
+      return '/teacher/dashboard';
+    case 'researcher':
+      return '/research/dashboard';
+    case 'provider':
+      return '/provider';
+    case 'learner':
+      return '/learner';
+    case 'institution':
+    case 'company':
+      return '/institution/portal/dashboard';
+    case 'tuition_provider':
+      return '/tuition-provider';
+    case 'student':
+    default:
+      return '/student';
+  }
+}
 
 export interface TrackChangeEventDetail {
   learningPath: LearningPath;
@@ -59,12 +81,15 @@ export const authService = {
     }
 
     const resolvedRole: UserRole = (userType || (json?.data?.user?.userType as UserRole) || 'student');
+    const returnedRoles: UserRole[] = json?.data?.user?.roles || [resolvedRole];
     const session: UserSession = {
       email: cleanEmail,
       name:
         registeredName ||
         cleanEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
       role: resolvedRole,
+      activeRole: (json?.data?.user?.activeRole as UserRole) || resolvedRole,
+      roles: returnedRoles,
       learningPath: 'school',
       language: 'English',
       createdAt: new Date().toISOString(),
@@ -188,6 +213,12 @@ export const authService = {
             schoolDetails: studentProfile?.schoolDetails,
             createdAt: studentProfile?.createdAt || new Date().toISOString(),
           };
+        }
+
+        // Attach multi-role identity attributes
+        if (session && user) {
+          session.activeRole = (user.activeRole as UserRole) || session.role;
+          session.roles = (user.roles as UserRole[]) || [session.role || 'student'];
         }
       }
     } catch (err: any) {
@@ -319,6 +350,11 @@ export const authService = {
             schoolDetails: studentProfile?.schoolDetails,
             createdAt: studentProfile?.createdAt || new Date().toISOString(),
           };
+        }
+
+        if (session && user) {
+          session.activeRole = (user.activeRole as UserRole) || session.role;
+          session.roles = (user.roles as UserRole[]) || [session.role || 'student'];
         }
       }
     } catch (err: any) {
@@ -454,6 +490,11 @@ export const authService = {
             createdAt: studentProfile?.createdAt || new Date().toISOString(),
           };
         }
+
+        if (session && user) {
+          session.activeRole = (user.activeRole as UserRole) || session.role;
+          session.roles = (user.roles as UserRole[]) || [session.role || 'student'];
+        }
       }
     } catch (err: any) {
       throw err instanceof Error ? err : new Error('Unable to connect to the authentication service.');
@@ -545,10 +586,103 @@ export const authService = {
     const updated: UserSession = {
       ...current,
       role: cleanRole,
+      activeRole: cleanRole,
     };
     localStorage.setItem(ROLE_KEY, cleanRole);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
+  },
+
+  switchRole: async (role: UserRole): Promise<UserSession> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      throw new Error('Please log in to switch workspace.');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auth/switch-role`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ role }),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(json?.message || `Failed to switch to ${role} role.`);
+    }
+
+    const { user, studentProfile, teacherProfile, researcherProfile, token: newToken } = json.data;
+    if (newToken) {
+      localStorage.setItem(TOKEN_KEY, newToken);
+    }
+    if (studentProfile?._id) localStorage.setItem(PROFILE_ID_KEY, studentProfile._id);
+    if (teacherProfile?._id) localStorage.setItem('teacherProfileId', teacherProfile._id);
+    if (researcherProfile?._id) localStorage.setItem('researcherProfileId', researcherProfile._id);
+
+    localStorage.setItem(ROLE_KEY, role);
+
+    const prevSession: UserSession | null = authService.getCurrentUser();
+    const updatedSession: UserSession = {
+      ...(prevSession || {}),
+      id: user?._id || prevSession?.id,
+      email: user?.email || prevSession?.email || 'user@edupye.com',
+      name: user?.name || prevSession?.name,
+      role: role,
+      activeRole: role,
+      roles: (user?.roles as UserRole[]) || prevSession?.roles || [role],
+      language: user?.language || prevSession?.language || 'English',
+    };
+
+    if (role === 'teacher' && teacherProfile) {
+      updatedSession.teacherDetails = {
+        teacherType: teacherProfile.teacherType || 'institution',
+        institution: teacherProfile.institution,
+        tuitionCentre: teacherProfile.tuitionCentre,
+        department: teacherProfile.department,
+        designation: teacherProfile.designation,
+        subjects: teacherProfile.subjects || [],
+        classesTaught: teacherProfile.classesTaught || [],
+        boards: teacherProfile.boards || [],
+        experienceYears: teacherProfile.experienceYears || 0,
+      };
+    } else if (role === 'researcher' && researcherProfile) {
+      updatedSession.researcherProfileId = researcherProfile._id;
+      updatedSession.researcherDetails = researcherProfile;
+    } else if (role === 'student' && studentProfile) {
+      updatedSession.schoolDetails = studentProfile.schoolDetails;
+      updatedSession.learningPath = studentProfile.learningPath || 'school';
+    }
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedSession));
+    window.dispatchEvent(
+      new CustomEvent(EDUPYE_ROLE_CHANGE_EVENT, { detail: { role, session: updatedSession } })
+    );
+    return updatedSession;
+  },
+
+  activateRole: async (role: UserRole): Promise<UserSession> => {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
+      throw new Error('Please log in to activate role.');
+    }
+
+    const res = await fetch(`${API_BASE_URL}/auth/activate-role`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ role }),
+    });
+
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new Error(json?.message || `Failed to activate ${role} role.`);
+    }
+
+    return await authService.switchRole(role);
   },
 
   setLearningPath: async (learningPath: LearningPath): Promise<UserSession> => {

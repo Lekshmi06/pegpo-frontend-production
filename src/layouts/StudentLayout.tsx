@@ -13,11 +13,13 @@ import { NavItem } from '../types/common';
 import EduPyeAIChat from '../components/student/EduPyeAIChat';
 import { LearningModeProvider } from '../context/LearningModeContext';
 import { PageContextProvider } from '../context/PageContext';
+import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
 
 export default function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const navItems: NavItem[] = [
     { path: '/student/home', label: 'Home', icon: Home },
@@ -33,7 +35,7 @@ export default function StudentLayout() {
     { path: '/student/projects', label: 'Projects', icon: LineChart },
     { path: '/student/homework', label: 'Homework', icon: FileCheck },
     { path: '/student/bookshelf', label: 'Book shelf', icon: BookMarked },
-    { path: '/student/explore', label: 'Tuition', icon: GraduationCap },
+    { path: '/student/tuition', label: 'Tuition', icon: GraduationCap },
     { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
     { path: '/student/tests', label: 'Tests', icon: CheckSquare },
     { path: '/student/bookmarks', label: 'Edu Shop', icon: ShoppingCart },
@@ -41,6 +43,7 @@ export default function StudentLayout() {
 
   const isCustomHeaderPage =
     location.pathname === '/student/home' ||
+    location.pathname === '/student/tuition' ||
     location.pathname === '/student/learn' ||
     location.pathname === '/student/library' ||
     location.pathname === '/student/upload' ||
@@ -125,12 +128,19 @@ export default function StudentLayout() {
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
             <span className="text-xs font-extrabold tracking-wide">EDUPYE STUDENT</span>
-            <img
-              src={userImg}
-              alt="Profile"
-              onClick={() => navigate('/student/profile')}
-              className="w-7 h-7 rounded-full object-cover border border-white cursor-pointer"
-            />
+            <div className="relative">
+              <img
+                src={userImg}
+                alt="Profile"
+                onClick={() => setShowProfileMenu((prev) => !prev)}
+                className="w-7 h-7 rounded-full object-cover border border-white cursor-pointer"
+              />
+              <ProfileDropdownMenu
+                isOpen={showProfileMenu}
+                onClose={() => setShowProfileMenu(false)}
+                align="right"
+              />
+            </div>
           </div>
 
           {/* Top Header Bar ONLY on non-custom generic pages */}
@@ -163,9 +173,9 @@ export default function StudentLayout() {
 
                 <div className="relative">
                   <button
-                    onClick={() => navigate('/student/profile')}
+                    onClick={() => setShowProfileMenu((prev) => !prev)}
                     className="flex items-center gap-2 focus:outline-none cursor-pointer hover:ring-2 hover:ring-[#0091ff]/30 rounded-full transition-all"
-                    title="Student Profile"
+                    title="User Account & Workspace Menu"
                   >
                     <img
                       src={userImg}
@@ -173,6 +183,11 @@ export default function StudentLayout() {
                       className="w-8 h-8 md:w-9 md:h-9 rounded-full object-cover border-2 border-[#d0e3f7] hover:border-[#1c3352] transition-all shadow-2xs cursor-pointer"
                     />
                   </button>
+                  <ProfileDropdownMenu
+                    isOpen={showProfileMenu}
+                    onClose={() => setShowProfileMenu(false)}
+                    align="right"
+                  />
                 </div>
               </div>
             </header>

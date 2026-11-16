@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Globe, Trophy, Search, ChevronDown, Clock, Calendar, Bookmark, Star, AlertTriangle,
   Send, MessageSquare, BookOpen, Mic, Video, Brain, FileText,
-  CheckCircle2, Layers, TrendingUp, RotateCcw, NotebookPen, ArrowLeft
+  CheckCircle2, Layers, TrendingUp, RotateCcw, NotebookPen, ArrowLeft, ExternalLink
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import cardSmartboard from '../../assets/card-smartboard.png';
@@ -13,6 +13,7 @@ import cardInfographics from '../../assets/card-infographics.png';
 import { useToast } from '../../hooks/useToast';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
+import { NativeLiveClassroom } from '../../components/classroom/NativeLiveClassroom';
 
 interface LiveSession {
   id: number;
@@ -80,6 +81,15 @@ export default function LiveClasses() {
     setSelectedGraphicCard(card);
     setActiveModal('graphic');
   };
+
+  if (activeLiveSession) {
+    return (
+      <NativeLiveClassroom
+        sessionId={`class-${activeLiveSession.id}`}
+        onExit={() => setActiveLiveSession(null)}
+      />
+    );
+  }
 
   return (
     <div className="flex h-full min-h-screen bg-[#f8fbfe] overflow-hidden">
@@ -202,161 +212,69 @@ export default function LiveClasses() {
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 flex flex-col min-w-0 bg-[#f8fbfe] overflow-y-auto">
             <div className="p-4 sm:p-8 space-y-6 max-w-6xl mx-auto w-full">
-              {!activeLiveSession ? (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  <div>
-                    <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">Live Class</h1>
-                    <p className="text-xs text-slate-500 font-medium mt-0.5">Enrolled Classes</p>
-                  </div>
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div>
+                  <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">Live Class</h1>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Enrolled Classes</p>
+                </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-                    {[1, 2, 3, 4, 5, 6].map((id) => (
-                      <div
-                        key={id}
-                        className="bg-white rounded-3xl border border-[#e2ebf4] p-6 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between relative overflow-hidden"
-                      >
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-                            <span className="text-slate-600 font-bold">Physics</span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              Duration: 1 hour
-                            </span>
-                          </div>
-
-                          <h3 className="text-base font-extrabold text-[#111827] tracking-tight pt-1">
-                            Electric Circuits – Live Class
-                          </h3>
-
-                          <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                            26 Nov, 4:00–5:00 PM
-                          </p>
-
-                          <p className="text-xs font-bold text-[#1c3352]">
-                            Instructor: Varun Reddy
-                          </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+                  {[1, 2, 3, 4, 5, 6].map((id) => (
+                    <div
+                      key={id}
+                      className="bg-white rounded-3xl border border-[#e2ebf4] p-6 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col justify-between relative overflow-hidden"
+                    >
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+                          <span className="text-slate-600 font-bold">Physics</span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            Duration: 1 hour
+                          </span>
                         </div>
 
-                        <div className="flex items-end justify-between pt-6">
+                        <h3 className="text-base font-extrabold text-[#111827] tracking-tight pt-1">
+                          Electric Circuits – Live Class
+                        </h3>
+
+                        <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          26 Nov, 4:00–5:00 PM
+                        </p>
+
+                        <p className="text-xs font-bold text-[#1c3352]">
+                          Instructor: Varun Reddy
+                        </p>
+                      </div>
+
+                      <div className="flex items-end justify-between pt-6">
+                        <div className="flex items-center gap-2">
                           <button
                             onClick={() => {
                               setActiveLiveSession({ id, subject: 'Physics', title: '01 Light - Reflection and Refraction' });
-                              toast.success('Joined Live Stream Class!');
+                              toast.success('Joining Live Stream Classroom...');
                             }}
-                            className="px-8 py-2.5 bg-[#1c3352] hover:bg-[#284872] text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+                            className="px-6 py-2.5 bg-[#1c3352] hover:bg-[#284872] text-white rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
                           >
                             Join
                           </button>
-
-                          <div className="w-24 h-24 shrink-0 overflow-hidden flex items-end justify-end -mb-2 -mr-2">
-                            <img src={userImg} alt="Instructor" className="w-20 h-20 object-cover rounded-2xl border border-slate-100 shadow-2xs" />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6 animate-in fade-in duration-200">
-                  <div>
-                    <h1 className="text-2xl font-extrabold text-[#111827] tracking-tight">{activeLiveSession.subject}</h1>
-                  </div>
-
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                    <div className="lg:col-span-8 space-y-4">
-                      <div className="bg-black rounded-3xl overflow-hidden aspect-video relative shadow-lg group">
-                        <div className="w-full h-full bg-[#111] flex items-center justify-center relative">
-                          <div className="text-center space-y-2 text-white/80">
-                            <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md mx-auto flex items-center justify-center border border-white/20">
-                              <Video className="w-8 h-8 text-[#0091ff]" />
-                            </div>
-                            <span className="text-xs font-bold tracking-wide block">LIVE CLASS STREAM</span>
-                          </div>
-
-                          <div className="absolute bottom-4 right-4 w-32 h-24 rounded-2xl overflow-hidden border-2 border-white/40 shadow-xl bg-slate-900">
-                            <img src={userImg} alt="Instructor PIP" className="w-full h-full object-cover" />
-                          </div>
+                          <button
+                            onClick={() => navigate(`/live/class-${id}`)}
+                            className="p-2.5 bg-slate-100 hover:bg-slate-200 text-[#1c3352] rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                            title="Open Fullscreen Classroom"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </button>
                         </div>
 
-                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-4 flex items-center justify-between text-white text-xs font-semibold">
-                          <div className="flex items-center gap-3">
-                            <button className="hover:text-[#0091ff]">▶</button>
-                            <span className="text-[11px] opacity-80">0.04 / 30.15</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-                            <span className="text-[10px] uppercase font-extrabold tracking-wider text-red-500">LIVE</span>
-                          </div>
+                        <div className="w-24 h-24 shrink-0 overflow-hidden flex items-end justify-end -mb-2 -mr-2">
+                          <img src={userImg} alt="Instructor" className="w-20 h-20 object-cover rounded-2xl border border-slate-100 shadow-2xs" />
                         </div>
-                      </div>
-
-                      <h2 className="text-base font-extrabold text-[#111827]">
-                        {activeLiveSession.title}
-                      </h2>
-
-                      <div className="flex items-center gap-3 pt-1">
-                        <button
-                          onClick={() => toast.info('Class bookmarked!')}
-                          className="px-4 py-1.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-[#1c3352] rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Bookmark className="w-3.5 h-3.5" />
-                          <span>Book Mark</span>
-                        </button>
-
-                        <button
-                          onClick={() => toast.info('Class rated 5 stars!')}
-                          className="px-4 py-1.5 border border-[#0091ff] hover:bg-[#eff6ff] text-[#0091ff] rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <Star className="w-3.5 h-3.5 fill-[#0091ff]" />
-                          <span>Rate</span>
-                        </button>
-
-                        <button
-                          onClick={() => toast.info('Feedback reported')}
-                          className="px-4 py-1.5 border border-[#ef4444] hover:bg-[#fef2f2] text-[#ef4444] rounded-full text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-                        >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Report</span>
-                        </button>
                       </div>
                     </div>
-
-                    <div className="lg:col-span-4 bg-white rounded-3xl border border-[#e2ebf4] p-6 shadow-xs flex flex-col justify-between h-[480px]">
-                      <div className="space-y-4">
-                        <h3 className="text-sm font-extrabold text-[#111827]">Live Chat</h3>
-
-                        <div className="space-y-3 overflow-y-auto max-h-[340px] pr-1">
-                          {chatMessages.map((m) => (
-                            <div key={m.id} className="bg-[#f8fbfe] border border-slate-100 rounded-2xl p-3 text-xs font-semibold text-[#1c3352] max-w-[200px]">
-                              {m.text}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="border border-[#e2ebf4] bg-[#f8fbfe] rounded-2xl p-2 px-3 flex items-center justify-between gap-2 shadow-2xs mt-4">
-                        <input
-                          type="text"
-                          value={chatInput}
-                          onChange={(e) => setChatInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSendLiveMessage();
-                          }}
-                          placeholder="Type message..."
-                          className="w-full bg-transparent text-xs font-semibold text-[#1c3352] outline-none"
-                        />
-                        <button
-                          onClick={handleSendLiveMessage}
-                          className="w-7 h-7 rounded-xl bg-[#c5dff2] hover:bg-[#b0d2eb] text-[#1c3352] flex items-center justify-center transition-colors cursor-pointer shrink-0 shadow-2xs"
-                        >
-                          <Send className="w-3.5 h-3.5 stroke-[2.5]" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
             </div>
           </div>
 

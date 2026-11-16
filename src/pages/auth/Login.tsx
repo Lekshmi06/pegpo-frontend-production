@@ -52,7 +52,10 @@ export default function Login() {
       return target.startsWith('/learner') || target.startsWith('/courses') || target.startsWith('/marketplace') || target.startsWith('/learn');
     }
     if (role === 'teacher') {
-      return target.startsWith('/teacher') || target.startsWith('/provider');
+      return target.startsWith('/teacher') || target.startsWith('/provider') || target.startsWith('/tuition-provider');
+    }
+    if (role === 'tuition_provider') {
+      return target.startsWith('/tuition-provider') || target.startsWith('/tuition') || target.startsWith('/live') || target.startsWith('/teacher');
     }
     if (role === 'researcher') {
       return target.startsWith('/research') || target.startsWith('/onboarding/researcher');
@@ -73,7 +76,9 @@ export default function Login() {
       return;
     }
 
-    if (session.role === 'provider') {
+    if (session.role === 'tuition_provider') {
+      navigate('/tuition-provider/dashboard');
+    } else if (session.role === 'provider') {
       navigate('/provider');
     } else if (session.role === 'learner') {
       navigate('/learner');

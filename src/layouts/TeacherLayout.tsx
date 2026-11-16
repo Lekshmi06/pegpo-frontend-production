@@ -17,6 +17,7 @@ import { teacherProfileService } from '../services/teacherProfileService';
 import { TeacherMenuGroup } from '../types/teacher';
 import { CreateAction, QuickLink } from '../types/common';
 import TeacherAIChatBot from '../components/teacher/TeacherAIChatBot';
+import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
 
 const menuGroups: TeacherMenuGroup[] = [
   {
@@ -270,41 +271,11 @@ export default function TeacherLayout() {
                 />
               </button>
 
-              {showProfileMenu && (
-                <div className="absolute right-0 top-10 z-50 w-48 rounded-2xl border border-slate-200 bg-white p-2 text-xs shadow-xl space-y-1 animate-in fade-in duration-150 font-bold">
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate('/teacher/profile');
-                    }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-[#1c3352] hover:bg-slate-50 rounded-xl"
-                  >
-                    <User className="w-3.5 h-3.5 text-[#254b73]" />
-                    <span>Teacher Profile</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate('/student');
-                    }}
-                    className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded-xl"
-                  >
-                    Student Portal
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigate('/research');
-                    }}
-                    className="block w-full px-3 py-2 text-left text-slate-700 hover:bg-slate-50 rounded-xl"
-                  >
-                    Research Portal
-                  </button>
-                  <button onClick={logout} className="block w-full px-3 py-2 text-left text-rose-600 hover:bg-rose-50 rounded-xl">
-                    Log out
-                  </button>
-                </div>
-              )}
+              <ProfileDropdownMenu
+                isOpen={showProfileMenu}
+                onClose={() => setShowProfileMenu(false)}
+                align="right"
+              />
             </div>
           </div>
         </header>
