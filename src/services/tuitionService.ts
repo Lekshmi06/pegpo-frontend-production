@@ -14,7 +14,16 @@ import {
   TuitionPlatformTier,
   SearchOfferingsQuery,
   SearchOfferingsResponse,
+  TuitionProgram,
+  GetTuitionProgramsResponse,
+  TuitionProgramContext,
+  TuitionCodeLoginPayload,
+  TuitionCodeLoginResponse,
+  CombinedStudyMessage,
 } from "../types/tuition";
+
+export const TUITION_MODE_TOKEN_KEY = "tuition_mode_token";
+export const TUITION_PROGRAM_CONTEXT_KEY = "tuition_program_context";
 
 export interface SearchProvidersQuery {
   search?: string;
@@ -458,6 +467,117 @@ export const tuitionService = {
     return await apiRequest(`/tuition/admin/providers/${profileId}/recalculate-tier`, {
       method: "POST",
     });
+  },
+
+  // ================= PHASE B: TUITION PROGRAMS & CODE GATEWAY =================
+  getTuitionPrograms: async (): Promise<GetTuitionProgramsResponse> => {
+    return await apiRequest(`/tuition/programs`);
+  },
+
+  getProgramRoster: async (programId: string): Promise<any> => {
+    return await apiRequest(`/tuition/programs/${programId}/roster`);
+  },
+
+  getTeacherEnrolledStudents: async (): Promise<{
+    success: boolean;
+    totalPrograms: number;
+    programRosters: Array<{
+      programId: string;
+      title: string;
+      code: string;
+      subject: string;
+      grade?: string;
+      schedule: any[];
+      status: string;
+      totalEnrolled: number;
+      students: Array<{
+        _id: string;
+        name: string;
+        email: string;
+        studentCode?: string;
+        userType?: string;
+        status?: string;
+      }>;
+    }>;
+  }> => {
+    return await apiRequest(`/tuition/teacher/enrolled-students`);
+  },
+
+  codeLogin: async (payload: TuitionCodeLoginPayload): Promise<TuitionCodeLoginResponse> => {
+    return await apiRequest(`/tuition/auth/code-login`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getCombinedStudyMessages: async (
+    programId: string,
+    before?: string
+  ): Promise<{ success: boolean; messages: CombinedStudyMessage[] }> => {
+    const qs = before ? `?before=${encodeURIComponent(before)}` : "";
+    return await apiRequest(`/tuition/programs/${programId}/combined-study${qs}`);
+  },
+
+  postCombinedStudyMessage: async (
+    programId: string,
+    data: FormData | { messageType: string; content?: string }
+  ): Promise<{ success: boolean; message: CombinedStudyMessage }> => {
+    if (data instanceof FormData) {
+      return await apiRequest(`/tuition/programs/${programId}/combined-study`, {
+        method: "POST",
+        body: data,
+      });
+    }
+    return await apiRequest(`/tuition/programs/${programId}/combined-study`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Session & Storage Management
+  setTuitionModeSession: (token: string, programContext?: TuitionProgramContext, user?: any) => {
+    localStorage.setItem(TUITION_MODE_TOKEN_KEY, token);
+    if (programContext) {
+      localStorage.setItem(TUITION_PROGRAM_CONTEXT_KEY, JSON.stringify(programContext));
+    }
+    if (user) {
+      const existing = localStorage.getItem("user");
+      let session: any = {};
+      if (existing) {
+        try {
+          session = JSON.parse(existing);
+        } catch (e) {}
+      }
+      session = {
+        ...session,
+        id: user._id || session.id,
+        email: user.email || session.email,
+        name: user.name || session.name,
+        role: user.activeRole || user.userType || session.role || "student",
+        studentCode: user.studentCode || session.studentCode,
+        teacherCode: user.teacherCode || session.teacherCode,
+      };
+      localStorage.setItem("user", JSON.stringify(session));
+    }
+  },
+
+  getTuitionModeSession: (): { token: string | null; programContext: TuitionProgramContext | null } => {
+    const token = localStorage.getItem(TUITION_MODE_TOKEN_KEY);
+    const rawContext = localStorage.getItem(TUITION_PROGRAM_CONTEXT_KEY);
+    let programContext: TuitionProgramContext | null = null;
+    if (rawContext) {
+      try {
+        programContext = JSON.parse(rawContext);
+      } catch (e) {
+        programContext = null;
+      }
+    }
+    return { token, programContext };
+  },
+
+  clearTuitionModeSession: () => {
+    localStorage.removeItem(TUITION_MODE_TOKEN_KEY);
+    localStorage.removeItem(TUITION_PROGRAM_CONTEXT_KEY);
   },
 };
 

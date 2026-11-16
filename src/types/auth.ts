@@ -98,6 +98,8 @@ export interface UserSession {
   };
   researcherProfileId?: string;
   researcherDetails?: any;
+  studentCode?: string;
+  teacherCode?: string;
   token?: string;
   createdAt?: string;
 }

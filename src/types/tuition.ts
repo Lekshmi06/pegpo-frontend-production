@@ -352,3 +352,92 @@ export interface TuitionTransaction {
   createdAt: string;
 }
 
+export interface IProgramScheduleSlot {
+  day: string;
+  startTime: string; // e.g. "17:00"
+  endTime: string;   // e.g. "18:30"
+}
+
+export type TuitionProgramStatus =
+  | "draft"
+  | "upcoming"
+  | "active"
+  | "completed"
+  | "archived";
+
+export interface TuitionProgram {
+  _id: string;
+  title: string;
+  code: string;
+  subject: string;
+  grade?: string;
+  description?: string;
+  schedule: IProgramScheduleSlot[];
+  teacherIds: string[] | Array<{ _id: string; name?: string; email?: string; teacherCode?: string }>;
+  enrolledStudentIds: string[] | Array<{ _id: string; name?: string; email?: string; studentCode?: string }>;
+  status: TuitionProgramStatus;
+  startDate?: string;
+  endDate?: string;
+  maxCapacity?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface GetTuitionProgramsResponse {
+  success: boolean;
+  myPrograms?: TuitionProgram[];
+  catalogPrograms?: TuitionProgram[];
+  programs?: TuitionProgram[];
+  count?: number;
+  message?: string;
+}
+
+export interface TuitionProgramContext {
+  _id: string;
+  title: string;
+  code: string;
+  subject: string;
+  grade?: string;
+  roleInProgram: "teacher" | "student";
+}
+
+export interface TuitionCodeLoginPayload {
+  code: string;
+  name?: string;
+  programId?: string;
+}
+
+export interface TuitionCodeLoginResponse {
+  success: boolean;
+  token: string;
+  tuitionMode: boolean;
+  user: {
+    _id: string;
+    name?: string;
+    email: string;
+    userType?: string;
+    roles?: string[];
+    activeRole?: string;
+    studentCode?: string;
+    teacherCode?: string;
+  };
+  programContext?: TuitionProgramContext;
+  message?: string;
+}
+
+export interface CombinedStudyMessage {
+  _id: string;
+  programId: string;
+  senderId: string | { _id: string; name?: string; email?: string; studentCode?: string; teacherCode?: string };
+  senderRole: "teacher" | "student" | "institution";
+  messageType: "text" | "pdf" | "image" | "video";
+  content?: string;
+  fileUrl?: string;
+  fileName?: string;
+  fileSizeBytes?: number;
+  mimeType?: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+

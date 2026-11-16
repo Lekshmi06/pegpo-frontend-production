@@ -69,6 +69,15 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
                 Explore
               </span>
             </Link>
+            <a
+              href="#tuition"
+              className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
+            >
+              <span>Tuition Mode</span>
+              <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">
+                Code Entry
+              </span>
+            </a>
             <Link
               to="/tuition"
               className="px-3.5 py-2 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors flex items-center gap-1.5"
@@ -151,6 +160,14 @@ export const LandingNavbar: React.FC<LandingNavbarProps> = ({ onOpenDemo }) => {
               className="py-2 hover:text-white border-b border-slate-800/60"
             >
               Platform Features
+            </a>
+            <a
+              href="#tuition"
+              onClick={() => setMobileMenuOpen(false)}
+              className="py-2 hover:text-white border-b border-slate-800/60 flex items-center justify-between"
+            >
+              <span>Tuition Mode</span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded font-bold">Code Entry</span>
             </a>
             <Link
               to="/marketplace"

@@ -10,6 +10,7 @@ import {
   PhoneOff,
   AlertTriangle,
   X,
+  Presentation,
 } from 'lucide-react';
 
 interface ClassroomControlsBarProps {
@@ -21,13 +22,15 @@ interface ClassroomControlsBarProps {
   unreadChatCount?: number;
   isChatOpen: boolean;
   isParticipantListOpen: boolean;
+  isSmartBoardOpen?: boolean;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onToggleScreenShare: () => void;
   onToggleChat: () => void;
   onToggleParticipantList: () => void;
+  onToggleSmartBoard?: () => void;
   onLeaveClass: () => void;
-  onEndClass: () => void;
+  onEndClass: (logoutTuition?: boolean) => void;
 }
 
 export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
@@ -39,15 +42,18 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
   unreadChatCount = 0,
   isChatOpen,
   isParticipantListOpen,
+  isSmartBoardOpen = false,
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
   onToggleChat,
   onToggleParticipantList,
+  onToggleSmartBoard,
   onLeaveClass,
   onEndClass,
 }) => {
   const [showEndModal, setShowEndModal] = useState(false);
+  const [logoutTuition, setLogoutTuition] = useState(true);
 
   return (
     <>
@@ -138,6 +144,21 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
               {participantCount}
             </span>
           </button>
+
+          {/* SmartBoard Split-Screen Toggle */}
+          {onToggleSmartBoard && (
+            <button
+              onClick={onToggleSmartBoard}
+              title={isSmartBoardOpen ? "Close SmartBoard Split" : "Open SmartBoard Split"}
+              className={`min-h-[44px] min-w-[44px] w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isSmartBoardOpen
+                  ? 'bg-amber-500/20 text-amber-400 border border-amber-400/40'
+                  : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-700'
+              }`}
+            >
+              <Presentation className="w-5 h-5 text-amber-400" />
+            </button>
+          )}
         </div>
 
         {/* Right segment: Leave / End buttons */}
@@ -189,6 +210,19 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
               </p>
             </div>
 
+            <div className="flex items-center gap-2 py-1 px-1 bg-slate-950 rounded-xl border border-slate-800">
+              <input
+                type="checkbox"
+                id="clearTuition"
+                checked={logoutTuition}
+                onChange={(e) => setLogoutTuition(e.target.checked)}
+                className="w-4 h-4 ml-2 accent-amber-500 rounded"
+              />
+              <label htmlFor="clearTuition" className="text-xs text-slate-300 font-medium cursor-pointer">
+                Exit and log out of Tuition Mode
+              </label>
+            </div>
+
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowEndModal(false)}
@@ -199,7 +233,7 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
               <button
                 onClick={() => {
                   setShowEndModal(false);
-                  onEndClass();
+                  onEndClass(logoutTuition);
                 }}
                 className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition-colors cursor-pointer"
               >

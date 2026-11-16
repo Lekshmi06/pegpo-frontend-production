@@ -219,6 +219,9 @@ export const authService = {
         if (session && user) {
           session.activeRole = (user.activeRole as UserRole) || session.role;
           session.roles = (user.roles as UserRole[]) || [session.role || 'student'];
+          session.studentCode = user.studentCode;
+          session.teacherCode = user.teacherCode;
+          session.id = user._id;
         }
       }
     } catch (err: any) {

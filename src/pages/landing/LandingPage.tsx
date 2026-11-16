@@ -3,6 +3,7 @@ import { LandingNavbar } from './LandingNavbar';
 import { HeroSection } from './HeroSection';
 import { ChooseJourneySection } from './ChooseJourneySection';
 import { FeaturesSection } from './FeaturesSection';
+import { TuitionSection } from './TuitionSection';
 import { HowItWorksSection } from './HowItWorksSection';
 import { ComparisonSection } from './ComparisonSection';
 import { MobileAppsSection } from './MobileAppsSection';
@@ -27,6 +28,9 @@ export default function LandingPage() {
 
         {/* 3. Explore Core EduPye Features */}
         <FeaturesSection />
+
+        {/* 3.5. Dedicated Centralized Tuition Mode */}
+        <TuitionSection />
 
         {/* 4. How EduPye Works (The Connected Ecosystem) */}
         <HowItWorksSection />

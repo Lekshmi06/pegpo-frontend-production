@@ -14,6 +14,7 @@ export interface UseWebRTCClassroomOptions {
   userName?: string;
   autoJoin?: boolean;
   onSessionEnded?: () => void;
+  onForceLogout?: (reason?: string) => void;
   onWhiteboardSync?: (elements: any[]) => void;
 }
 
@@ -23,6 +24,7 @@ export function useWebRTCClassroom({
   userName,
   autoJoin = false,
   onSessionEnded,
+  onForceLogout,
   onWhiteboardSync,
 }: UseWebRTCClassroomOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -39,6 +41,7 @@ export function useWebRTCClassroom({
     'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'disconnected'
   >('idle');
   const [isClassEnded, setIsClassEnded] = useState(false);
+  const [isForceLoggedOut, setIsForceLoggedOut] = useState(false);
   const [endReason, setEndReason] = useState<string | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -54,6 +57,8 @@ export function useWebRTCClassroom({
   // Keep callback refs fresh
   const onSessionEndedRef = useRef(onSessionEnded);
   onSessionEndedRef.current = onSessionEnded;
+  const onForceLogoutRef = useRef(onForceLogout);
+  onForceLogoutRef.current = onForceLogout;
   const onWhiteboardSyncRef = useRef(onWhiteboardSync);
   onWhiteboardSyncRef.current = onWhiteboardSync;
 
@@ -439,6 +444,19 @@ export function useWebRTCClassroom({
               break;
             }
 
+            case 'force-logout': {
+              setIsClassEnded(true);
+              setIsForceLoggedOut(true);
+              setEndReason(data.reason || 'Session idle limit exceeded (15 minutes).');
+              setConnectionStatus('disconnected');
+              if (onForceLogoutRef.current) {
+                onForceLogoutRef.current(data.reason);
+              } else if (onSessionEndedRef.current) {
+                onSessionEndedRef.current();
+              }
+              break;
+            }
+
             case 'error': {
               console.error('[WebRTC Classroom Error from Server]', data.message);
               break;
@@ -628,6 +646,7 @@ export function useWebRTCClassroom({
     chatMessages,
     connectionStatus,
     isClassEnded,
+    isForceLoggedOut,
     endReason,
     joinClass,
     leaveClass,

@@ -33,6 +33,8 @@ export interface LiveClassSession {
   };
   startedAt?: string;
   endedAt?: string;
+  scheduledStartTime?: string;
+  scheduledEndTime?: string;
 }
 
 export interface ICallParticipant {
@@ -121,6 +123,12 @@ export type SignallingIncomingMessage =
   | {
       type: 'session-ended';
       reason?: string;
+    }
+  | {
+      type: 'force-logout';
+      sessionId?: string;
+      reason?: string;
+      code?: string;
     }
   | {
       type: 'error';

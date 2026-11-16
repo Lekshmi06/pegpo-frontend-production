@@ -57,6 +57,7 @@ const menuGroups: TeacherMenuGroup[] = [
     color: '#4a98f3',
     items: [
       { label: 'Tuition', icon: GraduationCap, path: '/teacher/tuition' },
+      { label: 'Students Enrolled', icon: Users, path: '/teacher/enrolled-students' },
       { label: 'Recorded Classes', icon: Mic, path: '/teacher/recorded' },
     ],
   },
@@ -262,6 +263,22 @@ export default function TeacherLayout() {
               <Trophy className="h-5 w-5 text-[#1c3352] stroke-[2]" />
             </button>
 
+            {/* Tuition Mode Switcher & Teacher Code Badge */}
+            {authService.getCurrentUser()?.teacherCode && (
+              <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold tracking-wider" title="Your Permanent Teacher Code">
+                <span>TCH:</span> {authService.getCurrentUser()?.teacherCode}
+              </span>
+            )}
+            <button
+              onClick={() => navigate('/tuition-mode')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+              title="Switch to EduPye Centralized Tuition Mode"
+            >
+              <GraduationCap className="w-4 h-4 text-slate-950" />
+              <span className="hidden sm:inline">Change to Tuition Mode</span>
+              <span className="sm:hidden">Tuition</span>
+            </button>
+
             <div className="relative">
               <button onClick={() => setShowProfileMenu((v) => !v)} className="flex items-center gap-2 focus:outline-none">
                 <img
@@ -315,6 +332,8 @@ export default function TeacherLayout() {
                   onClick={() => {
                     if (card.id === 'smartboard') {
                       navigate('/teacher/smartboard');
+                    } else if (card.id === 'combine') {
+                      navigate('/tuition-mode');
                     }
                   }}
                   className="flex items-center justify-between p-3 bg-[#d6e8f6] hover:bg-[#c5dff2] rounded-2xl cursor-pointer transition-all group shadow-2xs"

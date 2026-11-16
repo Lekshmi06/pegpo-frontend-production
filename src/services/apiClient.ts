@@ -46,7 +46,7 @@ export async function apiRequest<T>(
   }
 
   // Automatically attach authentication header if available in storage
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('tuition_mode_token') || localStorage.getItem('token');
   if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`);
   }

@@ -61,6 +61,7 @@ const StandardSmartBoard = lazy(() => import('../pages/teacher/smartboard/Standa
 const IntegratedSmartBoard = lazy(() => import('../pages/teacher/smartboard/IntegratedSmartBoard'));
 const AssessmentStudio = lazy(() => import('../pages/teacher/assessment/AssessmentStudio'));
 const TeacherClasses = lazy(() => import('../pages/teacher/classes/TeacherClasses'));
+const TeacherEnrolledStudents = lazy(() => import('../pages/teacher/enrolled-students/TeacherEnrolledStudents'));
 const TeacherUpload = lazy(() => import('../pages/teacher/Upload'));
 const TeacherAssignments = lazy(() => import('../pages/teacher/assignments/TeacherAssignments'));
 
@@ -123,6 +124,11 @@ const TuitionProviderRequests = lazy(() => import('../pages/tuition-provider/Tui
 const TuitionProviderSchedule = lazy(() => import('../pages/tuition-provider/TuitionProviderSchedule'));
 const TuitionProviderStudents = lazy(() => import('../pages/tuition-provider/TuitionProviderStudents'));
 const TuitionProviderFinancials = lazy(() => import('../pages/tuition-provider/TuitionProviderFinancials'));
+
+// Dedicated Centralized Tuition Mode
+const TuitionModeLayout = lazy(() => import('../layouts/TuitionModeLayout'));
+const TuitionProgramsPage = lazy(() => import('../pages/tuition-mode/TuitionProgramsPage'));
+const TuitionProgramWorkspace = lazy(() => import('../pages/tuition-mode/TuitionProgramWorkspace'));
 
 // Public Informational & Legal Pages
 const HelpFaq = lazy(() => import('../pages/public/HelpFaq'));
@@ -247,6 +253,7 @@ export default function AppRoutes() {
           <Route path="collaboration" element={<TeacherBlankWorkspace />} />
           <Route path="classes" element={<TeacherClasses />} />
           <Route path="tuition" element={<TeacherClasses />} />
+          <Route path="enrolled-students" element={<TeacherEnrolledStudents />} />
           <Route path="recorded" element={<GenericTeacherPage title="Recorded Classes" desc="Manage lecture recordings, video archives, and audio transcripts." />} />
           <Route path="smartboard" element={<SmartBoardHome />} />
           <Route path="project" element={<GenericTeacherPage title="Class Projects" desc="Track group tasks and assignments." />} />
@@ -390,6 +397,20 @@ export default function AppRoutes() {
           <Route path="schedule" element={<TuitionProviderSchedule />} />
           <Route path="students" element={<TuitionProviderStudents />} />
           <Route path="financials" element={<TuitionProviderFinancials />} />
+        </Route>
+
+        {/* Dedicated Centralized Tuition Mode Portal (Protected) */}
+        <Route
+          path="/tuition-mode"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'learner', 'personal', 'teacher', 'tuition_provider', 'provider', 'institution', 'company']}>
+              <TuitionModeLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<TuitionProgramsPage />} />
+          <Route path="programs" element={<TuitionProgramsPage />} />
+          <Route path="program/:programId" element={<TuitionProgramWorkspace />} />
         </Route>
 
         {/* Protected Learning Player */}
