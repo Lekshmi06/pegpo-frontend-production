@@ -25,7 +25,7 @@ import { TuitionProgram } from '../../types/tuition';
 
 export const TuitionProgramsPage: React.FC = () => {
   const navigate = useNavigate();
-  const currentUser = authService.getCurrentUser();
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
 
   const [myPrograms, setMyPrograms] = useState<TuitionProgram[]>([]);
   const [catalogPrograms, setCatalogPrograms] = useState<TuitionProgram[]>([]);
@@ -53,6 +53,19 @@ export const TuitionProgramsPage: React.FC = () => {
 
   useEffect(() => {
     fetchPrograms();
+    let isMounted = true;
+    authService.fetchCurrentUser().then((user) => {
+      if (isMounted && user) {
+        setCurrentUser(user);
+        if (user.studentCode || user.teacherCode) {
+          setApprovalStatus('approved');
+          setInputCode(user.studentCode || user.teacherCode || '');
+        }
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const fetchPrograms = async () => {
@@ -84,12 +97,16 @@ export const TuitionProgramsPage: React.FC = () => {
       setRequestSuccessMsg(null);
       const res = await tuitionService.requestProgramAccess();
       if (res.success) {
-        setApprovalStatus(res.tuitionApprovalStatus || 'pending');
-        setRequestSuccessMsg('Tuition access request submitted! An administrator will review and issue your permanent code.');
-        const existing = authService.getCurrentUser();
-        if (existing) {
-          existing.tuitionApprovalStatus = 'pending';
-          localStorage.setItem('user', JSON.stringify(existing));
+        setApprovalStatus(res.tuitionApprovalStatus || 'approved');
+        if (res.code) {
+          setInputCode(res.code);
+          setRequestSuccessMsg(`Tuition code issued: ${res.code}`);
+        } else {
+          setRequestSuccessMsg('Tuition access request submitted! An administrator will review and issue your permanent code.');
+        }
+        const updated = await authService.fetchCurrentUser();
+        if (updated) {
+          setCurrentUser(updated);
         }
       }
     } catch (err: any) {
@@ -102,7 +119,8 @@ export const TuitionProgramsPage: React.FC = () => {
   const openCodeGate = (program: TuitionProgram) => {
     setSelectedProgram(program);
     setGateError(null);
-    setInputCode(userCode || '');
+    const activeCode = currentUser?.studentCode || currentUser?.teacherCode || '';
+    setInputCode(activeCode);
     setInputName(currentUser?.name || '');
     setCodeGateOpen(true);
   };

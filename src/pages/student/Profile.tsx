@@ -1185,7 +1185,7 @@ export default function Profile() {
                       <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
                         Tuition Mode Access Code
                       </h3>
-                      {currentUserSession?.studentCode ? (
+                      {currentUserSession?.studentCode || currentUserSession?.teacherCode ? (
                         <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
                           Approved
                         </span>
@@ -1207,13 +1207,16 @@ export default function Profile() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                {currentUserSession?.studentCode ? (
+                {currentUserSession?.studentCode || currentUserSession?.teacherCode ? (
                   <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-amber-400/30 font-mono text-sm sm:text-base font-extrabold text-amber-300 tracking-wider">
-                    <span>{currentUserSession.studentCode}</span>
+                    <span>{currentUserSession?.studentCode || currentUserSession?.teacherCode}</span>
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(currentUserSession.studentCode!);
-                        toast.success('Tuition Code copied to clipboard!');
+                        const code = currentUserSession?.studentCode || currentUserSession?.teacherCode;
+                        if (code) {
+                          navigator.clipboard.writeText(code);
+                          toast.success('Tuition Code copied to clipboard!');
+                        }
                       }}
                       className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
                       title="Copy Tuition Code"

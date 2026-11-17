@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   GraduationCap,
@@ -20,6 +20,7 @@ import {
   FolderPlus,
   FileCheck,
   Calendar,
+  Copy,
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { Button } from '../../components/ui/Button';
@@ -330,8 +331,22 @@ const USER_TYPE_DISPLAY: Record<string, string> = {
 export default function Onboarding() {
   const navigate = useNavigate();
 
-  // Resolve user type from session or localStorage
-  const currentUser = authService.getCurrentUser();
+  // Resolve user state from session or localStorage and keep freshly synchronized
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    authService.fetchCurrentUser().then((user) => {
+      if (isMounted && user) {
+        setCurrentUser(user);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const rawRole = (currentUser?.role || localStorage.getItem('userRole') || localStorage.getItem('selectedUserType') || 'student').toLowerCase() as UserRole;
   const userType = ROLE_GOAL_MAP[rawRole] ? rawRole : 'student';
 
@@ -412,7 +427,7 @@ export default function Onboarding() {
           </div>
 
           {/* Permanent Tuition Code Onboarding Banner */}
-          {authService.getCurrentUser()?.studentCode && (
+          {(currentUser?.studentCode || currentUser?.teacherCode) && (
             <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 shrink-0">
@@ -431,7 +446,22 @@ export default function Onboarding() {
                 </div>
               </div>
               <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-amber-200/80 shadow-2xs font-mono text-xs font-black text-amber-800 tracking-wider">
-                <span>{authService.getCurrentUser()?.studentCode}</span>
+                <span>{currentUser.studentCode || currentUser.teacherCode}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const codeToCopy = currentUser.studentCode || currentUser.teacherCode;
+                    if (codeToCopy) {
+                      navigator.clipboard.writeText(codeToCopy);
+                      setCopiedCode(true);
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }
+                  }}
+                  className="p-1 rounded-md hover:bg-stone-100 text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
+                  title="Copy Tuition Code"
+                >
+                  {copiedCode ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                </button>
               </div>
             </div>
           )}

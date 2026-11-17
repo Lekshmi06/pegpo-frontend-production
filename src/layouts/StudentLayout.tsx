@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, Library, Upload, Calendar,
@@ -20,6 +20,29 @@ export default function StudentLayout() {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    authService.fetchCurrentUser().then((user) => {
+      if (isMounted && user) {
+        setCurrentUser(user);
+      }
+    });
+
+    const handleStorage = () => {
+      if (isMounted) {
+        setCurrentUser(authService.getCurrentUser());
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   const navItems: NavItem[] = [
     { path: '/student/home', label: 'Home', icon: Home },
@@ -126,18 +149,20 @@ export default function StudentLayout() {
                 <span>EduPye Centralized Tuition</span>
               </span>
               {(() => {
-                const currentUser = authService.getCurrentUser();
                 const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.studentCode ? 'approved' : 'none');
                 if (approvalStatus === 'approved' && currentUser?.studentCode) {
                   return (
                     <span
                       onClick={() => {
                         navigator.clipboard.writeText(currentUser.studentCode!);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
                       }}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono text-[11px] font-bold cursor-pointer hover:bg-amber-400/30 transition-colors"
                       title="Click to copy your permanent Student Code"
                     >
                       <span>Code:</span> {currentUser.studentCode}
+                      {copiedCode && <span className="text-[9px] text-emerald-300 font-sans ml-1">Copied!</span>}
                     </span>
                   );
                 } else if (approvalStatus === 'pending') {
