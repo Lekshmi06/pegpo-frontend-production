@@ -32,9 +32,9 @@ export const JOURNEY_OPTIONS: JourneyOption[] = [
   },
   {
     id: 'teacher',
-    title: 'Teacher',
-    badge: 'Faculty Workspace',
-    description: 'Lesson planning, assessments, teaching resources, and classroom tools.',
+    title: 'Educator / Teacher',
+    badge: 'Faculty & Tuition Workspace',
+    description: 'School, college faculty, and centralized tuition programs with SmartBoard and live classrooms.',
     icon: BookOpen,
   },
   {
@@ -57,13 +57,6 @@ export const JOURNEY_OPTIONS: JourneyOption[] = [
     badge: 'Creator Studio',
     description: 'Create, publish, and manage courses, learners, and course sales.',
     icon: Video,
-  },
-  {
-    id: 'tuition_provider',
-    title: 'Tuition Provider',
-    badge: '1:1 & Cohort Tutoring',
-    description: 'Offer private 1:1 or group tuition, schedule live batches, and mentor students.',
-    icon: Award,
   },
   {
     id: 'learner',

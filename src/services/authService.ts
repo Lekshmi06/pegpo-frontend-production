@@ -35,7 +35,7 @@ export function getDashboardPathForRole(role?: UserRole): string {
     case 'company':
       return '/institution/portal/dashboard';
     case 'tuition_provider':
-      return '/tuition-provider';
+      return '/teacher';
     case 'student':
     default:
       return '/student';
@@ -159,7 +159,7 @@ export const authService = {
             goal: 'Corporate & Institutional Learning',
             createdAt: new Date().toISOString(),
           };
-        } else if (user.userType === 'teacher' || (!user.userType && teacherProfile)) {
+        } else if (user.userType === 'teacher' || user.userType === 'tuition_provider' || (!user.userType && teacherProfile)) {
           localStorage.setItem(ROLE_KEY, 'teacher');
           session = {
             email: user.email,
@@ -221,6 +221,9 @@ export const authService = {
           session.roles = (user.roles as UserRole[]) || [session.role || 'student'];
           session.studentCode = user.studentCode;
           session.teacherCode = user.teacherCode;
+          session.tuitionApprovalStatus =
+            user.tuitionApprovalStatus ||
+            (user.studentCode || user.teacherCode ? 'approved' : 'none');
           session.id = user._id;
         }
       }
@@ -299,7 +302,7 @@ export const authService = {
             goal: 'Corporate & Institutional Learning',
             createdAt: new Date().toISOString(),
           };
-        } else if (user.userType === 'teacher' || (!user.userType && teacherProfile)) {
+        } else if (user.userType === 'teacher' || user.userType === 'tuition_provider' || (!user.userType && teacherProfile)) {
           localStorage.setItem(ROLE_KEY, 'teacher');
           session = {
             email: user.email,
@@ -1072,6 +1075,50 @@ export const authService = {
       };
     }
     return null;
+  },
+
+  fetchCurrentUser: async (): Promise<UserSession | null> => {
+    try {
+      const headers = authService.getAuthHeaders();
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+      });
+
+      if (!res.ok) return authService.getCurrentUser();
+
+      const json = await res.json().catch(() => null);
+      if (json?.data?.user) {
+        const u = json.data.user;
+        const current: UserSession = authService.getCurrentUser() || {
+          email: u.email,
+          role: (u.userType as UserRole) || 'student',
+        };
+        const updated: UserSession = {
+          ...current,
+          id: u._id || u.id || current.id,
+          name: u.name || u.displayName || current.name,
+          email: u.email || current.email,
+          role: u.userType || u.activeRole || current.role || 'student',
+          activeRole: u.activeRole || current.activeRole,
+          roles: u.roles || current.roles,
+          studentCode: u.studentCode || current.studentCode,
+          teacherCode: u.teacherCode || current.teacherCode,
+          tuitionApprovalStatus: u.tuitionApprovalStatus || (u.studentCode || u.teacherCode ? 'approved' : 'none'),
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        if (updated.email) localStorage.setItem(EMAIL_KEY, updated.email);
+        if (updated.role) localStorage.setItem(ROLE_KEY, updated.role);
+        window.dispatchEvent(new Event('storage'));
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Could not refresh user session from /auth/me:', err);
+    }
+    return authService.getCurrentUser();
   },
 
   updateCurrentUser: (updates: Partial<UserSession>): UserSession => {

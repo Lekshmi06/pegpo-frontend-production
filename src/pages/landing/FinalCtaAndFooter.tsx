@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowRight, 
   Sparkles, 
-  ShoppingBag, 
+  ShoppingBag,
+  GraduationCap, 
   Building2, 
   Smartphone, 
   Mail, 
@@ -57,11 +58,11 @@ export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo
             </button>
 
             <button
-              onClick={() => navigate('/marketplace')}
+              onClick={() => navigate('/tuition-mode')}
               className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4 text-cyan-400" />
-              <span>Explore Marketplace</span>
+              <GraduationCap className="w-4 h-4 text-amber-400" />
+              <span>Explore Tuition Mode</span>
             </button>
 
             <button

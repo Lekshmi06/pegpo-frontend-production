@@ -114,8 +114,8 @@ export default function SignUp() {
       toast.success('Account created! Welcome to EduPye.');
       
       // Page Two to Page Three: navigate to goal selection and profile setup
-      if (userType === 'tuition_provider') {
-        navigate('/tuition-provider/onboarding');
+      if (userType === 'teacher' || userType === 'tuition_provider') {
+        navigate('/onboarding/teacher');
       } else {
         navigate('/onboarding');
       }

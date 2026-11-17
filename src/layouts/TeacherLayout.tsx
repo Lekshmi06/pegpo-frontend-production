@@ -39,7 +39,6 @@ const menuGroups: TeacherMenuGroup[] = [
       { label: 'Assignments', icon: BookOpen, path: '/teacher/assignments' },
       { label: 'Test', icon: ClipboardList, path: '/teacher/test' },
       { label: 'Examination', icon: FileText, path: '/teacher/examination' },
-      { label: 'Assessment', icon: LineChart, path: '/teacher/assessment' },
     ],
   },
   {
@@ -56,7 +55,7 @@ const menuGroups: TeacherMenuGroup[] = [
   {
     color: '#4a98f3',
     items: [
-      { label: 'Tuition', icon: GraduationCap, path: '/teacher/tuition' },
+      { label: 'Class Sections', icon: GraduationCap, path: '/teacher/classes' },
       { label: 'Students Enrolled', icon: Users, path: '/teacher/enrolled-students' },
       { label: 'Recorded Classes', icon: Mic, path: '/teacher/recorded' },
     ],
@@ -65,7 +64,7 @@ const menuGroups: TeacherMenuGroup[] = [
     color: '#62acd8',
     items: [
       { label: 'Smart Board', icon: MonitorUp, path: '/teacher/smartboard' },
-      { label: 'Project', icon: Presentation, path: '/teacher/project' },
+      { label: 'Projects', icon: Presentation, path: '/teacher/projects' },
     ],
   },
   {
@@ -152,9 +151,8 @@ export default function TeacherLayout() {
 
       {/* 1. Left Dark Blue Sidebar */}
       <aside
-        className={`fixed md:relative z-40 h-full w-[165px] shrink-0 overflow-y-auto bg-[#254b73] px-1 py-4 text-white flex flex-col justify-between transition-transform duration-200 ${
-          mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        className={`fixed md:relative z-40 h-full w-[165px] shrink-0 overflow-y-auto bg-[#254b73] px-1 py-4 text-white flex flex-col justify-between transition-transform duration-200 ${mobileNavOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+          }`}
       >
         <div className="space-y-3">
           <div
@@ -180,9 +178,8 @@ export default function TeacherLayout() {
                         setMobileNavOpen(false);
                         navigate(item.path);
                       }}
-                      className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs leading-tight transition-colors cursor-pointer ${
-                        isActive ? 'bg-white/20 text-white font-extrabold' : 'hover:bg-white/10 text-white/90 font-medium'
-                      }`}
+                      className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs leading-tight transition-colors cursor-pointer ${isActive ? 'bg-white/20 text-white font-extrabold' : 'hover:bg-white/10 text-white/90 font-medium'
+                        }`}
                     >
                       <Icon className="h-4 w-4 shrink-0 stroke-[2.2]" />
                       <span>{item.label}</span>
@@ -264,11 +261,39 @@ export default function TeacherLayout() {
             </button>
 
             {/* Tuition Mode Switcher & Teacher Code Badge */}
-            {authService.getCurrentUser()?.teacherCode && (
-              <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold tracking-wider" title="Your Permanent Teacher Code">
-                <span>TCH:</span> {authService.getCurrentUser()?.teacherCode}
-              </span>
-            )}
+            {(() => {
+              const currentUser = authService.getCurrentUser();
+              const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.teacherCode ? 'approved' : 'none');
+              if (approvalStatus === 'approved' && currentUser?.teacherCode) {
+                return (
+                  <span
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentUser.teacherCode!);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold tracking-wider cursor-pointer hover:bg-amber-100 transition-colors"
+                    title="Click to copy your permanent Teacher Code"
+                  >
+                    <span>TCH:</span> {currentUser.teacherCode}
+                  </span>
+                );
+              } else if (approvalStatus === 'pending') {
+                return (
+                  <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-300 text-xs font-semibold" title="Tuition access requested, awaiting Admin approval">
+                    Tuition: Pending Admin Approval
+                  </span>
+                );
+              } else {
+                return (
+                  <button
+                    onClick={() => navigate('/tuition-mode')}
+                    className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                    title="Request Tuition Mode Access"
+                  >
+                    Request Tuition Access
+                  </button>
+                );
+              }
+            })()}
             <button
               onClick={() => navigate('/tuition-mode')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"

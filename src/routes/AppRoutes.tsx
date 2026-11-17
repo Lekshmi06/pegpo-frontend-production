@@ -218,7 +218,7 @@ export default function AppRoutes() {
           <Route path="calendar" element={<StudentCalendar />} />
           <Route path="projects" element={<Projects />} />
           <Route path="bookshelf" element={<Bookshelf />} />
-          <Route path="tuition" element={<TuitionStudentDashboard />} />
+          <Route path="tuition" element={<Navigate to="/tuition-mode" replace />} />
         </Route>
 
         {/* Teacher Portal (Protected) */}
@@ -245,18 +245,18 @@ export default function AppRoutes() {
           <Route path="ask" element={<GenericTeacherPage title="AI Teacher Help" desc="Chat with syllabus guidelines or generate quiz questions." />} />
           <Route path="test" element={<AssessmentStudio />} />
           <Route path="examination" element={<GenericTeacherPage title="Term Examinations" desc="Manage midterm/final examination schedules." />} />
-          <Route path="assessment" element={<AssessmentStudio />} />
+          <Route path="assessment" element={<Navigate to="/teacher/test" replace />} />
           <Route path="assignments" element={<TeacherAssignments />} />
           <Route path="homework" element={<TeacherAssignments />} />
           <Route path="new-folder" element={<GenericTeacherPage title="New Folder" desc="Configure resource folders and sync pathways." />} />
           <Route path="bookshelf" element={<GenericTeacherPage title="Class Bookshelf" desc="Selected reading lists and textbooks for classes." />} />
           <Route path="collaboration" element={<TeacherBlankWorkspace />} />
           <Route path="classes" element={<TeacherClasses />} />
-          <Route path="tuition" element={<TeacherClasses />} />
+          <Route path="tuition" element={<Navigate to="/teacher/classes" replace />} />
           <Route path="enrolled-students" element={<TeacherEnrolledStudents />} />
           <Route path="recorded" element={<GenericTeacherPage title="Recorded Classes" desc="Manage lecture recordings, video archives, and audio transcripts." />} />
           <Route path="smartboard" element={<SmartBoardHome />} />
-          <Route path="project" element={<GenericTeacherPage title="Class Projects" desc="Track group tasks and assignments." />} />
+          <Route path="project" element={<Navigate to="/teacher/projects" replace />} />
           <Route path="3d-lab" element={<GenericTeacherPage title="3D Interactive Lab" desc="Explore physics simulations." />} />
           <Route path="edu-game" element={<GenericTeacherPage title="Edu Games Shelf" desc="Manage educational puzzles." />} />
           <Route path="edu-shop" element={<GenericTeacherPage title="Edu Shop" desc="Syllabus materials and classroom supplies store." />} />
@@ -291,6 +291,14 @@ export default function AppRoutes() {
         />
         <Route
           path="/classroom/:sessionId"
+          element={
+            <ProtectedRoute allowedRoles={['student', 'learner', 'personal', 'teacher', 'tuition_provider', 'provider', 'institution', 'company']}>
+              <NativeLiveClassroom />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/tuition-mode/program/:programId/live"
           element={
             <ProtectedRoute allowedRoles={['student', 'learner', 'personal', 'teacher', 'tuition_provider', 'provider', 'institution', 'company']}>
               <NativeLiveClassroom />
@@ -369,35 +377,18 @@ export default function AppRoutes() {
         <Route path="/institution/departments" element={<Navigate to="/institution/portal/departments" replace />} />
         <Route path="/institution/settings" element={<Navigate to="/institution/portal/settings" replace />} />
 
-        {/* Course Marketplace (Public Course Discovery) */}
-        <Route path="/marketplace" element={<Marketplace />} />
+        {/* Course Marketplace (Redirect legacy to Centralized Tuition Mode) */}
+        <Route path="/marketplace" element={<Navigate to="/tuition-mode" replace />} />
         <Route path="/courses" element={<Marketplace />} />
         <Route path="/courses/:id" element={<CourseDetails />} />
 
-        {/* Tuition Marketplace (Public Discovery & Mentors) */}
-        <Route path="/tuition" element={<TuitionMarketplace />} />
-        <Route path="/tuition/marketplace" element={<TuitionMarketplace />} />
-        <Route path="/tuition/provider/:id" element={<TuitionProviderPublicProfile />} />
+        {/* Tuition Marketplace Redirects to Centralized Tuition Mode */}
+        <Route path="/tuition" element={<Navigate to="/tuition-mode" replace />} />
+        <Route path="/tuition/*" element={<Navigate to="/tuition-mode" replace />} />
 
-        {/* Tuition Provider Studio Portal (Protected) */}
-        <Route
-          path="/tuition-provider"
-          element={
-            <ProtectedRoute allowedRoles={['tuition_provider', 'teacher', 'provider']}>
-              <TuitionProviderLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<TuitionProviderDashboard />} />
-          <Route path="dashboard" element={<TuitionProviderDashboard />} />
-          <Route path="profile" element={<TuitionProviderOnboarding />} />
-          <Route path="onboarding" element={<TuitionProviderOnboarding />} />
-          <Route path="offerings" element={<TuitionProviderOfferings />} />
-          <Route path="requests" element={<TuitionProviderRequests />} />
-          <Route path="schedule" element={<TuitionProviderSchedule />} />
-          <Route path="students" element={<TuitionProviderStudents />} />
-          <Route path="financials" element={<TuitionProviderFinancials />} />
-        </Route>
+        {/* Tuition Provider Studio Redirects to Unified Teacher Portal */}
+        <Route path="/tuition-provider" element={<Navigate to="/teacher" replace />} />
+        <Route path="/tuition-provider/*" element={<Navigate to="/teacher" replace />} />
 
         {/* Dedicated Centralized Tuition Mode Portal (Protected) */}
         <Route

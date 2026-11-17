@@ -39,8 +39,8 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   onExit,
 }) => {
   const navigate = useNavigate();
-  const routeParams = useParams<{ sessionId: string }>();
-  const activeSessionId = propSessionId || routeParams.sessionId || '';
+  const routeParams = useParams<{ sessionId?: string; programId?: string }>();
+  const activeSessionId = propSessionId || routeParams.sessionId || routeParams.programId || '';
 
   const [session, setSession] = useState<LiveClassSession | null>(null);
   const [loading, setLoading] = useState(true);

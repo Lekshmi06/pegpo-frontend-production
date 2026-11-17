@@ -148,7 +148,10 @@ export const TuitionProgramWorkspace: React.FC = () => {
           {/* Quick Actions */}
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <button
-              onClick={() => navigate('/student/live-classes')}
+              onClick={() => {
+                const liveRoomId = program?.code || program?._id || programId || 'tuition-live';
+                navigate(`/live/${encodeURIComponent(liveRoomId)}`);
+              }}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
             >
               <Tv className="w-4 h-4" />

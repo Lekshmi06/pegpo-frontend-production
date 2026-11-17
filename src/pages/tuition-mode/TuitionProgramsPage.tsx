@@ -33,6 +33,12 @@ export const TuitionProgramsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedCode, setCopiedCode] = useState(false);
 
+  const [approvalStatus, setApprovalStatus] = useState<string>(
+    currentUser?.tuitionApprovalStatus || (currentUser?.studentCode || currentUser?.teacherCode ? 'approved' : 'none')
+  );
+  const [requestingAccess, setRequestingAccess] = useState(false);
+  const [requestSuccessMsg, setRequestSuccessMsg] = useState<string | null>(null);
+
   // Modal State
   const [selectedProgram, setSelectedProgram] = useState<TuitionProgram | null>(null);
   const [codeGateOpen, setCodeGateOpen] = useState(false);
@@ -69,6 +75,27 @@ export const TuitionProgramsPage: React.FC = () => {
       navigator.clipboard.writeText(userCode);
       setCopiedCode(true);
       setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleRequestAccess = async () => {
+    try {
+      setRequestingAccess(true);
+      setRequestSuccessMsg(null);
+      const res = await tuitionService.requestProgramAccess();
+      if (res.success) {
+        setApprovalStatus(res.tuitionApprovalStatus || 'pending');
+        setRequestSuccessMsg('Tuition access request submitted! An administrator will review and issue your permanent code.');
+        const existing = authService.getCurrentUser();
+        if (existing) {
+          existing.tuitionApprovalStatus = 'pending';
+          localStorage.setItem('user', JSON.stringify(existing));
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to request access:', err);
+    } finally {
+      setRequestingAccess(false);
     }
   };
 
@@ -148,12 +175,22 @@ export const TuitionProgramsPage: React.FC = () => {
                   Your Tuition Code
                 </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                Permanent
-              </span>
+              {approvalStatus === 'approved' && userCode ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Permanent
+                </span>
+              ) : approvalStatus === 'pending' ? (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  Pending Review
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20">
+                  Access Needed
+                </span>
+              )}
             </div>
 
-            {userCode ? (
+            {approvalStatus === 'approved' && userCode ? (
               <div className="flex items-center justify-between bg-slate-950 px-4 py-3 rounded-xl border border-slate-800">
                 <span className="font-mono text-base sm:text-lg font-extrabold tracking-wider text-amber-300">
                   {userCode}
@@ -166,11 +203,41 @@ export const TuitionProgramsPage: React.FC = () => {
                   {copiedCode ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 </button>
               </div>
+            ) : approvalStatus === 'pending' ? (
+              <div className="space-y-2 bg-slate-950 px-4 py-3.5 rounded-xl border border-blue-900/40">
+                <div className="flex items-center gap-2 text-blue-400 font-bold text-xs">
+                  <ShieldCheck className="w-4 h-4 text-blue-400" />
+                  <span>Tuition: Pending Admin Approval</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  Your request has been submitted. An administrator will verify your profile and issue your permanent code shortly.
+                </p>
+              </div>
+            ) : currentUser ? (
+              <div className="space-y-3 bg-slate-950 px-4 py-3.5 rounded-xl border border-slate-800">
+                <p className="text-xs text-slate-400">
+                  Request access to unlock your permanent tuition code and join enrolled programs.
+                </p>
+                <button
+                  onClick={handleRequestAccess}
+                  disabled={requestingAccess}
+                  className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-50"
+                >
+                  {requestingAccess ? 'Submitting Request...' : 'Request Tuition Access'}
+                </button>
+              </div>
             ) : (
               <div className="text-xs text-slate-400 py-2">
                 Log in with your EduPye Student or Teacher account to view your permanent code.
               </div>
             )}
+
+            {requestSuccessMsg && (
+              <p className="mt-2 text-[11px] text-emerald-400 font-medium">
+                {requestSuccessMsg}
+              </p>
+            )}
+
             <p className="mt-2 text-[11px] text-slate-400">
               Use this permanent alphanumeric code to securely unlock your assigned tuition batches.
             </p>
@@ -283,9 +350,21 @@ export const TuitionProgramsPage: React.FC = () => {
 
             <form onSubmit={handleCodeSubmit} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Permanent Code <span className="text-amber-400">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Permanent Code <span className="text-amber-400">*</span>
+                  </label>
+                  {userCode && (
+                    <button
+                      type="button"
+                      onClick={() => setInputCode(userCode)}
+                      className="text-[11px] font-bold text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                    >
+                      <KeyRound className="w-3 h-3" />
+                      <span>Fill My Code ({userCode})</span>
+                    </button>
+                  )}
+                </div>
                 <input
                   type="text"
                   placeholder="STU-XXXXXX or TCH-XXXXXX"
@@ -293,6 +372,22 @@ export const TuitionProgramsPage: React.FC = () => {
                   onChange={(e) => setInputCode(e.target.value.toUpperCase())}
                   className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white font-mono text-sm tracking-wider uppercase focus:outline-none focus:border-amber-400"
                 />
+                {userCode && (
+                  <div className="mt-1.5 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Your registered code: <strong className="text-amber-300 font-mono">{userCode}</strong></span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(userCode);
+                        handleCopyCode();
+                      }}
+                      className="text-slate-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" />
+                      <span>{copiedCode ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div>

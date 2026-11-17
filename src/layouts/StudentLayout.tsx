@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Home, BookOpen, Library, Upload, Calendar,
-  Tv, Layers, LineChart, NotebookPen, FlaskConical, Gamepad2, ShoppingCart,
+  Tv, Layers, LineChart, NotebookPen, FlaskConical, Gamepad2, ShoppingCart, Bookmark,
   Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare,
   FileCheck, ArrowRight
 } from 'lucide-react';
@@ -35,10 +35,10 @@ export default function StudentLayout() {
     { path: '/student/projects', label: 'Projects', icon: LineChart },
     { path: '/student/homework', label: 'Homework', icon: FileCheck },
     { path: '/student/bookshelf', label: 'Book shelf', icon: BookMarked },
-    { path: '/student/tuition', label: 'Tuition', icon: GraduationCap },
+    { path: '/tuition-mode', label: 'Tuition Mode', icon: GraduationCap },
     { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
     { path: '/student/tests', label: 'Tests', icon: CheckSquare },
-    { path: '/student/bookmarks', label: 'Edu Shop', icon: ShoppingCart },
+    { path: '/student/bookmarks', label: 'Bookmarks', icon: Bookmark },
   ];
 
   const isCustomHeaderPage =
@@ -125,11 +125,38 @@ export default function StudentLayout() {
                 <GraduationCap className="w-3.5 h-3.5 text-amber-400" />
                 <span>EduPye Centralized Tuition</span>
               </span>
-              {authService.getCurrentUser()?.studentCode && (
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono text-[11px] font-bold">
-                  Code: {authService.getCurrentUser()?.studentCode}
-                </span>
-              )}
+              {(() => {
+                const currentUser = authService.getCurrentUser();
+                const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.studentCode ? 'approved' : 'none');
+                if (approvalStatus === 'approved' && currentUser?.studentCode) {
+                  return (
+                    <span
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentUser.studentCode!);
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono text-[11px] font-bold cursor-pointer hover:bg-amber-400/30 transition-colors"
+                      title="Click to copy your permanent Student Code"
+                    >
+                      <span>Code:</span> {currentUser.studentCode}
+                    </span>
+                  );
+                } else if (approvalStatus === 'pending') {
+                  return (
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-400/20 text-blue-300 border border-blue-400/30 text-[11px] font-semibold">
+                      Tuition: Pending Admin Approval
+                    </span>
+                  );
+                } else {
+                  return (
+                    <button
+                      onClick={() => navigate('/tuition-mode')}
+                      className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-600 transition-colors cursor-pointer"
+                    >
+                      Request Tuition Access
+                    </button>
+                  );
+                }
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <button

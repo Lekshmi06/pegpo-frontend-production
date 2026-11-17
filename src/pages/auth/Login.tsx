@@ -76,16 +76,14 @@ export default function Login() {
       return;
     }
 
-    if (session.role === 'tuition_provider') {
-      navigate('/tuition-provider/dashboard');
+    if (session.role === 'teacher' || session.role === 'tuition_provider') {
+      navigate('/teacher');
     } else if (session.role === 'provider') {
       navigate('/provider');
     } else if (session.role === 'learner') {
       navigate('/learner');
     } else if (session.role === 'company') {
       navigate('/institution/portal/dashboard');
-    } else if (session.role === 'teacher') {
-      navigate('/teacher');
     } else if (session.role === 'institution') {
       navigate('/institution/portal/dashboard');
     } else if (session.role === 'researcher') {

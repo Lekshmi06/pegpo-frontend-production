@@ -192,6 +192,31 @@ export default function TeacherOnboarding() {
             </p>
           </div>
 
+          {/* Permanent Tuition Code Onboarding Banner */}
+          {authService.getCurrentUser()?.teacherCode && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 shrink-0">
+                  <GraduationCap className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900">Your Permanent Teacher Code</span>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-200">
+                      Approved
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    Use this permanent code to authenticate in Tuition Mode and unlock live program rosters.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-amber-200/80 shadow-2xs font-mono text-xs font-black text-amber-800 tracking-wider">
+                <span>{authService.getCurrentUser()?.teacherCode}</span>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* 1. What type of teacher are you? */}
             <div className="space-y-2">

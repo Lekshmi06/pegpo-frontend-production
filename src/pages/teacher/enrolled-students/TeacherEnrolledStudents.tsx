@@ -225,8 +225,11 @@ export const TeacherEnrolledStudents: React.FC = () => {
                   </button>
 
                   <button
-                    onClick={() => navigate('/teacher/classes')}
-                    className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#1c3352] hover:bg-[#254b73] text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
+                    onClick={() => {
+                      const liveRoomId = group.code || group.programId || 'tuition-live';
+                      navigate(`/live/${encodeURIComponent(liveRoomId)}`);
+                    }}
+                    className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs shadow-xs transition-all cursor-pointer"
                     title="Launch live classroom"
                   >
                     <Tv className="w-3.5 h-3.5" />

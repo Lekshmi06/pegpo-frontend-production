@@ -534,6 +534,19 @@ export const tuitionService = {
     });
   },
 
+  requestProgramAccess: async (data: { programId?: string; notes?: string } = {}): Promise<{
+    success: boolean;
+    message: string;
+    tuitionApprovalStatus: string;
+    code?: string;
+    user?: any;
+  }> => {
+    return await apiRequest("/tuition/requests/program-access", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
   // Session & Storage Management
   setTuitionModeSession: (token: string, programContext?: TuitionProgramContext, user?: any) => {
     localStorage.setItem(TUITION_MODE_TOKEN_KEY, token);

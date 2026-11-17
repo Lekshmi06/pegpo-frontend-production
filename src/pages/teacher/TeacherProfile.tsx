@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   User as UserIcon,
   Building2,
@@ -16,15 +17,20 @@ import {
   Phone,
   Mail,
   Calendar,
+  KeyRound,
+  Copy,
+  ArrowRight,
 } from 'lucide-react';
 import teacherAvatar from '../../assets/user.png';
 import { useTeacherProfile } from '../../hooks/useTeacherProfile';
 import { useToast } from '../../hooks/useToast';
 import { authService } from '../../services/authService';
+import { tuitionService } from '../../services/tuitionService';
 import { teacherProfileService } from '../../services/teacherProfileService';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
 import { TEACHER_GOALS, TeacherType } from '../../types/teacher';
+import { UserSession } from '../../types/auth';
 
 type ProfileTab = 'personal' | 'teaching' | 'subjects' | 'goals' | 'settings';
 
@@ -73,10 +79,41 @@ const DEPARTMENTS = [
 ];
 
 export default function TeacherProfile() {
+  const navigate = useNavigate();
   const toast = useToast();
   const { profile, isLoading, isSaving, updateProfile } = useTeacherProfile();
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('personal');
+  const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(authService.getCurrentUser());
+  const [isRequestingTuition, setIsRequestingTuition] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    authService.fetchCurrentUser().then((user) => {
+      if (isMounted && user) {
+        setCurrentUserSession(user);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleRequestTuitionCode = async () => {
+    try {
+      setIsRequestingTuition(true);
+      const res = await tuitionService.requestProgramAccess();
+      if (res.success) {
+        toast.success(res.message || 'Teacher Code successfully generated!');
+        const updated = await authService.fetchCurrentUser();
+        if (updated) setCurrentUserSession(updated);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to request tuition code');
+    } finally {
+      setIsRequestingTuition(false);
+    }
+  };
 
   // Form states
   const [name, setName] = useState('');
@@ -298,6 +335,75 @@ export default function TeacherProfile() {
         >
           Save Changes
         </Button>
+      </div>
+
+      {/* Tuition Mode Access Code Card */}
+      <div className="bg-gradient-to-br from-[#11243d] via-[#1c3352] to-[#254b73] rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-amber-400/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30">
+              <KeyRound className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
+                  Tuition Mode Access Code
+                </h3>
+                {currentUserSession?.teacherCode ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+                    Approved
+                  </span>
+                ) : currentUserSession?.tuitionApprovalStatus === 'pending' ? (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-400/20 text-blue-300 border border-blue-400/30">
+                    Pending Approval
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    Action Required
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                Your permanent, unique teacher code to launch live centralized Tuition programs, manage student rosters, and run Combined Study.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {currentUserSession?.teacherCode ? (
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-amber-400/30 font-mono text-sm sm:text-base font-extrabold text-amber-300 tracking-wider">
+              <span>{currentUserSession.teacherCode}</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(currentUserSession.teacherCode!);
+                  toast.success('Teacher Code copied to clipboard!');
+                }}
+                className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="Copy Teacher Code"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleRequestTuitionCode}
+              disabled={isRequestingTuition}
+              className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <KeyRound className="w-4 h-4 text-slate-950" />
+              <span>{isRequestingTuition ? 'Generating Code...' : 'Generate / Request Tuition Code'}</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => navigate('/tuition-mode')}
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+          >
+            <span>Go to Tuition Mode</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Activity Overview Summary */}

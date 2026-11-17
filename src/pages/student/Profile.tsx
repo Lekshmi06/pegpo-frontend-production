@@ -27,9 +27,12 @@ import {
   AlertCircle,
   Target,
   Award,
+  KeyRound,
+  Copy,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import { authService } from '../../services/authService';
+import { tuitionService } from '../../services/tuitionService';
 import { subscriptionService } from '../../services/subscriptionService';
 import { recognitionService } from '../../services/recognitionService';
 import { StudentRecognition } from '../../types/recognition';
@@ -46,7 +49,7 @@ import {
   InvoiceItem,
   PlanPeriod,
 } from '../../types/subscription';
-import { LearningPath } from '../../types/auth';
+import { LearningPath, UserSession } from '../../types/auth';
 
 type ProfileTab = 'personal' | 'academic' | 'recognition' | 'subscription' | 'security';
 
@@ -315,6 +318,37 @@ export default function Profile() {
     category: 'Engineering Entrance',
     preparationMode: 'Self-Study with Digital Tools',
   });
+
+  const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(authService.getCurrentUser());
+  const [isRequestingTuition, setIsRequestingTuition] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    authService.fetchCurrentUser().then((user) => {
+      if (isMounted && user) {
+        setCurrentUserSession(user);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleRequestTuitionCode = async () => {
+    try {
+      setIsRequestingTuition(true);
+      const res = await tuitionService.requestProgramAccess();
+      if (res.success) {
+        toast.success(res.message || 'Tuition Code successfully generated!');
+        const updated = await authService.fetchCurrentUser();
+        if (updated) setCurrentUserSession(updated);
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to request tuition code');
+    } finally {
+      setIsRequestingTuition(false);
+    }
+  };
 
   // Security Form State
   const [securityForm, setSecurityForm] = useState({
@@ -1136,6 +1170,75 @@ export default function Profile() {
                 >
                   Log Out
                 </Button>
+              </div>
+            </div>
+
+            {/* Tuition Mode Access Code Card */}
+            <div className="bg-gradient-to-br from-[#11243d] via-[#1c3352] to-[#254b73] rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-amber-400/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    <KeyRound className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-extrabold text-white tracking-tight">
+                        Tuition Mode Access Code
+                      </h3>
+                      {currentUserSession?.studentCode ? (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+                          Approved
+                        </span>
+                      ) : currentUserSession?.tuitionApprovalStatus === 'pending' ? (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-400/20 text-blue-300 border border-blue-400/30">
+                          Pending Approval
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                          Action Required
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-300 font-medium mt-0.5">
+                      Your permanent, unique code to access centralized Tuition batches, split-screen SmartBoard classrooms, and combined study.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                {currentUserSession?.studentCode ? (
+                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-amber-400/30 font-mono text-sm sm:text-base font-extrabold text-amber-300 tracking-wider">
+                    <span>{currentUserSession.studentCode}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentUserSession.studentCode!);
+                        toast.success('Tuition Code copied to clipboard!');
+                      }}
+                      className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                      title="Copy Tuition Code"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleRequestTuitionCode}
+                    disabled={isRequestingTuition}
+                    className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                  >
+                    <KeyRound className="w-4 h-4 text-slate-950" />
+                    <span>{isRequestingTuition ? 'Generating Code...' : 'Generate / Request Tuition Code'}</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => navigate('/tuition-mode')}
+                  className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+                >
+                  <span>Go to Tuition Mode</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
