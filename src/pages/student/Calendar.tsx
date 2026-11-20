@@ -4,7 +4,8 @@ import {
   Globe, Trophy, Search, ChevronDown, ChevronLeft, ChevronRight, Plus, X,
   Calendar as CalendarIcon, MapPin, CheckCircle2, Layers,
   MessageSquare, BookOpen, Mic, Video, Brain, FileText,
-  TrendingUp, RotateCcw, NotebookPen, Bookmark, Trash2, Clock
+  TrendingUp, RotateCcw, NotebookPen, Bookmark, Trash2, Clock,
+  GraduationCap, Tv
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import cardSmartboard from '../../assets/card-smartboard.png';
@@ -15,6 +16,8 @@ import { useToast } from '../../hooks/useToast';
 import { Modal } from '../../components/ui/Modal';
 import { Button } from '../../components/ui/Button';
 import { workspaceService, CalendarEventItem } from '../../services/workspaceService';
+import { tuitionService } from '../../services/tuitionService';
+import { TuitionCalendarSession } from '../../types/tuition';
 
 interface EventItem {
   id: string | number;
@@ -27,6 +30,10 @@ interface EventItem {
   location?: string;
   eventType?: string;
   isCompleted?: boolean;
+  isTuition?: boolean;
+  programCode?: string;
+  liveRoomUrl?: string;
+  canJoinNow?: boolean;
 }
 
 const COLOR_PALETTES = [
@@ -84,6 +91,7 @@ export default function StudentCalendar() {
 
   // Backend Events state
   const [allEvents, setAllEvents] = useState<CalendarEventItem[]>([]);
+  const [tuitionSessions, setTuitionSessions] = useState<TuitionCalendarSession[]>([]);
   const [isBackendLoaded, setIsBackendLoaded] = useState(false);
 
   // Inline task card state
@@ -132,14 +140,20 @@ export default function StudentCalendar() {
   const day2Info = getDayDetails(1);
   const day3Info = getDayDetails(2);
 
-  // Load calendar events from backend on mount
+  // Load calendar events & tuition schedule from backend on mount
   useEffect(() => {
     let mounted = true;
     const loadEvents = async () => {
       try {
-        const events = await workspaceService.getCalendarEvents();
+        const [events, scheduleRes] = await Promise.all([
+          workspaceService.getCalendarEvents().catch(() => []),
+          tuitionService.getMyTuitionSchedule().catch(() => ({ success: false, sessions: [] as TuitionCalendarSession[] })),
+        ]);
         if (mounted) {
           setAllEvents(events || []);
+          if (scheduleRes && scheduleRes.sessions) {
+            setTuitionSessions(scheduleRes.sessions);
+          }
           setIsBackendLoaded(true);
         }
       } catch (err) {
@@ -205,10 +219,43 @@ export default function StudentCalendar() {
     }
   });
 
-  // If student has no saved events yet, show default items so the screen is complete
-  const effectiveDay1 = allEvents.length > 0 ? userDay1Events : DEFAULT_DAY1;
-  const effectiveDay2 = allEvents.length > 0 ? userDay2Events : DEFAULT_DAY2;
-  const effectiveDay3 = allEvents.length > 0 ? userDay3Events : DEFAULT_DAY3;
+  // Automatically inject and badge Tuition Program upcoming classes
+  tuitionSessions.forEach((ts) => {
+    const item: EventItem = {
+      id: ts.id,
+      title: `${ts.subject}: ${ts.programTitle}`,
+      time: `${ts.startTime} - ${ts.endTime}`,
+      bg: 'bg-gradient-to-br from-[#11243d] via-[#1c3352] to-[#254b73] border-amber-400/50 text-white',
+      date: ts.date,
+      description: `EduPye Centralized Tuition Program (${ts.programCode}) • ${ts.grade || 'Classroom'}. 1-click live classroom launch with split-screen SmartBoard.`,
+      location: `Tuition Room: ${ts.programCode}`,
+      eventType: 'tuition',
+      isCompleted: ts.status === 'completed',
+      isTuition: true,
+      programCode: ts.programCode,
+      liveRoomUrl: ts.liveRoomUrl,
+      canJoinNow: ts.canJoinNow,
+    };
+
+    if (ts.date === day1Info.dateStr) {
+      userDay1Events.push(item);
+    } else if (ts.date === day2Info.dateStr) {
+      userDay2Events.push(item);
+    } else if (ts.date === day3Info.dateStr) {
+      userDay3Events.push(item);
+    }
+  });
+
+  // Sort by time
+  userDay1Events.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  userDay2Events.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  userDay3Events.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+  // If student has saved events or tuition sessions, show real items
+  const hasRealEvents = allEvents.length > 0 || tuitionSessions.length > 0;
+  const effectiveDay1 = hasRealEvents ? userDay1Events : DEFAULT_DAY1;
+  const effectiveDay2 = hasRealEvents ? userDay2Events : DEFAULT_DAY2;
+  const effectiveDay3 = hasRealEvents ? userDay3Events : DEFAULT_DAY3;
   const effectiveWaiting = allEvents.length > 0 ? userWaitingTasks : DEFAULT_WAITING;
 
   // Search filter
@@ -227,6 +274,53 @@ export default function StudentCalendar() {
   const filteredDay2 = applySearch(effectiveDay2);
   const filteredDay3 = applySearch(effectiveDay3);
   const filteredWaiting = applySearch(effectiveWaiting);
+
+  const renderEventCard = (evt: EventItem) => (
+    <div
+      key={evt.id}
+      onClick={() => setSelectedEventDetails(evt)}
+      className={`p-3 rounded-2xl border ${evt.bg} shadow-2xs space-y-1.5 cursor-pointer transition-all hover:scale-102 ${
+        evt.isCompleted ? 'opacity-60 line-through' : ''
+      }`}
+    >
+      {evt.isTuition && (
+        <div className="flex items-center justify-between text-[10px] font-extrabold text-amber-300">
+          <span className="flex items-center gap-1">
+            <GraduationCap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>Tuition Mode • {evt.programCode}</span>
+          </span>
+          {evt.canJoinNow && (
+            <span className="px-1.5 py-0.5 rounded-full bg-red-500/30 text-red-200 border border-red-400/40 text-[9px] font-black animate-pulse flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
+              LIVE NOW
+            </span>
+          )}
+        </div>
+      )}
+      <h4 className="text-xs font-bold leading-snug">{evt.title}</h4>
+      <div className="flex items-center justify-between text-[10px] opacity-90 font-semibold">
+        <span>{evt.time}</span>
+        {evt.location && <span className="truncate max-w-[120px]">{evt.location}</span>}
+      </div>
+      {evt.isTuition && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(evt.liveRoomUrl || `/live/${evt.programCode}`);
+          }}
+          className={`w-full mt-1.5 py-1.5 px-3 rounded-xl text-white text-[11px] font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer ${
+            evt.canJoinNow
+              ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 animate-pulse'
+              : 'bg-red-600/80 hover:bg-red-600'
+          }`}
+          title="Launch split-screen SmartBoard live classroom"
+        >
+          <Tv className="w-3.5 h-3.5" />
+          <span>Join Live SmartBoard</span>
+        </button>
+      )}
+    </div>
+  );
 
   // 1. Save inline task to backend
   const handleSaveInlineTask = async () => {
@@ -488,6 +582,30 @@ export default function StudentCalendar() {
               )}
             </div>
 
+            {selectedEventDetails.isTuition && (
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-red-500/10 via-amber-500/10 to-red-500/10 border border-amber-500/30 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-amber-400/20 text-amber-700">
+                    <GraduationCap className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">Centralized Tuition Live Session</h4>
+                    <p className="text-[10px] text-slate-500">Split-screen interactive SmartBoard & WebRTC audio/video</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    navigate(selectedEventDetails.liveRoomUrl || `/live/${selectedEventDetails.programCode}`);
+                  }}
+                  className="bg-red-600 hover:bg-red-500 text-white font-bold"
+                  leftIcon={<Tv className="w-3.5 h-3.5" />}
+                >
+                  Join Live SmartBoard
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-2">
               <Button
                 variant="outline"
@@ -740,50 +858,17 @@ export default function StudentCalendar() {
                         </div>
                       )}
 
-                      {filteredDay1.map((evt) => (
-                        <div
-                          key={evt.id}
-                          onClick={() => setSelectedEventDetails(evt)}
-                          className={`p-3 rounded-2xl border ${evt.bg} shadow-2xs space-y-1 cursor-pointer transition-all hover:scale-102 ${
-                            evt.isCompleted ? 'opacity-60 line-through' : ''
-                          }`}
-                        >
-                          <h4 className="text-xs font-bold leading-snug">{evt.title}</h4>
-                          <span className="text-[10px] opacity-80 font-semibold">{evt.time}</span>
-                        </div>
-                      ))}
+                      {filteredDay1.map(renderEventCard)}
                     </div>
 
                     {/* Day 2 Column */}
                     <div className="p-3 space-y-2.5 flex flex-col">
-                      {filteredDay2.map((evt) => (
-                        <div
-                          key={evt.id}
-                          onClick={() => setSelectedEventDetails(evt)}
-                          className={`p-3 rounded-2xl border ${evt.bg} shadow-2xs space-y-1 cursor-pointer transition-all hover:scale-102 ${
-                            evt.isCompleted ? 'opacity-60 line-through' : ''
-                          }`}
-                        >
-                          <h4 className="text-xs font-bold leading-snug">{evt.title}</h4>
-                          <span className="text-[10px] opacity-80 font-semibold">{evt.time}</span>
-                        </div>
-                      ))}
+                      {filteredDay2.map(renderEventCard)}
                     </div>
 
                     {/* Day 3 Column */}
                     <div className="p-3 space-y-2.5 flex flex-col">
-                      {filteredDay3.map((evt) => (
-                        <div
-                          key={evt.id}
-                          onClick={() => setSelectedEventDetails(evt)}
-                          className={`p-3 rounded-2xl border ${evt.bg} shadow-2xs space-y-1 cursor-pointer transition-all hover:scale-102 ${
-                            evt.isCompleted ? 'opacity-60 line-through' : ''
-                          }`}
-                        >
-                          <h4 className="text-xs font-bold leading-snug">{evt.title}</h4>
-                          <span className="text-[10px] opacity-80 font-semibold">{evt.time}</span>
-                        </div>
-                      ))}
+                      {filteredDay3.map(renderEventCard)}
                     </div>
                   </div>
                 </div>

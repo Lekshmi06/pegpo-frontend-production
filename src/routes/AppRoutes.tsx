@@ -253,6 +253,8 @@ export default function AppRoutes() {
           <Route path="collaboration" element={<TeacherBlankWorkspace />} />
           <Route path="classes" element={<TeacherClasses />} />
           <Route path="tuition" element={<Navigate to="/teacher/classes" replace />} />
+          <Route path="tuition-earnings" element={<TuitionProviderFinancials />} />
+          <Route path="financials" element={<TuitionProviderFinancials />} />
           <Route path="enrolled-students" element={<TeacherEnrolledStudents />} />
           <Route path="recorded" element={<GenericTeacherPage title="Recorded Classes" desc="Manage lecture recordings, video archives, and audio transcripts." />} />
           <Route path="smartboard" element={<SmartBoardHome />} />

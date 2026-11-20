@@ -104,7 +104,11 @@ export default function TeacherProfile() {
       setIsRequestingTuition(true);
       const res = await tuitionService.requestProgramAccess();
       if (res.success) {
-        toast.success(res.message || 'Teacher Code successfully generated!');
+        if (res.code) {
+          toast.success(`Teacher Code issued: ${res.code}`);
+        } else {
+          toast.success(res.message || 'Tuition access requested! Awaiting Admin approval.');
+        }
         const updated = await authService.fetchCurrentUser();
         if (updated) setCurrentUserSession(updated);
       }
@@ -385,6 +389,14 @@ export default function TeacherProfile() {
                 <Copy className="w-4 h-4" />
               </button>
             </div>
+          ) : currentUserSession?.tuitionApprovalStatus === 'pending' ? (
+            <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-blue-950/60 border border-blue-400/40 text-blue-200">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+              <div className="text-left">
+                <div className="text-xs font-bold text-blue-300">Pending Admin Approval</div>
+                <div className="text-[11px] text-slate-300">EduPye Admin is reviewing your profile to issue your permanent Teacher ID.</div>
+              </div>
+            </div>
           ) : (
             <button
               onClick={handleRequestTuitionCode}
@@ -392,7 +404,7 @@ export default function TeacherProfile() {
               className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
               <KeyRound className="w-4 h-4 text-slate-950" />
-              <span>{isRequestingTuition ? 'Generating Code...' : 'Generate / Request Tuition Code'}</span>
+              <span>{isRequestingTuition ? 'Submitting Request...' : 'Request Tuition Access'}</span>
             </button>
           )}
 

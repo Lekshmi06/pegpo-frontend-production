@@ -15,7 +15,13 @@ import {
   Network
 } from 'lucide-react';
 
-export const HowItWorksSection: React.FC = () => {
+import type { HowItWorksStep } from '../../services/contentService';
+
+interface HowItWorksSectionProps {
+  dynamicSteps?: HowItWorksStep[];
+}
+
+export const HowItWorksSection: React.FC<HowItWorksSectionProps> = ({ dynamicSteps }) => {
   const steps = [
     {
       step: '01',
@@ -87,6 +93,23 @@ export const HowItWorksSection: React.FC = () => {
     },
   ];
 
+  const displaySteps = (dynamicSteps && dynamicSteps.length > 0)
+    ? dynamicSteps.map((ds, idx) => {
+        const matchingDefault = steps[idx] || steps[steps.length - 1];
+        return {
+          step: ds.stepNumber < 10 ? `0${ds.stepNumber}` : `${ds.stepNumber}`,
+          title: ds.title,
+          role: matchingDefault.role,
+          icon: matchingDefault.icon,
+          color: matchingDefault.color,
+          badgeColor: matchingDefault.badgeColor,
+          description: ds.description,
+          highlights: matchingDefault.highlights,
+          flowOutput: matchingDefault.flowOutput,
+        };
+      })
+    : steps;
+
   return (
     <section id="how-it-works" className="py-24 bg-slate-950 relative border-t border-slate-900 overflow-hidden">
       {/* Background glow decoration */}
@@ -136,7 +159,7 @@ export const HowItWorksSection: React.FC = () => {
 
         {/* 4 Connected Pillars Workflow Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          {steps.map((item, index) => {
+          {displaySteps.map((item, index) => {
             const Icon = item.icon;
             return (
               <div

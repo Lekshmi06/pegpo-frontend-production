@@ -14,13 +14,30 @@ import {
   Lock,
 } from 'lucide-react';
 import { tuitionService } from '../../services/tuitionService';
+import type { TuitionBannerContent } from '../../services/contentService';
 
-export const TuitionSection: React.FC = () => {
+interface TuitionSectionProps {
+  content?: TuitionBannerContent;
+}
+
+export const TuitionSection: React.FC<TuitionSectionProps> = ({ content }) => {
   const navigate = useNavigate();
   const [quickCode, setQuickCode] = useState('');
   const [quickName, setQuickName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const badge = content?.badge || "Centralized Tuition Ecosystem";
+  const title = content?.title || "EduPye Tuition Mode";
+  const subtitle = content?.subtitle || "A high-focus, scheduled learning environment engineered for structured one-to-one programs, interactive SmartBoard live classes, combined study streams, and frictionless permanent code access.";
+  const f1Title = content?.feature1Title || "Permanent User Codes";
+  const f1Desc = content?.feature1Desc || "Unique Student (STU-XXXXXX) and Teacher (TCH-XXXXXX) codes for instant tuition authentication and program verification.";
+  const f2Title = content?.feature2Title || "Dual-Dock SmartBoard";
+  const f2Desc = content?.feature2Desc || "Phase 4 WebRTC live classroom with split-screen multi-mode docks, real-time stylus annotations, document viewing, and full-duplex video.";
+  const f3Title = content?.feature3Title || "Combined Study Stream";
+  const f3Desc = content?.feature3Desc || "Program-specific real-time discussion rooms with PDF, image, and video exchange, backed by 1-year compliant storage and automatic archival.";
+  const f4Title = content?.feature4Title || "15-Min Post-Session Logout";
+  const f4Desc = content?.feature4Desc || "Automated security protocols ensure student classrooms gracefully close and log out idle participants 15 minutes after class completion.";
 
   const handleQuickCodeSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,13 +78,13 @@ export const TuitionSection: React.FC = () => {
         <div className="text-center max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/20 mb-4">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Centralized Tuition Ecosystem
+            {badge}
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            EduPye <span className="bg-gradient-to-r from-amber-400 via-amber-200 to-orange-400 bg-clip-text text-transparent">Tuition Mode</span>
+            {title}
           </h2>
           <p className="mt-4 text-base sm:text-lg text-slate-300">
-            A high-focus, scheduled learning environment engineered for structured one-to-one programs, interactive SmartBoard live classes, combined study streams, and frictionless permanent code access.
+            {subtitle}
           </p>
         </div>
 
@@ -80,9 +97,9 @@ export const TuitionSection: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 mb-4 group-hover:scale-105 transition-transform border border-amber-500/20">
                 <KeyRound className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Permanent User Codes</h3>
+              <h3 className="text-lg font-bold text-white mb-2">{f1Title}</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Unique Student (<code className="text-amber-300 font-mono text-xs">STU-XXXXXX</code>) and Teacher (<code className="text-blue-300 font-mono text-xs">TCH-XXXXXX</code>) codes for instant tuition authentication and program verification.
+                {f1Desc}
               </p>
             </div>
 
@@ -91,9 +108,9 @@ export const TuitionSection: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-400 mb-4 group-hover:scale-105 transition-transform border border-blue-500/20">
                 <Video className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Dual-Dock SmartBoard</h3>
+              <h3 className="text-lg font-bold text-white mb-2">{f2Title}</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Phase 4 WebRTC live classroom with split-screen multi-mode docks, real-time stylus annotations, document viewing, and full-duplex video.
+                {f2Desc}
               </p>
             </div>
 
@@ -102,9 +119,9 @@ export const TuitionSection: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mb-4 group-hover:scale-105 transition-transform border border-emerald-500/20">
                 <MessageSquareShare className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Combined Study Stream</h3>
+              <h3 className="text-lg font-bold text-white mb-2">{f3Title}</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Program-specific real-time discussion rooms with PDF, image, and video exchange, backed by 1-year compliant storage and automatic archival.
+                {f3Desc}
               </p>
             </div>
 
@@ -113,9 +130,9 @@ export const TuitionSection: React.FC = () => {
               <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 mb-4 group-hover:scale-105 transition-transform border border-purple-500/20">
                 <Clock className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">15-Min Post-Session Logout</h3>
+              <h3 className="text-lg font-bold text-white mb-2">{f4Title}</h3>
               <p className="text-sm text-slate-400 leading-relaxed">
-                Automated security protocols ensure student classrooms gracefully close and log out idle participants 15 minutes after class completion.
+                {f4Desc}
               </p>
             </div>
           </div>

@@ -16,6 +16,9 @@ export interface UseWebRTCClassroomOptions {
   onSessionEnded?: () => void;
   onForceLogout?: (reason?: string) => void;
   onWhiteboardSync?: (elements: any[]) => void;
+  onWhiteboardDraw?: (element: any) => void;
+  onWhiteboardClear?: () => void;
+  onWhiteboardUndo?: (elements?: any[]) => void;
 }
 
 export function useWebRTCClassroom({
@@ -26,6 +29,9 @@ export function useWebRTCClassroom({
   onSessionEnded,
   onForceLogout,
   onWhiteboardSync,
+  onWhiteboardDraw,
+  onWhiteboardClear,
+  onWhiteboardUndo,
 }: UseWebRTCClassroomOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
@@ -61,6 +67,12 @@ export function useWebRTCClassroom({
   onForceLogoutRef.current = onForceLogout;
   const onWhiteboardSyncRef = useRef(onWhiteboardSync);
   onWhiteboardSyncRef.current = onWhiteboardSync;
+  const onWhiteboardDrawRef = useRef(onWhiteboardDraw);
+  onWhiteboardDrawRef.current = onWhiteboardDraw;
+  const onWhiteboardClearRef = useRef(onWhiteboardClear);
+  onWhiteboardClearRef.current = onWhiteboardClear;
+  const onWhiteboardUndoRef = useRef(onWhiteboardUndo);
+  onWhiteboardUndoRef.current = onWhiteboardUndo;
 
   // 1. Initialise local media stream with graceful degradation
   const initLocalMedia = useCallback(async (): Promise<MediaStream | null> => {
@@ -306,6 +318,10 @@ export function useWebRTCClassroom({
                   console.error(`[WebRTC] Failed to create offer to ${p.peerId}:`, offerErr);
                 }
               }
+              // Initial whiteboard sync if room has existing strokes
+              if ((data as any).whiteboardState && Array.isArray((data as any).whiteboardState) && (data as any).whiteboardState.length > 0) {
+                onWhiteboardSyncRef.current?.((data as any).whiteboardState);
+              }
               break;
             }
 
@@ -427,9 +443,34 @@ export function useWebRTCClassroom({
               break;
             }
 
+            case 'whiteboard:draw':
+            case 'whiteboard-draw': {
+              if (onWhiteboardDrawRef.current && (data as any).element) {
+                onWhiteboardDrawRef.current((data as any).element);
+              }
+              break;
+            }
+
+            case 'whiteboard:clear':
+            case 'whiteboard-clear': {
+              if (onWhiteboardClearRef.current) {
+                onWhiteboardClearRef.current();
+              }
+              break;
+            }
+
+            case 'whiteboard:undo':
+            case 'whiteboard-undo': {
+              if (onWhiteboardUndoRef.current) {
+                onWhiteboardUndoRef.current((data as any).elements);
+              }
+              break;
+            }
+
+            case 'whiteboard:sync-state':
             case 'whiteboard-sync': {
-              if (onWhiteboardSyncRef.current) {
-                onWhiteboardSyncRef.current(data.elements);
+              if (onWhiteboardSyncRef.current && (data as any).elements) {
+                onWhiteboardSyncRef.current((data as any).elements);
               }
               break;
             }
@@ -569,10 +610,36 @@ export function useWebRTCClassroom({
     [sendSignalling]
   );
 
+  const broadcastWhiteboardDraw = useCallback(
+    (element: any) => {
+      sendSignalling({
+        type: 'whiteboard:draw',
+        element,
+      });
+    },
+    [sendSignalling]
+  );
+
+  const broadcastWhiteboardClear = useCallback(() => {
+    sendSignalling({
+      type: 'whiteboard:clear',
+    });
+  }, [sendSignalling]);
+
+  const broadcastWhiteboardUndo = useCallback(
+    (elements?: any[]) => {
+      sendSignalling({
+        type: 'whiteboard:undo',
+        elements,
+      });
+    },
+    [sendSignalling]
+  );
+
   const broadcastWhiteboardData = useCallback(
     (elements: any[]) => {
       sendSignalling({
-        type: 'whiteboard-sync',
+        type: 'whiteboard:sync-state',
         elements,
       });
     },
@@ -656,6 +723,9 @@ export function useWebRTCClassroom({
     toggleScreenShare,
     sendChatMessage,
     broadcastWhiteboardData,
+    broadcastWhiteboardDraw,
+    broadcastWhiteboardClear,
+    broadcastWhiteboardUndo,
   };
 }
 

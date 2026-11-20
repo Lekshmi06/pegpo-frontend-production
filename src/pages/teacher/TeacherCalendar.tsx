@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, GraduationCap, Tv } from 'lucide-react';
 import { TeacherTask } from '../../types/teacherTask';
 import { teacherTaskService } from '../../services/teacherTaskService';
+import { tuitionService } from '../../services/tuitionService';
+import { TuitionCalendarSession } from '../../types/tuition';
 import TeacherTaskModal from '../../components/teacher/TeacherTaskModal';
 
 export default function TeacherCalendar() {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];
   });
   const [allTasks, setAllTasks] = useState<TeacherTask[]>([]);
   const [upcomingTasks, setUpcomingTasks] = useState<TeacherTask[]>([]);
+  const [tuitionSessions, setTuitionSessions] = useState<TuitionCalendarSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TeacherTask | null>(null);
@@ -18,19 +23,25 @@ export default function TeacherCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Fetch tasks for the current view and upcoming
+  // Fetch tasks and tuition schedule for the current view and upcoming
   const loadTasks = useCallback(async () => {
     try {
       setLoading(true);
       // Fetch upcoming tasks (limit 4)
-      const upcoming = await teacherTaskService.getUpcomingTasks(4);
-      setUpcomingTasks(upcoming);
-
-      // Fetch all tasks for current month view (with buffer)
       const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
       const endDate = new Date(year, month + 2, 0).toISOString().split('T')[0];
-      const tasks = await teacherTaskService.getTasks({ startDate, endDate });
-      setAllTasks(tasks);
+
+      const [upcoming, tasks, tuitionRes] = await Promise.all([
+        teacherTaskService.getUpcomingTasks(4).catch(() => []),
+        teacherTaskService.getTasks({ startDate, endDate }).catch(() => []),
+        tuitionService.getMyTuitionSchedule().catch(() => ({ success: false, sessions: [] as TuitionCalendarSession[] })),
+      ]);
+
+      setUpcomingTasks(upcoming || []);
+      setAllTasks(tasks || []);
+      if (tuitionRes && tuitionRes.sessions) {
+        setTuitionSessions(tuitionRes.sessions);
+      }
     } catch (err) {
       console.warn('Failed to load teacher tasks:', err);
     } finally {
@@ -51,7 +62,7 @@ export default function TeacherCalendar() {
     };
   }, [loadTasks]);
 
-  // Group tasks by YYYY-MM-DD
+  // Group tasks by YYYY-MM-DD (including Tuition Program sessions)
   const tasksByDate = useMemo(() => {
     const map: Record<string, TeacherTask[]> = {};
     for (const t of allTasks) {
@@ -60,8 +71,72 @@ export default function TeacherCalendar() {
       if (!map[key]) map[key] = [];
       map[key].push(t);
     }
+
+    for (const ts of tuitionSessions) {
+      if (!ts.date) continue;
+      const key = ts.date;
+      if (!map[key]) map[key] = [];
+      map[key].push({
+        _id: ts.id,
+        teacherId: 'self',
+        title: `${ts.subject}: ${ts.programTitle}`,
+        description: `Tuition Program (${ts.programCode}) Live SmartBoard lecture`,
+        date: ts.date,
+        startTime: ts.startTime,
+        endTime: ts.endTime,
+        taskType: 'Lecture',
+        priority: 'High',
+        status: ts.status === 'completed' ? 'Completed' : 'Scheduled',
+        isTuition: true,
+        programCode: ts.programCode,
+        liveRoomUrl: ts.liveRoomUrl,
+        canJoinNow: ts.canJoinNow,
+        subject: ts.subject,
+      });
+    }
+
+    // Sort tasks in each date by startTime
+    for (const key of Object.keys(map)) {
+      map[key].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    }
+
     return map;
-  }, [allTasks]);
+  }, [allTasks, tuitionSessions]);
+
+  // Combined upcoming list for left sidebar (tasks + upcoming tuition sessions)
+  const combinedUpcoming = useMemo(() => {
+    const list: TeacherTask[] = [...upcomingTasks];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const upcomingTuition = tuitionSessions.filter((ts) => ts.date >= todayStr).slice(0, 5);
+
+    for (const ts of upcomingTuition) {
+      list.push({
+        _id: ts.id,
+        teacherId: 'self',
+        title: `${ts.subject}: ${ts.programTitle}`,
+        description: `Tuition Program (${ts.programCode})`,
+        date: ts.date,
+        startTime: ts.startTime,
+        endTime: ts.endTime,
+        taskType: 'Lecture',
+        priority: 'High',
+        status: ts.status === 'completed' ? 'Completed' : 'Scheduled',
+        isTuition: true,
+        programCode: ts.programCode,
+        liveRoomUrl: ts.liveRoomUrl,
+        canJoinNow: ts.canJoinNow,
+        subject: ts.subject,
+      });
+    }
+
+    list.sort((a, b) => {
+      const dateA = `${a.date || ''} ${a.startTime || ''}`;
+      const dateB = `${b.date || ''} ${b.startTime || ''}`;
+      return dateA.localeCompare(dateB);
+    });
+
+    return list.slice(0, 6);
+  }, [upcomingTasks, tuitionSessions]);
 
   // Calendar matrix calculations
   const firstDayOfWeek = new Date(year, month, 1).getDay(); // 0 is Sunday
@@ -115,6 +190,10 @@ export default function TeacherCalendar() {
 
   const handleOpenEditModal = (task: TeacherTask, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (task.isTuition) {
+      navigate(task.liveRoomUrl || `/live/${task.programCode}`);
+      return;
+    }
     setEditingTask(task);
     if (task.date) setSelectedDate(task.date.split('T')[0]);
     setIsModalOpen(true);
@@ -188,19 +267,19 @@ export default function TeacherCalendar() {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[#0b2d5a]">Upcoming Events & Tasks</h3>
             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-              {upcomingTasks.length} upcoming
+              {combinedUpcoming.length} upcoming
             </span>
           </div>
 
           <div className="space-y-3">
-            {upcomingTasks.length === 0 ? (
+            {combinedUpcoming.length === 0 ? (
               <div className="p-6 text-center border border-dashed border-slate-200 rounded-xl space-y-2">
                 <CalendarIcon className="h-7 w-7 text-slate-300 mx-auto" />
                 <p className="text-xs font-bold text-slate-600">No upcoming tasks</p>
                 <p className="text-[11px] text-slate-400">Click &ldquo;Add Task&rdquo; to plan your schedule.</p>
               </div>
             ) : (
-              upcomingTasks.map((task) => {
+              combinedUpcoming.map((task) => {
                 const isSelected = task.date?.split('T')[0] === selectedDate;
                 return (
                   <div
@@ -213,10 +292,21 @@ export default function TeacherCalendar() {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded">
-                        {task.taskType || 'Task'}
-                      </span>
-                      {task.status === 'completed' ? (
+                      {task.isTuition ? (
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-amber-400/20 text-amber-700 rounded flex items-center gap-1 border border-amber-300">
+                          <GraduationCap className="w-3 h-3 text-amber-600" />
+                          Tuition Mode &bull; {task.programCode}
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 bg-slate-200 text-slate-600 rounded">
+                          {task.taskType || 'Task'}
+                        </span>
+                      )}
+                      {task.canJoinNow ? (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 animate-pulse">
+                          LIVE NOW
+                        </span>
+                      ) : task.status === 'completed' ? (
                         <span className="flex items-center gap-0.5 text-[9px] font-bold text-emerald-600">
                           <CheckCircle2 className="h-3 w-3" /> Done
                         </span>
@@ -246,6 +336,23 @@ export default function TeacherCalendar() {
                         </>
                       )}
                     </p>
+                    {task.isTuition && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(task.liveRoomUrl || `/live/${task.programCode}`);
+                        }}
+                        className={`w-full mt-2 py-1.5 px-3 rounded-xl text-white text-[11px] font-extrabold flex items-center justify-center gap-1.5 shadow-sm transition-all hover:scale-[1.02] cursor-pointer ${
+                          task.canJoinNow
+                            ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 animate-pulse'
+                            : 'bg-red-600/80 hover:bg-red-600'
+                        }`}
+                        title="Launch live classroom with split-screen SmartBoard"
+                      >
+                        <Tv className="w-3.5 h-3.5" />
+                        <span>Join Live SmartBoard</span>
+                      </button>
+                    )}
                   </div>
                 );
               })
@@ -344,9 +451,13 @@ export default function TeacherCalendar() {
                         key={t._id}
                         onClick={(e) => handleOpenEditModal(t, e)}
                         title={`${t.title}${t.startTime ? ` (${t.startTime})` : ''}`}
-                        className="w-full text-left truncate text-[10px] leading-tight px-1.5 py-0.5 rounded bg-white/90 border border-[#1c3d73]/20 text-[#0b2d5a] font-semibold hover:bg-[#1c3d73] hover:text-white transition-colors cursor-pointer shadow-2xs"
+                        className={`w-full text-left truncate text-[10px] leading-tight px-1.5 py-0.5 rounded font-semibold transition-colors cursor-pointer shadow-2xs ${
+                          t.isTuition
+                            ? 'bg-gradient-to-r from-[#11243d] to-[#1c3352] text-amber-300 border border-amber-400/40 hover:bg-red-600 hover:text-white'
+                            : 'bg-white/90 border border-[#1c3d73]/20 text-[#0b2d5a] hover:bg-[#1c3d73] hover:text-white'
+                        }`}
                       >
-                        {t.title}
+                        {t.isTuition ? `★ ${t.title}` : t.title}
                       </div>
                     ))}
                     {dayTasks.length > 2 && (

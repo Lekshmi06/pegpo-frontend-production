@@ -19,10 +19,33 @@ import {
   BarChart3,
   Flame,
   Search,
-  Code
+  Code,
+  Tv,
+  GraduationCap,
+  ShieldCheck,
 } from 'lucide-react';
+import type { FeatureItem } from '../../services/contentService';
 
-export const FeaturesSection: React.FC = () => {
+const ICON_MAP: Record<string, any> = {
+  Brain,
+  Tv,
+  ShoppingBag,
+  Calendar,
+  Layers,
+  GraduationCap,
+  Building2,
+  ShieldCheck,
+  Sparkles,
+  BookOpen,
+  Code,
+  Search,
+};
+
+interface FeaturesSectionProps {
+  dynamicFeatures?: FeatureItem[];
+}
+
+export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ dynamicFeatures }) => {
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<'all' | 'learning' | 'teaching' | 'operations' | 'research'>('all');
 
@@ -156,9 +179,33 @@ export const FeaturesSection: React.FC = () => {
     },
   ];
 
+  const displayFeatures = (dynamicFeatures && dynamicFeatures.length > 0)
+    ? dynamicFeatures.map((df, idx) => {
+        const IconComponent = ICON_MAP[df.icon] || Sparkles;
+        const matchingDefault = features.find((f) => f.id === df.id);
+        return {
+          id: df.id || `feat-${idx}`,
+          category: matchingDefault ? matchingDefault.category : 'learning',
+          badge: matchingDefault ? matchingDefault.badge : 'Platform Pillar',
+          badgeColor: matchingDefault ? matchingDefault.badgeColor : 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+          icon: IconComponent,
+          title: df.title,
+          subtitle: matchingDefault ? matchingDefault.subtitle : 'EduPye Connected Cloud Architecture',
+          description: df.description,
+          metrics: matchingDefault ? matchingDefault.metrics : '24/7 Availability • Scalable Cloud Integration',
+          preview: matchingDefault ? matchingDefault.preview : {
+            type: 'simple',
+            text: df.description,
+          },
+          actionText: matchingDefault ? matchingDefault.actionText : 'Get Started Free',
+          actionLink: matchingDefault ? matchingDefault.actionLink : '/signup',
+        };
+      })
+    : features;
+
   const filteredFeatures = activeCategory === 'all' 
-    ? features 
-    : features.filter((f) => f.category === activeCategory);
+    ? displayFeatures 
+    : displayFeatures.filter((f) => f.category === activeCategory);
 
   return (
     <section id="features" className="py-24 bg-slate-900/60 relative border-t border-slate-800/80 overflow-hidden">
@@ -238,6 +285,12 @@ export const FeaturesSection: React.FC = () => {
 
                   {/* Live Interactive Preview Visual */}
                   <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800/90 space-y-2 text-xs">
+                    {feat.preview.type === 'simple' && (
+                      <div className="text-[11px] text-slate-300 leading-relaxed font-mono bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                        {feat.preview.text}
+                      </div>
+                    )}
+
                     {feat.preview.type === 'ai-chat' && (
                       <div className="space-y-2">
                         <div className="text-[11px] text-slate-400 font-mono">Q: {feat.preview.prompt}</div>

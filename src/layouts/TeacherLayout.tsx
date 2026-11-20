@@ -106,10 +106,28 @@ export default function TeacherLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [department, setDepartment] = useState('Department');
   const [subject, setSubject] = useState('Subject');
+  const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
 
   useEffect(() => {
+    let isMounted = true;
+
+    const refreshUser = async () => {
+      try {
+        const user = await authService.fetchCurrentUser();
+        if (isMounted && user) {
+          setCurrentUser(user);
+        }
+      } catch (e) {}
+    };
+
+    refreshUser();
+    window.addEventListener('focus', refreshUser);
+
     const syncProfile = () => {
       const user = authService.getCurrentUser();
+      if (isMounted && user) {
+        setCurrentUser(user);
+      }
       const cached = teacherProfileService.getCachedProfile();
       const activeDept =
         cached?.preferences?.activeDepartment ||
@@ -129,6 +147,8 @@ export default function TeacherLayout() {
     window.addEventListener('teacher-profile-updated', syncProfile);
     window.addEventListener('storage', syncProfile);
     return () => {
+      isMounted = false;
+      window.removeEventListener('focus', refreshUser);
       window.removeEventListener('teacher-profile-updated', syncProfile);
       window.removeEventListener('storage', syncProfile);
     };
@@ -260,33 +280,49 @@ export default function TeacherLayout() {
               <Trophy className="h-5 w-5 text-[#1c3352] stroke-[2]" />
             </button>
 
-            {/* Tuition Mode Switcher & Teacher Code Badge */}
+            {/* Consolidated Tuition Control */}
             {(() => {
-              const currentUser = authService.getCurrentUser();
               const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.teacherCode ? 'approved' : 'none');
               if (approvalStatus === 'approved' && currentUser?.teacherCode) {
                 return (
-                  <span
-                    onClick={() => {
-                      navigator.clipboard.writeText(currentUser.teacherCode!);
-                    }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold tracking-wider cursor-pointer hover:bg-amber-100 transition-colors"
-                    title="Click to copy your permanent Teacher Code"
-                  >
-                    <span>TCH:</span> {currentUser.teacherCode}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      onClick={() => {
+                        navigator.clipboard.writeText(currentUser.teacherCode!);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 font-mono text-xs font-bold tracking-wider cursor-pointer hover:bg-amber-100 transition-colors shadow-xs"
+                      title="Click to copy your permanent Teacher Code"
+                    >
+                      <span className="text-amber-600 font-semibold">TCH:</span> {currentUser.teacherCode}
+                    </span>
+                    <button
+                      onClick={() => navigate('/tuition-mode')}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+                      title="Switch to EduPye Centralized Tuition Mode"
+                    >
+                      <GraduationCap className="w-4 h-4 text-slate-950" />
+                      <span className="hidden sm:inline">Tuition Mode</span>
+                      <span className="sm:hidden">Tuition</span>
+                    </button>
+                  </div>
                 );
               } else if (approvalStatus === 'pending') {
                 return (
-                  <span className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-800 border border-blue-300 text-xs font-semibold" title="Tuition access requested, awaiting Admin approval">
-                    Tuition: Pending Admin Approval
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 text-amber-800 border border-amber-300 text-xs font-semibold shadow-xs"
+                      title="Tuition access requested, awaiting EduPye Admin approval"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span>Tuition: Pending Admin Approval</span>
+                    </span>
+                  </div>
                 );
               } else {
                 return (
                   <button
-                    onClick={() => navigate('/tuition-mode')}
-                    className="hidden xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-medium transition-colors cursor-pointer"
+                    onClick={() => navigate('/teacher/profile')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
                     title="Request Tuition Mode Access"
                   >
                     Request Tuition Access
@@ -294,15 +330,6 @@ export default function TeacherLayout() {
                 );
               }
             })()}
-            <button
-              onClick={() => navigate('/tuition-mode')}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
-              title="Switch to EduPye Centralized Tuition Mode"
-            >
-              <GraduationCap className="w-4 h-4 text-slate-950" />
-              <span className="hidden sm:inline">Change to Tuition Mode</span>
-              <span className="sm:hidden">Tuition</span>
-            </button>
 
             <div className="relative">
               <button onClick={() => setShowProfileMenu((v) => !v)} className="flex items-center gap-2 focus:outline-none">

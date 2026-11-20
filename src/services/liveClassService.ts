@@ -38,7 +38,13 @@ export const liveClassService = {
    */
   getLiveClassDetails: async (
     sessionId: string
-  ): Promise<{ success: boolean; session: LiveClassSession; rtcConfig: WebRTCConfiguration }> => {
+  ): Promise<{
+    success: boolean;
+    session?: LiveClassSession;
+    rtcConfig?: WebRTCConfiguration;
+    isWaiting?: boolean;
+    message?: string;
+  }> => {
     return apiRequest(`/live-classes/${sessionId}`, {
       method: 'GET',
       headers: getAuthHeaders(),
@@ -48,9 +54,9 @@ export const liveClassService = {
   /**
    * Shortcut to retrieve live class session model
    */
-  getLiveClass: async (sessionId: string): Promise<LiveClassSession> => {
+  getLiveClass: async (sessionId: string): Promise<LiveClassSession | null> => {
     const res = await liveClassService.getLiveClassDetails(sessionId);
-    return res.session;
+    return res.session || null;
   },
 
   /**

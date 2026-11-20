@@ -1,19 +1,72 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Home, BookOpen, Library, Upload, Calendar,
-  Tv, Layers, LineChart, NotebookPen, FlaskConical, Gamepad2, ShoppingCart, Bookmark,
-  Mic, ClipboardCheck, FolderPlus, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare,
-  FileCheck, ArrowRight
+  Home, BookOpen, Library, Upload, CalendarDays,
+  Tv, Layers, LineChart, NotebookPen, FlaskConical, Bookmark,
+  Mic, ClipboardCheck, BookMarked, GraduationCap, Globe, Search, Trophy, Menu, X, CheckSquare,
+  FileCheck, ArrowRight, LogOut
 } from 'lucide-react';
-import logoImg from '../assets/logo.png';
 import userImg from '../assets/user.png';
+import { EdupyeLogo } from '../components/common/EdupyeLogo';
 import { authService } from '../services/authService';
-import { NavItem } from '../types/common';
 import EduPyeAIChat from '../components/student/EduPyeAIChat';
 import { LearningModeProvider } from '../context/LearningModeContext';
 import { PageContextProvider } from '../context/PageContext';
 import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
+
+interface StudentMenuGroup {
+  color: string;
+  items: Array<{
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    path: string;
+  }>;
+}
+
+const studentMenuGroups: StudentMenuGroup[] = [
+  {
+    color: '#3d89bd',
+    items: [
+      { label: 'Home', icon: Home, path: '/student/home' },
+      { label: 'Learn', icon: BookOpen, path: '/student/learn' },
+      { label: 'Library', icon: Library, path: '/student/library' },
+      { label: 'Notebook', icon: NotebookPen, path: '/student/notebook' },
+      { label: 'Upload', icon: Upload, path: '/student/upload' },
+      { label: 'Record', icon: Mic, path: '/student/record' },
+    ],
+  },
+  {
+    color: '#246a9e',
+    items: [
+      { label: 'Live Classes', icon: Tv, path: '/student/live-classes' },
+      { label: 'Tuition Mode', icon: GraduationCap, path: '/tuition-mode' },
+      { label: 'Calendar', icon: CalendarDays, path: '/student/calendar' },
+    ],
+  },
+  {
+    color: '#2e63a5',
+    items: [
+      { label: 'Exam Cracker', icon: ClipboardCheck, path: '/student/exam-cracker' },
+      { label: 'Homework', icon: FileCheck, path: '/student/homework' },
+      { label: 'Tests', icon: CheckSquare, path: '/student/tests' },
+    ],
+  },
+  {
+    color: '#087dc2',
+    items: [
+      { label: 'My Courses', icon: Layers, path: '/student/courses' },
+      { label: 'Book shelf', icon: BookMarked, path: '/student/bookshelf' },
+    ],
+  },
+  {
+    color: '#4a98f3',
+    items: [
+      { label: 'Projects', icon: LineChart, path: '/student/projects' },
+      { label: '3D Lab', icon: FlaskConical, path: '/student/3d-lab' },
+      { label: 'Bookmarks', icon: Bookmark, path: '/student/bookmarks' },
+    ],
+  },
+];
 
 export default function StudentLayout() {
   const location = useLocation();
@@ -25,11 +78,17 @@ export default function StudentLayout() {
 
   useEffect(() => {
     let isMounted = true;
-    authService.fetchCurrentUser().then((user) => {
-      if (isMounted && user) {
-        setCurrentUser(user);
-      }
-    });
+
+    const refreshUser = () => {
+      authService.fetchCurrentUser().then((user) => {
+        if (isMounted && user) {
+          setCurrentUser(user);
+        }
+      }).catch(() => {});
+    };
+
+    refreshUser();
+    window.addEventListener('focus', refreshUser);
 
     const handleStorage = () => {
       if (isMounted) {
@@ -40,29 +99,10 @@ export default function StudentLayout() {
 
     return () => {
       isMounted = false;
+      window.removeEventListener('focus', refreshUser);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
-
-  const navItems: NavItem[] = [
-    { path: '/student/home', label: 'Home', icon: Home },
-    { path: '/student/library', label: 'Library', icon: Library },
-    { path: '/student/learn', label: 'Learn', icon: BookOpen },
-    { path: '/student/upload', label: 'Upload', icon: Upload },
-    { path: '/student/notebook', label: 'Notebook', icon: NotebookPen },
-    { path: '/student/record', label: 'Record', icon: Mic },
-    { path: '/student/live-classes', label: 'Live Classes', icon: Tv },
-    { path: '/student/exam-cracker', label: 'Exam Cracker', icon: ClipboardCheck },
-    { path: '/student/courses', label: 'My Courses', icon: Layers },
-    { path: '/student/calendar', label: 'Calendar', icon: Calendar },
-    { path: '/student/projects', label: 'Projects', icon: LineChart },
-    { path: '/student/homework', label: 'Homework', icon: FileCheck },
-    { path: '/student/bookshelf', label: 'Book shelf', icon: BookMarked },
-    { path: '/tuition-mode', label: 'Tuition Mode', icon: GraduationCap },
-    { path: '/student/3d-lab', label: '3D Lab', icon: FlaskConical },
-    { path: '/student/tests', label: 'Tests', icon: CheckSquare },
-    { path: '/student/bookmarks', label: 'Bookmarks', icon: Bookmark },
-  ];
 
   const isCustomHeaderPage =
     location.pathname === '/student/home' ||
@@ -102,41 +142,69 @@ export default function StudentLayout() {
 
         {/* Sidebar */}
         <aside
-          className={`fixed md:relative z-40 h-full w-14 bg-[#1c3352] text-white flex flex-col flex-shrink-0 select-none overflow-y-auto transition-transform duration-200 ${
+          className={`fixed md:relative z-40 h-full w-[165px] shrink-0 overflow-y-auto bg-[#254b73] px-1 py-4 text-white flex flex-col justify-between transition-transform duration-200 ${
             mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
           }`}
         >
-          <div className="h-14 flex items-center justify-center flex-shrink-0">
-            <Link
-              to="/student"
-              className="bg-white rounded-xl w-9 h-9 flex items-center justify-center p-1 shadow-xs hover:scale-105 transition-transform cursor-pointer"
-              title="Your Dashboard"
+          <div className="space-y-3">
+            <div
+              onClick={() => {
+                setMobileMenuOpen(false);
+                navigate('/student');
+              }}
+              className="flex h-12 items-center justify-center rounded-xl bg-white px-3 shadow-xs cursor-pointer hover:bg-slate-50 transition-colors"
             >
-              <img src={logoImg} alt="EDUPYE" className="w-full h-full object-contain" />
-            </Link>
+              <EdupyeLogo />
+            </div>
+
+            <div className="space-y-px overflow-hidden rounded-xl">
+              {studentMenuGroups.map((group, groupIndex) => (
+                <div
+                  key={`group-${groupIndex}`}
+                  className="space-y-px py-0.5"
+                  style={{ backgroundColor: group.color }}
+                >
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      location.pathname === item.path ||
+                      (item.path === '/student/home' &&
+                        (location.pathname === '/student' || location.pathname === '/student/dashboard')) ||
+                      (item.path === '/tuition-mode' && location.pathname.startsWith('/tuition-mode')) ||
+                      (item.path === '/student/homework' && location.pathname === '/student/assignments');
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          navigate(item.path);
+                        }}
+                        className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs leading-tight transition-colors cursor-pointer ${
+                          isActive
+                            ? 'bg-white/20 text-white font-extrabold'
+                            : 'hover:bg-white/10 text-white/90 font-medium'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 stroke-[2.2]" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
 
-          <nav className="flex-1 w-full px-2 space-y-1.5 pb-4">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = location.pathname === item.path;
-              return (
-                <Link
-                  key={`${item.label}-${item.path}`}
-                  to={item.path}
-                  title={item.label}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={`h-9 w-full flex items-center justify-center rounded-xl transition-all ${
-                    isActive
-                      ? 'bg-[#2b4d7a] text-white shadow-xs'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <Icon className="w-4 h-4 stroke-[2.2]" />
-                </Link>
-              );
-            })}
-          </nav>
+          <button
+            onClick={() => {
+              authService.logout();
+              navigate('/');
+            }}
+            className="mt-4 flex w-full items-center gap-2.5 px-3 py-2 text-left text-xs text-white/80 hover:text-white transition-colors cursor-pointer"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Log out</span>
+          </button>
         </aside>
 
         {/* Main Area */}
@@ -167,35 +235,45 @@ export default function StudentLayout() {
                   );
                 } else if (approvalStatus === 'pending') {
                   return (
-                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-400/20 text-blue-300 border border-blue-400/30 text-[11px] font-semibold">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-semibold shadow-xs" title="Tuition access requested, awaiting EduPye Admin approval">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
                       Tuition: Pending Admin Approval
                     </span>
                   );
-                } else {
+                }
+                return null;
+              })()}
+            </div>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.studentCode ? 'approved' : 'none');
+                if (approvalStatus === 'approved' && currentUser?.studentCode) {
                   return (
                     <button
                       onClick={() => navigate('/tuition-mode')}
-                      className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-700/60 hover:bg-slate-700 text-slate-300 hover:text-white text-[11px] font-medium border border-slate-600 transition-colors cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <span>Change to Tuition Mode</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  );
+                } else if (approvalStatus !== 'pending') {
+                  return (
+                    <button
+                      onClick={() => navigate('/student/profile')}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-semibold border border-slate-600 transition-colors cursor-pointer"
                     >
                       Request Tuition Access
                     </button>
                   );
                 }
+                return null;
               })()}
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate('/tuition-mode')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
-              >
-                <span>Change to Tuition Mode</span>
-                <ArrowRight className="w-3 h-3" />
-              </button>
             </div>
           </div>
 
           {/* Mobile Header Toggle */}
-          <div className="md:hidden flex items-center justify-between px-4 py-2 bg-[#1c3352] text-white">
+          <div className="md:hidden flex items-center justify-between px-4 py-2 bg-[#254b73] text-white">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-1 rounded-lg hover:bg-white/10"

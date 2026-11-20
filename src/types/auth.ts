@@ -100,7 +100,7 @@ export interface UserSession {
   researcherDetails?: any;
   studentCode?: string;
   teacherCode?: string;
-  tuitionApprovalStatus?: 'none' | 'pending' | 'approved' | 'rejected';
+  tuitionApprovalStatus?: 'none' | 'pending' | 'approved' | 'rejected' | 'revoked' | 'suspended';
   token?: string;
   createdAt?: string;
 }

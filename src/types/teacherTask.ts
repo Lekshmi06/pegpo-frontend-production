@@ -34,6 +34,11 @@ export interface TeacherTask {
   status: TeacherTaskStatus;
   teachingContextId?: string | { _id: string; subject?: string; classLevel?: string; section?: string };
   classSectionId?: string | { _id: string; name?: string; classLevel?: string; section?: string; board?: string };
+  programCode?: string;
+  isTuition?: boolean;
+  liveRoomUrl?: string;
+  canJoinNow?: boolean;
+  subject?: string;
   createdAt?: string;
   updatedAt?: string;
 }

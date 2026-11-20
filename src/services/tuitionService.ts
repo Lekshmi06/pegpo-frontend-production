@@ -20,6 +20,8 @@ import {
   TuitionCodeLoginPayload,
   TuitionCodeLoginResponse,
   CombinedStudyMessage,
+  TuitionCalendarSession,
+  GetTuitionScheduleResponse,
 } from "../types/tuition";
 
 export const TUITION_MODE_TOKEN_KEY = "tuition_mode_token";
@@ -65,6 +67,108 @@ export interface OfferingPublicDetailsResponse {
   provider: TuitionProviderProfile;
   batches: TuitionBatch[];
   reviews: TuitionReview[];
+}
+
+export interface TuitionComplaintPayload {
+  isAnonymous?: boolean;
+  category: "Academic / Class" | "Conduct / Behavior" | "Technical / SmartBoard" | "Schedule / Billing" | "Other" | string;
+  subject: string;
+  description: string;
+  programId?: string;
+}
+
+export interface UserComplaintItem {
+  _id: string;
+  ticketCode: string;
+  isAnonymous: boolean;
+  reporterRole: "student" | "teacher";
+  category: string;
+  subject: string;
+  description: string;
+  programId?: {
+    _id: string;
+    title: string;
+    code: string;
+    subject?: string;
+  } | null;
+  status: "open" | "in_review" | "resolved" | "closed";
+  adminProgressNotes: Array<{
+    message: string;
+    updatedBy?: string;
+    updatedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TuitionHomeworkItem {
+  _id: string;
+  programId: string;
+  assignedBy?: {
+    _id: string;
+    name?: string;
+    displayName?: string;
+    email?: string;
+    teacherCode?: string;
+  };
+  teacherName?: string;
+  title: string;
+  description: string;
+  subject?: string;
+  dueDate: string;
+  totalPoints: number;
+  attachments?: Array<{
+    name: string;
+    url: string;
+    size?: number;
+    type?: string;
+  }>;
+  submissionsCount?: number;
+  mySubmission?: {
+    _id: string;
+    studentId: string;
+    studentName?: string;
+    studentCode?: string;
+    submittedAt: string;
+    content?: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    status: "submitted" | "graded" | "returned";
+    grade?: number;
+    feedback?: string;
+    gradedAt?: string;
+  } | null;
+  submissions?: Array<{
+    _id: string;
+    studentId: string;
+    studentName?: string;
+    studentCode?: string;
+    submittedAt: string;
+    content?: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    status: "submitted" | "graded" | "returned";
+    grade?: number;
+    feedback?: string;
+    gradedAt?: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateHomeworkPayload {
+  title: string;
+  description: string;
+  subject?: string;
+  dueDate: string;
+  totalPoints?: number;
+  attachments?: Array<{ name: string; url: string; size?: number; type?: string }>;
+}
+
+export interface SubmitHomeworkPayload {
+  content?: string;
+  attachmentUrl?: string;
+  attachmentName?: string;
 }
 
 export const tuitionService = {
@@ -544,6 +648,120 @@ export const tuitionService = {
     return await apiRequest("/tuition/requests/program-access", {
       method: "POST",
       body: JSON.stringify(data),
+    });
+  },
+
+  requestProgramEnrollment: async (
+    programId: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    alreadyRequested?: boolean;
+    request?: any;
+    programId?: string;
+  }> => {
+    return await apiRequest(`/tuition/programs/${programId}/request-enrollment`, {
+      method: "POST",
+    });
+  },
+
+  getMyTuitionSchedule: async (): Promise<GetTuitionScheduleResponse> => {
+    return await apiRequest("/tuition/my-schedule", {
+      method: "GET",
+    });
+  },
+
+  getProgramRecordings: async (
+    programId: string
+  ): Promise<{
+    success: boolean;
+    programId: string;
+    programCode: string;
+    programTitle: string;
+    recordings: Array<{
+      sessionId: string;
+      recordingId: string;
+      title: string;
+      subject: string;
+      sessionDate: string;
+      durationMinutes: number;
+      recordingUrl: string;
+      status: string;
+      retentionDays: number;
+      daysRemaining: number;
+      retentionBadge: string;
+      expiresAt: string;
+      totalAttendees: number;
+      attendanceLogs: Array<{
+        userId?: string;
+        name: string;
+        role: string;
+        durationMinutes?: number;
+      }>;
+      teacher?: { name: string; email?: string; teacherCode?: string };
+    }>;
+    totalRecordings: number;
+    retentionPolicyDays: number;
+  }> => {
+    return await apiRequest(`/tuition/programs/${programId}/recordings`);
+  },
+
+  getTeacherPayouts: async (): Promise<{
+    success: boolean;
+    totalEarned: number;
+    pendingAmount: number;
+    payouts: Array<{
+      _id: string;
+      subject: string;
+      durationHours: number;
+      payoutRate: number;
+      totalAmount: number;
+      currency: string;
+      attendanceVerified: boolean;
+      status: "pending_review" | "approved" | "disbursed" | "rejected" | "withheld";
+      createdAt: string;
+      sessionId?: any;
+      adminNotes?: string;
+    }>;
+  }> => {
+    return await apiRequest("/tuition/teacher/payouts");
+  },
+
+  // Complaints & Grievance Ticketing
+  submitComplaint: async (payload: TuitionComplaintPayload): Promise<{ success: boolean; message: string; ticketCode: string; complaint: UserComplaintItem }> => {
+    return await apiRequest("/tuition/complaints", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  getMyComplaints: async (): Promise<{ success: boolean; count: number; complaints: UserComplaintItem[] }> => {
+    return await apiRequest("/tuition/complaints/mine");
+  },
+
+  // Batch Homework & Tasks
+  getProgramHomework: async (programId: string): Promise<{ success: boolean; count: number; homework: TuitionHomeworkItem[] }> => {
+    return await apiRequest(`/tuition/programs/${programId}/homework`);
+  },
+
+  createProgramHomework: async (programId: string, payload: CreateHomeworkPayload): Promise<{ success: boolean; message: string; homework: TuitionHomeworkItem }> => {
+    return await apiRequest(`/tuition/programs/${programId}/homework`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitHomework: async (homeworkId: string, payload: SubmitHomeworkPayload): Promise<{ success: boolean; message: string; submission: any }> => {
+    return await apiRequest(`/tuition/homework/${homeworkId}/submit`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  gradeHomework: async (homeworkId: string, studentId: string, payload: { grade?: number; feedback?: string; status?: string }): Promise<{ success: boolean; message: string; submission: any }> => {
+    return await apiRequest(`/tuition/homework/${homeworkId}/submissions/${studentId}/grade`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
     });
   },
 

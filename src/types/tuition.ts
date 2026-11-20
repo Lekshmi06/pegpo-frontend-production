@@ -392,6 +392,31 @@ export interface GetTuitionProgramsResponse {
   message?: string;
 }
 
+export interface TuitionCalendarSession {
+  id: string;
+  programId: string;
+  programCode: string;
+  programTitle: string;
+  subject: string;
+  grade?: string;
+  date: string; // "YYYY-MM-DD"
+  dayOfWeek: string;
+  startTime: string;
+  endTime: string;
+  startDateTime: string;
+  endDateTime: string;
+  liveRoomUrl: string;
+  canJoinNow: boolean;
+  status: "scheduled" | "live" | "completed";
+}
+
+export interface GetTuitionScheduleResponse {
+  success: boolean;
+  count: number;
+  sessions: TuitionCalendarSession[];
+  message?: string;
+}
+
 export interface TuitionProgramContext {
   _id: string;
   title: string;

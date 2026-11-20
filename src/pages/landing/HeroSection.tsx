@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
   ArrowRight, 
   Sparkles, 
@@ -8,18 +8,28 @@ import {
   Building2, 
   ShoppingBag,
   CheckCircle2, 
-  Play, 
   Brain,
   ShieldCheck,
-  ChevronRight
 } from 'lucide-react';
+import type { HeroContent, LandingPageContentData } from '../../services/contentService';
 
 interface HeroSectionProps {
   onOpenDemo: () => void;
+  content?: HeroContent | LandingPageContentData['hero'];
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, content }) => {
   const navigate = useNavigate();
+
+  const tagBadge = (content as any)?.badgeText || (content as any)?.tagBadge || "Intelligent Unified LMS & Campus Platform";
+  const title = (content as any)?.title;
+  const headlineLine1 = (content as any)?.headlineLine1 || (title ? title.split('.')[0] + (title.includes('.') ? '.' : '') : "One platform.");
+  const headlineLine2Gradient = (content as any)?.headlineLine2Gradient || (title && title.includes('.') ? title.split('.').slice(1).join('.').trim() : (title ? "" : "Every learning journey."));
+  const subtitle = content?.subtitle || "EduPye brings students, educators, campuses, and corporate training teams into one connected cloud ecosystem. Unifying adaptive AI tutoring, smart teacher studios, verified course marketplace, and campus ERP operations.";
+  const primaryCtaText = content?.primaryCtaText || "Get Started Free";
+  const primaryCtaLink = (content as any)?.primaryCtaLink || "/signup";
+  const secondaryCtaText = content?.secondaryCtaText || "Sign In to Portal";
+  const secondaryCtaLink = (content as any)?.secondaryCtaLink || "/login";
 
   return (
     <section id="hero" className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-radial-[at_top] from-slate-900 via-slate-950 to-slate-950 text-slate-100">
@@ -37,7 +47,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-blue-500/30 text-slate-200 text-xs sm:text-sm font-semibold shadow-xl shadow-blue-900/20 backdrop-blur-md">
             <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
             <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent font-bold">
-              Intelligent Unified LMS & Campus Platform
+              {tagBadge}
             </span>
             <span className="text-slate-600">|</span>
             <span className="text-slate-300 hidden sm:inline">All-in-One Cloud Architecture</span>
@@ -47,33 +57,32 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo }) => {
         {/* Headline & Concise LMS Description */}
         <div className="text-center max-w-4xl mx-auto space-y-6">
           <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
-            One platform.{' '}
+            {headlineLine1}{' '}
             <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-              Every learning journey.
+              {headlineLine2Gradient}
             </span>
           </h1>
 
           <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            EduPye brings students, educators, campuses, and corporate training teams into one connected cloud ecosystem.
-            Unifying <strong className="text-white font-medium">adaptive AI tutoring</strong>, <strong className="text-white font-medium">smart teacher studios</strong>, <strong className="text-white font-medium">verified course marketplace</strong>, and <strong className="text-white font-medium">campus ERP operations</strong>.
+            {subtitle}
           </p>
 
           {/* Prominent Sign Up / Log In / Demo Calls to Action */}
           <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate(primaryCtaLink)}
               className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 cursor-pointer"
             >
               <Sparkles className="w-5 h-5 text-cyan-200" />
-              <span>Get Started Free</span>
+              <span>{primaryCtaText}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => navigate(secondaryCtaLink)}
               className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-semibold text-base transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg"
             >
-              <span>Sign In to Portal</span>
+              <span>{secondaryCtaText}</span>
             </button>
 
             <button

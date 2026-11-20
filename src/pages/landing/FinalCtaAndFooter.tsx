@@ -18,13 +18,21 @@ import {
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { publicLinksConfig } from '../../config/publicLinks';
+import type { LandingPageContentData } from '../../services/contentService';
 
 interface FinalCtaAndFooterProps {
   onOpenDemo: () => void;
+  footerContact?: LandingPageContentData['footerContact'];
 }
 
-export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo }) => {
+export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo, footerContact }) => {
   const navigate = useNavigate();
+
+  const tagline = footerContact?.tagline || "EduPye is the unified LMS platform providing adaptive AI study companions for learners, smart instructional command for educators, and enterprise-grade ERP governance for institutions.";
+  const supportEmail = footerContact?.supportEmail || publicLinksConfig.supportEmail;
+  const supportPhone = footerContact?.supportPhone || publicLinksConfig.phoneNumbers[0];
+  const address = footerContact?.address || "Global Multi-Region Cloud Operations";
+  const copyrightText = footerContact?.copyrightText || `© ${new Date().getFullYear()} EduPye Inc. All rights reserved. One unified platform. Every learning journey.`;
 
   return (
     <footer className="bg-slate-950 text-slate-300 relative border-t border-slate-900 overflow-hidden">
@@ -95,7 +103,7 @@ export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo
             </div>
 
             <p className="text-xs sm:text-sm text-slate-400 max-w-sm leading-relaxed">
-              EduPye is the unified LMS platform providing adaptive AI study companions for learners, smart instructional command for educators, and enterprise-grade ERP governance for institutions.
+              {tagline}
             </p>
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
@@ -108,8 +116,8 @@ export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo
             <div className="space-y-1.5 text-xs text-slate-400 pt-1">
               <div className="flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <a href={`mailto:${publicLinksConfig.supportEmail}`} className="hover:text-white transition-colors">
-                  {publicLinksConfig.supportEmail}
+                <a href={`mailto:${supportEmail}`} className="hover:text-white transition-colors">
+                  {supportEmail}
                 </a>
               </div>
               <div className="flex items-center gap-2">
@@ -120,11 +128,11 @@ export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo
               </div>
               <div className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>{publicLinksConfig.phoneNumbers[0]}</span>
+                <span>{supportPhone}</span>
               </div>
               <div className="flex items-center gap-2">
                 <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>Global Multi-Region Cloud Operations</span>
+                <span>{address}</span>
               </div>
             </div>
           </div>
@@ -239,7 +247,7 @@ export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo
         {/* BOTTOM COPYRIGHT & PUBLIC LEGAL BAR */}
         <div className="pt-8 mt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <div>
-            © {new Date().getFullYear()} EduPye Inc. All rights reserved. One unified platform. Every learning journey.
+            {copyrightText}
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-slate-400">

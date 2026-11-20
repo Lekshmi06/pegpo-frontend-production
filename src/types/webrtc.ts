@@ -35,6 +35,9 @@ export interface LiveClassSession {
   endedAt?: string;
   scheduledStartTime?: string;
   scheduledEndTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  totalDurationMinutes?: number;
 }
 
 export interface ICallParticipant {
@@ -69,6 +72,7 @@ export type SignallingIncomingMessage =
         isMicMuted: boolean;
         isVideoMuted: boolean;
       }>;
+      whiteboardState?: any[];
     }
   | {
       type: 'peer-joined';
@@ -116,8 +120,22 @@ export type SignallingIncomingMessage =
       timestamp: string;
     }
   | {
-      type: 'whiteboard-sync';
-      senderId: string;
+      type: 'whiteboard:draw' | 'whiteboard-draw';
+      senderId?: string;
+      element: any;
+    }
+  | {
+      type: 'whiteboard:clear' | 'whiteboard-clear';
+      senderId?: string;
+    }
+  | {
+      type: 'whiteboard:undo' | 'whiteboard-undo';
+      senderId?: string;
+      elements?: any[];
+    }
+  | {
+      type: 'whiteboard:sync-state' | 'whiteboard-sync';
+      senderId?: string;
       elements: any[];
     }
   | {

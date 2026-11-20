@@ -466,6 +466,28 @@ export default function Onboarding() {
             </div>
           )}
 
+          {/* Tuition Pending Admin Approval Card */}
+          {currentUser?.tuitionApprovalStatus === 'pending' && !(currentUser?.studentCode || currentUser?.teacherCode) && (
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/15 to-orange-500/10 border border-amber-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-700 shrink-0">
+                  <GraduationCap className="w-5 h-5 text-amber-600" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-stone-900">Tuition Mode Access Request</span>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300">
+                      Under Admin Review
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-500 mt-0.5">
+                    Your request for centralized Tuition Mode is submitted. An administrator is reviewing your details to assign your permanent access code and batches.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Role-Specific Goal Cards Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {availableGoals.map((goal) => {

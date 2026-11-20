@@ -230,10 +230,15 @@ export interface WhiteboardCanvasRef {
   clearCanvas: () => void;
 }
 
-interface WhiteboardCanvasProps {
+export interface WhiteboardCanvasProps {
   className?: string;
   onSave?: (dataUrl: string, elements: CanvasElement[]) => void;
   initialElements?: CanvasElement[];
+  remoteElements?: CanvasElement[];
+  onDrawStroke?: (element: CanvasElement) => void;
+  onClearBoard?: () => void;
+  onUndoBoard?: (remainingElements: CanvasElement[]) => void;
+  onSyncState?: (elements: CanvasElement[]) => void;
 }
 
 const COLOR_PALETTE = [
@@ -255,7 +260,7 @@ const STROKE_WIDTHS = [
 ];
 
 export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvasProps>(
-  ({ className, onSave, initialElements }, ref) => {
+  ({ className, onSave, initialElements, remoteElements, onDrawStroke, onClearBoard, onUndoBoard, onSyncState }, ref) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -548,6 +553,15 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       renderAllElements(initialElements);
     }
   }, [initialElements, renderAllElements]);
+
+  // Sync real-time remoteElements from WebSocket / LiveClassroom
+  useEffect(() => {
+    if (remoteElements !== undefined) {
+      setElements(remoteElements);
+      elementsRef.current = remoteElements;
+      renderAllElements(remoteElements);
+    }
+  }, [remoteElements, renderAllElements]);
 
   // Resize canvases strictly to parent container while preserving DPI and avoiding unnecessary buffer resets
   const renderSelectionOverlay = useCallback((selectedId: string | null, customElements?: CanvasElement[]) => {
@@ -1146,6 +1160,9 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     setElements(updated);
     elementsRef.current = updated;
 
+    onDrawStroke?.(current);
+    onSyncState?.(updated);
+
     if (onSave) {
       const canvas = mainCanvasRef.current;
       if (canvas) {
@@ -1179,6 +1196,9 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     setElements(updated);
     elementsRef.current = updated;
 
+    onDrawStroke?.(newEl);
+    onSyncState?.(updated);
+
     const mainCanvas = mainCanvasRef.current;
     if (mainCanvas) {
       const ctx = mainCanvas.getContext('2d');
@@ -1210,6 +1230,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
         selectedElementIdRef.current = null;
         renderSelectionOverlay(null);
         renderAllElements(remaining);
+        onUndoBoard?.(remaining);
+        onSyncState?.(remaining);
         if (onSave) {
           const canvas = mainCanvasRef.current;
           if (canvas) onSave(canvas.toDataURL('image/png'), remaining);
@@ -1226,6 +1248,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     setElements(prevSnapshot);
     elementsRef.current = prevSnapshot;
     renderAllElements(prevSnapshot);
+    onUndoBoard?.(prevSnapshot);
+    onSyncState?.(prevSnapshot);
 
     if (selectedElementIdRef.current && prevSnapshot.some((el) => el.id === selectedElementIdRef.current)) {
       renderSelectionOverlay(selectedElementIdRef.current, prevSnapshot);
@@ -1283,6 +1307,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       selectedElementIdRef.current = null;
       renderSelectionOverlay(null);
       renderAllElements([]);
+      onClearBoard?.();
+      onSyncState?.([]);
 
       if (onSave) {
         const canvas = mainCanvasRef.current;

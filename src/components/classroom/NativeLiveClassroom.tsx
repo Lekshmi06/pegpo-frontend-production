@@ -45,10 +45,20 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   const [session, setSession] = useState<LiveClassSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionFetchError, setSessionFetchError] = useState<string | null>(null);
+  const [isWaitingForTeacher, setIsWaitingForTeacher] = useState(false);
+
+  // Post-class summary modal state
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [sessionSummaryData, setSessionSummaryData] = useState<{
+    durationMinutes: number;
+    totalAttendees: number;
+    attendees: Array<{ name: string; role: string }>;
+  } | null>(null);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isSmartBoardOpen, setIsSmartBoardOpen] = useState(false);
+  const [whiteboardElements, setWhiteboardElements] = useState<any[]>([]);
 
   // Auto-logout compliance state (15-min idle rule)
   const [isIdleAutoLoggedOut, setIsIdleAutoLoggedOut] = useState(false);
@@ -58,6 +68,16 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   const currentUser = authService.getCurrentUser();
   const { token: tuitionToken } = tuitionService.getTuitionModeSession();
   const authToken = authService.getToken();
+
+  const userRole = (currentUser?.role || currentUser?.activeRole || (currentUser as any)?.userType || '').toLowerCase();
+  const isTeacherRole = Boolean(
+    userRole === 'teacher' ||
+    userRole === 'tuition_provider' ||
+    userRole === 'institution' ||
+    userRole === 'admin' ||
+    userRole === 'super_admin' ||
+    Boolean(currentUser?.teacherCode)
+  );
 
   // Tuition Mode Authorization Gate: Enforce active session or code verification
   useEffect(() => {
@@ -86,30 +106,71 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
       }
       try {
         setLoading(true);
-        const data = await liveClassService.getLiveClass(activeSessionId);
-        if (isMounted) {
-          setSession(data);
-          setSessionFetchError(null);
+        const data = await liveClassService.getLiveClassDetails(activeSessionId);
+        if (data.session && data.session.status === 'live' && !data.isWaiting) {
+          if (isMounted) {
+            setSession(data.session);
+            setIsWaitingForTeacher(false);
+            setSessionFetchError(null);
+          }
+        } else if (data.isWaiting || !data.session || data.session.status !== 'live') {
+          if (!isTeacherRole) {
+            // Student: Wait for instructor to launch live class
+            if (isMounted) {
+              setIsWaitingForTeacher(true);
+              setSession(data.session || null);
+              setSessionFetchError(null);
+            }
+          } else {
+            // Teacher: Initialize or launch host session
+            if (isMounted) {
+              setSession(data.session || {
+                _id: activeSessionId,
+                title: 'Live Classroom Session',
+                hostId: currentUserId,
+                hostRole: 'teacher',
+                status: 'live',
+                sessionType: 'tuition',
+                authorizedStudentIds: [],
+                settings: {
+                  allowMicrophone: true,
+                  allowCamera: true,
+                  allowScreenShare: true,
+                  allowChat: true,
+                },
+              });
+              setIsWaitingForTeacher(false);
+              setSessionFetchError(null);
+            }
+          }
         }
       } catch (err: any) {
         if (isMounted) {
           console.warn('[NativeLiveClassroom] Failed to fetch session info:', err?.message);
-          // Fallback session object for ad-hoc or direct room launches
-          setSession({
-            _id: activeSessionId,
-            title: 'Live Classroom Session',
-            hostId: currentUserId,
-            hostRole: 'teacher',
-            status: 'live',
-            sessionType: 'tuition',
-            authorizedStudentIds: [],
-            settings: {
-              allowMicrophone: true,
-              allowCamera: true,
-              allowScreenShare: true,
-              allowChat: true,
-            },
-          });
+          if (!isTeacherRole) {
+            // If student receives 404 or error, teacher has not started yet
+            setIsWaitingForTeacher(true);
+            setSession(null);
+            setSessionFetchError(null);
+          } else {
+            // Teacher role fallback for ad-hoc or direct room launches
+            setSession({
+              _id: activeSessionId,
+              title: 'Live Classroom Session',
+              hostId: currentUserId,
+              hostRole: 'teacher',
+              status: 'live',
+              sessionType: 'tuition',
+              authorizedStudentIds: [],
+              settings: {
+                allowMicrophone: true,
+                allowCamera: true,
+                allowScreenShare: true,
+                allowChat: true,
+              },
+            });
+            setIsWaitingForTeacher(false);
+          }
         }
       } finally {
         if (isMounted) setLoading(false);
@@ -119,13 +180,33 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [activeSessionId, currentUserId]);
+  }, [activeSessionId, currentUserId, isTeacherRole]);
+
+  // Polling for students waiting for the instructor to start
+  useEffect(() => {
+    if (!isWaitingForTeacher || isTeacherRole || !activeSessionId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const data = await liveClassService.getLiveClassDetails(activeSessionId);
+        if (data.session && data.session.status === 'live' && !data.isWaiting) {
+          setSession(data.session);
+          setIsWaitingForTeacher(false);
+        }
+      } catch (err) {
+        // Continue waiting
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [isWaitingForTeacher, isTeacherRole, activeSessionId]);
 
   const isHost =
-    forcedRole === 'host' ||
-    (session && typeof session.hostId === 'string'
-      ? session.hostId === currentUserId
-      : (session?.hostId as any)?._id === currentUserId);
+    isTeacherRole &&
+    (forcedRole === 'host' ||
+      (session && typeof session.hostId === 'string'
+        ? session.hostId === currentUserId
+        : (session?.hostId as any)?._id === currentUserId));
 
   const {
     localStream,
@@ -148,11 +229,31 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     toggleVideo,
     toggleScreenShare,
     sendChatMessage,
+    broadcastWhiteboardData,
+    broadcastWhiteboardDraw,
+    broadcastWhiteboardClear,
+    broadcastWhiteboardUndo,
   } = useWebRTCClassroom({
     sessionId: activeSessionId,
     role: isHost ? 'host' : 'student',
     userName: currentUserName,
-    autoJoin: true,
+    autoJoin: !isWaitingForTeacher && !loading && Boolean(session && session.status === 'live'),
+    onWhiteboardSync: (elements) => {
+      setWhiteboardElements(elements);
+    },
+    onWhiteboardDraw: (element) => {
+      setWhiteboardElements((prev) => [...prev, element]);
+    },
+    onWhiteboardClear: () => {
+      setWhiteboardElements([]);
+    },
+    onWhiteboardUndo: (elements) => {
+      if (elements) {
+        setWhiteboardElements(elements);
+      } else {
+        setWhiteboardElements((prev) => prev.slice(0, -1));
+      }
+    },
     onForceLogout: (reason) => {
       setIsIdleAutoLoggedOut(true);
       setIdleLogoutReason(
@@ -201,14 +302,29 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
 
   const handleTeacherEndClass = async (logoutTuition?: boolean) => {
     try {
+      const durationMinutes = Math.max(
+        1,
+        Math.round((Date.now() - new Date(session?.startedAt || session?.createdAt || Date.now()).getTime()) / 60000)
+      );
+      const attendeeList = [
+        { name: `${currentUserName} (Host)`, role: 'Instructor' },
+        ...participants.map((p) => ({ name: p.name, role: 'Student' })),
+      ];
+
+      setSessionSummaryData({
+        durationMinutes,
+        totalAttendees: attendeeList.length,
+        attendees: attendeeList,
+      });
+
       await endClass();
       if (logoutTuition) {
         tuitionService.clearTuitionModeSession();
       }
-      navigate(logoutTuition ? '/teacher' : '/tuition-mode');
+      setShowSummaryModal(true);
     } catch (e) {
       console.error('Error during end class:', e);
-      navigate('/tuition-mode');
+      setShowSummaryModal(true);
     }
   };
 
@@ -227,6 +343,45 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
       <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-amber-400" />
         <p className="text-sm font-bold tracking-wide">Connecting to Tuition Classroom...</p>
+      </div>
+    );
+  }
+
+  // Student Waiting Room: Waiting for Instructor to launch live session
+  if (isWaitingForTeacher && !isTeacherRole) {
+    return (
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white gap-6 p-6 select-none animate-fadeIn">
+        <div className="relative flex items-center justify-center">
+          <div className="w-28 h-28 rounded-full bg-amber-500/10 border border-amber-500/20 animate-ping absolute" />
+          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 z-10 shadow-xl shadow-amber-500/10">
+            <Radio className="w-10 h-10 animate-pulse text-amber-400" />
+          </div>
+        </div>
+
+        <div className="text-center max-w-md space-y-2.5 z-10">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+            Live Classroom Waiting Room
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-tight">
+            Waiting for Instructor to Start Session
+          </h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            The instructor has not launched this live classroom yet. Please stay on this screen—your connection will automatically enter the classroom the moment your instructor goes live.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5 text-xs text-slate-400 font-mono bg-slate-900/90 px-4 py-2 rounded-xl border border-slate-800 shadow-inner">
+          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+          <span>Polling live status (checking every 5s)...</span>
+        </div>
+
+        <button
+          onClick={() => navigate('/tuition-mode')}
+          className="mt-2 px-5 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 text-xs font-bold transition-all cursor-pointer shadow-md"
+        >
+          Exit Waiting Room
+        </button>
       </div>
     );
   }
@@ -276,23 +431,110 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     );
   }
 
-  // Ended state screen (standard close)
-  if (isClassEnded) {
+  // Ended state screen / Post-Class Session Completed Summary
+  if (isClassEnded || showSummaryModal) {
+    const durationMinutes = sessionSummaryData?.durationMinutes || Math.max(
+      1,
+      Math.round((Date.now() - new Date(session?.startedAt || session?.createdAt || Date.now()).getTime()) / 60000)
+    );
+    const totalAttendees = sessionSummaryData?.totalAttendees || (participants.length + 1);
+    const attendees = sessionSummaryData?.attendees || [
+      { name: isTeacherRole ? `${currentUserName} (Host)` : 'Instructor', role: 'Instructor' },
+      ...participants.map((p) => ({ name: p.name, role: 'Student' })),
+      ...(!isTeacherRole ? [{ name: `${currentUserName} (You)`, role: 'Student' }] : []),
+    ];
+
     return (
-      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white gap-4 p-6">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
-          <CheckCircle className="w-8 h-8" />
+      <div className="h-screen w-full bg-slate-950 flex flex-col items-center justify-center text-white p-4 sm:p-6 select-none animate-fadeIn">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30 shrink-0">
+              <CheckCircle className="w-8 h-8" />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Session Completed
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-white mt-1">
+                {session?.title || 'Live Classroom Session'}
+              </h2>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {endReason || 'The live classroom session has successfully concluded. Attendance logs and session analytics have been securely archived.'}
+          </p>
+
+          {/* Key Metrics Grid */}
+          <div className="grid grid-cols-2 gap-3 py-1">
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-1">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                <Clock className="w-4 h-4 text-amber-400" />
+                <span>Class Duration</span>
+              </div>
+              <div className="text-2xl font-black text-white font-mono">
+                {durationMinutes} <span className="text-xs font-sans text-slate-400 font-bold">mins</span>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-1">
+              <div className="flex items-center gap-2 text-slate-500 text-xs font-bold">
+                <Users className="w-4 h-4 text-blue-400" />
+                <span>Attendees Logged</span>
+              </div>
+              <div className="text-2xl font-black text-white font-mono">
+                {totalAttendees} <span className="text-xs font-sans text-slate-400 font-bold">present</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Attendance Log List */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs font-bold text-slate-400 px-1">
+              <span>Attendance Log</span>
+              <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1">
+                <ShieldCheck className="w-3 h-3" />
+                Verified
+              </span>
+            </div>
+            <div className="max-h-36 overflow-y-auto space-y-1.5 bg-slate-950/70 p-3 rounded-2xl border border-slate-800/80 text-xs">
+              {attendees.map((a, idx) => (
+                <div key={idx} className="flex items-center justify-between py-1 border-b border-slate-800/40 last:border-0">
+                  <span className="font-medium text-slate-200 truncate">{a.name}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${
+                    a.role === 'Instructor' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {a.role}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Archive Notice */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-300">
+            <ShieldCheck className="w-4 h-4 shrink-0 text-amber-400" />
+            <span>Recording & attendance securely stored under 1-year compliance policy.</span>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-3 pt-2">
+            <button
+              onClick={() => navigate('/tuition-mode')}
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs transition-all shadow-lg shadow-amber-500/20 cursor-pointer text-center"
+            >
+              Return to Tuition Hub
+            </button>
+            {isTeacherRole && (
+              <button
+                onClick={() => navigate('/teacher/tuition-earnings')}
+                className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700 font-bold text-xs transition-all cursor-pointer"
+              >
+                View Earnings
+              </button>
+            )}
+          </div>
         </div>
-        <h2 className="text-xl font-black">Class Concluded</h2>
-        <p className="text-xs text-slate-400 max-w-sm text-center">
-          {endReason || 'The instructor has concluded this live classroom session.'}
-        </p>
-        <button
-          onClick={handleExit}
-          className="mt-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md cursor-pointer"
-        >
-          Back to Sessions
-        </button>
       </div>
     );
   }
@@ -384,7 +626,14 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
               </button>
             </div>
             <div className="flex-1 min-h-0">
-              <WhiteboardCanvas className="w-full h-full" />
+              <WhiteboardCanvas
+                className="w-full h-full"
+                remoteElements={whiteboardElements}
+                onDrawStroke={(el) => broadcastWhiteboardDraw(el)}
+                onClearBoard={() => broadcastWhiteboardClear()}
+                onUndoBoard={(remaining) => broadcastWhiteboardUndo(remaining)}
+                onSyncState={(allEls) => broadcastWhiteboardData(allEls)}
+              />
             </div>
           </div>
         )}
