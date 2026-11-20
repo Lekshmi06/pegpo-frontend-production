@@ -6,6 +6,8 @@ import {
   LiveClassRole,
   SignallingIncomingMessage,
   RTCIceServerConfig,
+  InMeetingAssessment,
+  InMeetingSubmission,
 } from '../types/webrtc';
 
 export interface UseWebRTCClassroomOptions {
@@ -19,6 +21,10 @@ export interface UseWebRTCClassroomOptions {
   onWhiteboardDraw?: (element: any) => void;
   onWhiteboardClear?: () => void;
   onWhiteboardUndo?: (elements?: any[]) => void;
+  onAssessmentPublished?: (assessment: InMeetingAssessment) => void;
+  onAssessmentGraded?: (assessmentId: string, submission: InMeetingSubmission) => void;
+  onAssessmentResults?: (assessmentId: string, submissions: InMeetingSubmission[]) => void;
+  onAssessmentClosed?: (assessmentId: string) => void;
 }
 
 export function useWebRTCClassroom({
@@ -32,6 +38,10 @@ export function useWebRTCClassroom({
   onWhiteboardDraw,
   onWhiteboardClear,
   onWhiteboardUndo,
+  onAssessmentPublished,
+  onAssessmentGraded,
+  onAssessmentResults,
+  onAssessmentClosed,
 }: UseWebRTCClassroomOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
@@ -43,6 +53,8 @@ export function useWebRTCClassroom({
 
   const [participants, setParticipants] = useState<Map<string, ICallParticipant>>(new Map());
   const [chatMessages, setChatMessages] = useState<ClassroomChatMessage[]>([]);
+  const [activeAssessments, setActiveAssessments] = useState<InMeetingAssessment[]>([]);
+  const [studentSubmissions, setStudentSubmissions] = useState<Map<string, InMeetingSubmission>>(new Map());
   const [connectionStatus, setConnectionStatus] = useState<
     'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'disconnected'
   >('idle');
@@ -73,6 +85,14 @@ export function useWebRTCClassroom({
   onWhiteboardClearRef.current = onWhiteboardClear;
   const onWhiteboardUndoRef = useRef(onWhiteboardUndo);
   onWhiteboardUndoRef.current = onWhiteboardUndo;
+  const onAssessmentPublishedRef = useRef(onAssessmentPublished);
+  onAssessmentPublishedRef.current = onAssessmentPublished;
+  const onAssessmentGradedRef = useRef(onAssessmentGraded);
+  onAssessmentGradedRef.current = onAssessmentGraded;
+  const onAssessmentResultsRef = useRef(onAssessmentResults);
+  onAssessmentResultsRef.current = onAssessmentResults;
+  const onAssessmentClosedRef = useRef(onAssessmentClosed);
+  onAssessmentClosedRef.current = onAssessmentClosed;
 
   // 1. Initialise local media stream with graceful degradation
   const initLocalMedia = useCallback(async (): Promise<MediaStream | null> => {
@@ -322,6 +342,14 @@ export function useWebRTCClassroom({
               if ((data as any).whiteboardState && Array.isArray((data as any).whiteboardState) && (data as any).whiteboardState.length > 0) {
                 onWhiteboardSyncRef.current?.((data as any).whiteboardState);
               }
+              // Hydrate persistent chat history for late joiners
+              if ((data as any).chatHistory && Array.isArray((data as any).chatHistory) && (data as any).chatHistory.length > 0) {
+                setChatMessages((data as any).chatHistory);
+              }
+              // Hydrate active assessments in session
+              if ((data as any).activeAssessments && Array.isArray((data as any).activeAssessments)) {
+                setActiveAssessments((data as any).activeAssessments);
+              }
               break;
             }
 
@@ -429,17 +457,71 @@ export function useWebRTCClassroom({
             }
 
             case 'chat-message': {
-              setChatMessages((prev) => [
-                ...prev,
-                {
-                  id: data.id,
-                  senderId: data.senderId,
-                  senderName: data.senderName,
-                  senderRole: data.senderRole,
-                  text: data.text,
-                  timestamp: data.timestamp,
-                },
-              ]);
+              setChatMessages((prev) => {
+                if (prev.some((m) => m.id === data.id)) return prev;
+                return [
+                  ...prev,
+                  {
+                    id: data.id,
+                    senderId: data.senderId,
+                    senderName: data.senderName,
+                    senderRole: data.senderRole,
+                    text: data.text,
+                    timestamp: data.timestamp,
+                  },
+                ];
+              });
+              break;
+            }
+
+            case 'assessment:published': {
+              const publishedAss = (data as any).assessment;
+              if (publishedAss) {
+                setActiveAssessments((prev) => {
+                  const exists = prev.some((a) => a._id === publishedAss._id);
+                  if (exists) return prev.map((a) => (a._id === publishedAss._id ? publishedAss : a));
+                  return [publishedAss, ...prev];
+                });
+                onAssessmentPublishedRef.current?.(publishedAss);
+              }
+              break;
+            }
+
+            case 'assessment:graded': {
+              const { assessmentId, submission } = data as any;
+              if (assessmentId && submission) {
+                setStudentSubmissions((prev) => new Map(prev).set(assessmentId, submission));
+                onAssessmentGradedRef.current?.(assessmentId, submission);
+              }
+              break;
+            }
+
+            case 'assessment:results': {
+              const { assessmentId, submissions } = data as any;
+              if (assessmentId) {
+                setActiveAssessments((prev) =>
+                  prev.map((a) =>
+                    a._id === assessmentId
+                      ? {
+                          ...a,
+                          submissions: submissions || a.submissions,
+                        }
+                      : a
+                  )
+                );
+                onAssessmentResultsRef.current?.(assessmentId, submissions || []);
+              }
+              break;
+            }
+
+            case 'assessment:closed': {
+              const { assessmentId } = data as any;
+              if (assessmentId) {
+                setActiveAssessments((prev) =>
+                  prev.map((a) => (a._id === assessmentId ? { ...a, status: 'closed' } : a))
+                );
+                onAssessmentClosedRef.current?.(assessmentId);
+              }
               break;
             }
 
@@ -726,6 +808,27 @@ export function useWebRTCClassroom({
     broadcastWhiteboardDraw,
     broadcastWhiteboardClear,
     broadcastWhiteboardUndo,
+    activeAssessments,
+    studentSubmissions,
+    publishAssessment: (assessment: any) => {
+      sendSignalling({
+        type: 'assessment:publish',
+        assessment,
+      });
+    },
+    submitAssessment: (assessmentId: string, answers: any[]) => {
+      sendSignalling({
+        type: 'assessment:submit',
+        assessmentId,
+        answers,
+      });
+    },
+    closeAssessment: (assessmentId: string) => {
+      sendSignalling({
+        type: 'assessment:close',
+        assessmentId,
+      });
+    },
   };
 }
 

@@ -29,6 +29,7 @@ import {
   CheckCircle,
   ExternalLink,
   BookOpen,
+  Edit3,
 } from 'lucide-react';
 import { tuitionService, TuitionHomeworkItem } from '../../services/tuitionService';
 import { authService } from '../../services/authService';
@@ -44,9 +45,21 @@ export const TuitionProgramWorkspace: React.FC = () => {
   const [program, setProgram] = useState<TuitionProgram | null>(null);
   const [roster, setRoster] = useState<{ teachers: any[]; students: any[]; userRole: string } | null>(null);
   const [messages, setMessages] = useState<CombinedStudyMessage[]>([]);
-  const [activeTab, setActiveTab] = useState<'study' | 'live' | 'recordings' | 'roster' | 'homework'>('study');
+  const [activeTab, setActiveTab] = useState<'overview' | 'study' | 'live' | 'recordings' | 'roster' | 'homework'>('overview');
   const [loading, setLoading] = useState(true);
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false);
+
+  // User Profile modal state
+  const [profileModalUser, setProfileModalUser] = useState<any | null>(null);
+
+  // Edit Program Overview state (Teachers/Admins)
+  const [isEditOverviewModalOpen, setIsEditOverviewModalOpen] = useState(false);
+  const [overviewForm, setOverviewForm] = useState({
+    nextSessionTopic: '',
+    requiredMaterials: '',
+    syllabusTopics: '',
+  });
+  const [savingOverview, setSavingOverview] = useState(false);
 
   // Past Classes & 1-Year Recordings state
   const [recordings, setRecordings] = useState<any[]>([]);
@@ -91,6 +104,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
     Boolean(currentUser?.teacherCode) ||
     roster?.userRole === 'teacher'
   );
+
+  const leadTeacher =
+    roster?.teachers && roster.teachers.length > 0
+      ? roster.teachers[0]
+      : program?.teachers && program.teachers.length > 0
+      ? program.teachers[0]
+      : null;
 
   // Combined Study input state
   const [messageText, setMessageText] = useState('');
@@ -176,6 +196,11 @@ export const TuitionProgramWorkspace: React.FC = () => {
         });
         if (rosterRes.program) {
           setProgram(rosterRes.program);
+          setOverviewForm({
+            nextSessionTopic: rosterRes.program.nextSessionTopic || '',
+            requiredMaterials: (rosterRes.program.requiredMaterials || []).join('\n'),
+            syllabusTopics: (rosterRes.program.syllabusTopics || []).join('\n'),
+          });
         }
       }
 
@@ -204,6 +229,33 @@ export const TuitionProgramWorkspace: React.FC = () => {
       console.error('Failed to load workspace data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveOverview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!programId) return;
+    try {
+      setSavingOverview(true);
+      const res = await tuitionService.updateProgramOverview(programId, {
+        nextSessionTopic: overviewForm.nextSessionTopic.trim(),
+        requiredMaterials: overviewForm.requiredMaterials
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
+        syllabusTopics: overviewForm.syllabusTopics
+          .split('\n')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      });
+      if (res.success && res.program) {
+        setProgram((prev) => (prev ? { ...prev, ...res.program } : res.program));
+        setIsEditOverviewModalOpen(false);
+      }
+    } catch (err) {
+      console.error('Failed to update overview:', err);
+    } finally {
+      setSavingOverview(false);
     }
   };
 
@@ -436,6 +488,18 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {/* Tab Navigation */}
         <div className="max-w-7xl mx-auto mt-4 flex items-center gap-2 border-b border-slate-800/80 overflow-x-auto">
           <button
+            onClick={() => setActiveTab('overview')}
+            className={`pb-2.5 px-3 text-xs font-bold transition-colors cursor-pointer flex items-center gap-2 border-b-2 shrink-0 ${
+              activeTab === 'overview'
+                ? 'border-amber-400 text-amber-400'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Overview &amp; Bio</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('study')}
             className={`pb-2.5 px-3 text-xs font-bold transition-colors cursor-pointer flex items-center gap-2 border-b-2 shrink-0 ${
               activeTab === 'study'
@@ -509,6 +573,346 @@ export const TuitionProgramWorkspace: React.FC = () => {
 
       {/* Main Workspace Body */}
       <div className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8 flex flex-col min-h-0">
+        {/* Tab 0: Program Overview & Instructor Bio */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6 animate-fadeIn">
+            {/* Top Grid: Instructor Spotlight + Next Live Class Brief */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Instructor Spotlight Card (5 cols) */}
+              <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                      Lead Instructor
+                    </span>
+                    {leadTeacher?.platformTier && (
+                      <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800">
+                        Tier: {leadTeacher.platformTier}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    {leadTeacher?.avatar || leadTeacher?.profilePicture ? (
+                      <img
+                        src={leadTeacher.avatar || leadTeacher.profilePicture}
+                        alt={leadTeacher.name || 'Instructor'}
+                        className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-500/40 shrink-0 shadow-md cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => leadTeacher && setProfileModalUser(leadTeacher)}
+                      />
+                    ) : (
+                      <div
+                        onClick={() => leadTeacher && setProfileModalUser(leadTeacher)}
+                        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-amber-300 font-extrabold text-xl flex items-center justify-center border-2 border-amber-500/40 shrink-0 shadow-inner cursor-pointer hover:border-amber-400 transition-colors"
+                      >
+                        {(leadTeacher?.name || 'IN')
+                          .split(' ')
+                          .map((n: string) => n[0])
+                          .slice(0, 2)
+                          .join('')
+                          .toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-bold text-white truncate">
+                          {leadTeacher?.name || 'Assigned Instructor'}
+                        </h3>
+                        {leadTeacher?.teacherCode && (
+                          <span className="font-mono text-xs font-extrabold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                            {leadTeacher.teacherCode}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-amber-400/90 font-medium truncate mt-0.5">
+                        {leadTeacher?.qualifications?.[0] || program?.subject || 'Subject Specialist'}
+                        {leadTeacher?.experienceYears ? ` • ${leadTeacher.experienceYears}+ years exp` : ''}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                        {leadTeacher?.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Bio snippet */}
+                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-3.5 rounded-2xl border border-slate-800/80">
+                    {leadTeacher?.bio || 'Dedicated educator focused on conceptual clarity, active student engagement, and structured problem solving.'}
+                  </p>
+
+                  {/* Specializations & Subjects */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                      Credentials &amp; Subjects
+                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {(leadTeacher?.qualifications && leadTeacher.qualifications.length > 0
+                        ? leadTeacher.qualifications
+                        : [program?.subject || 'General Studies']
+                      ).map((q: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-semibold border border-slate-700"
+                        >
+                          {q}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-800/80 mt-4 flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400">Verified Teaching Faculty</span>
+                  <button
+                    onClick={() => leadTeacher && setProfileModalUser(leadTeacher)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <span>Full Instructor Profile</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Next Live Class & Required Materials Card (7 cols) */}
+              <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 flex flex-col justify-between shadow-xl space-y-5">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-bold text-white uppercase tracking-wider">
+                        Next Live Classroom Session
+                      </span>
+                    </div>
+
+                    {isTeacher && (
+                      <button
+                        onClick={() => setIsEditOverviewModalOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition cursor-pointer"
+                        title="Edit session topic and student checklist"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Edit Class Brief &amp; Materials</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Upcoming Schedule Info Banner */}
+                  <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-950 to-slate-900 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
+                        <Clock className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-white">
+                          {upcomingSessions[0]?.dateStr || 'Regular Weekly Slot'}
+                        </div>
+                        <div className="text-[11px] text-slate-400 mt-0.5">
+                          {upcomingSessions[0]?.dayLabel || program?.schedule?.[0]?.day || 'Scheduled'}:{' '}
+                          <span className="text-amber-300 font-mono">
+                            {upcomingSessions[0]?.startTime || program?.schedule?.[0]?.startTime || 'TBD'} -{' '}
+                            {upcomingSessions[0]?.endTime || program?.schedule?.[0]?.endTime || 'TBD'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                      SmartBoard Session
+                    </span>
+                  </div>
+
+                  {/* Today's Topic Card */}
+                  <div className="space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      Today's Topic &amp; Class Focus
+                    </span>
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80">
+                      <p className="text-sm font-bold text-white">
+                        {program?.nextSessionTopic || 'Fundamental Principles, Concept Derivations & Live Exercises'}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Live collaborative derivations, problem walkthroughs on SmartBoard, and interactive checks.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Required Materials Checklist */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Student Readiness &amp; Required Materials
+                      </span>
+                      <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Bring to Live Class
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {(program?.requiredMaterials && program.requiredMaterials.length > 0
+                        ? program.requiredMaterials
+                        : [
+                            'Class Notebook & Ballpoint Pen',
+                            'Standard Grade Textbook',
+                            'Scientific Calculator / Formula Sheet',
+                            'Questions & Doubt Notes from Chapter',
+                          ]
+                      ).map((item: string, i: number) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="truncate">{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1-Click Launch Button */}
+                <div className="pt-4 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                  <div className="text-[11px] text-slate-400 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Split SmartBoard canvas with real-time synchronized strokes</span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      const liveRoomId = program?.code || program?._id || programId || 'tuition-live';
+                      navigate(`/live/${encodeURIComponent(liveRoomId)}`);
+                    }}
+                    className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-red-950/50 transition-all cursor-pointer hover:scale-[1.02]"
+                  >
+                    <Tv className="w-4 h-4" />
+                    <span>Enter Live Classroom</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: Syllabus Topics & Enrolled Cohort Roster */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Syllabus Progress Card (7 cols) */}
+              <div className="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-sm font-bold text-white">Curriculum &amp; Syllabus Coverage</h3>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                    {(program?.syllabusTopics?.length || 4)} Core Modules
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {(program?.syllabusTopics && program.syllabusTopics.length > 0
+                    ? program.syllabusTopics
+                    : [
+                        'Foundations & Core Axioms',
+                        'Equations of Motion & Force Vectors',
+                        'Rotational Dynamics & Angular Momentum',
+                        'Thermodynamics & Heat Cycles',
+                        'Wave Mechanics & Harmonic Oscillations',
+                        'Model Exams & Problem Solving Workshops',
+                      ]
+                  ).map((topic: string, i: number) => (
+                    <div
+                      key={i}
+                      className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center gap-3 hover:border-slate-700 transition-colors"
+                    >
+                      <span className="w-6 h-6 rounded-lg bg-amber-500/20 text-amber-400 font-extrabold text-xs flex items-center justify-center shrink-0">
+                        {i + 1}
+                      </span>
+                      <span className="text-xs font-semibold text-white truncate">{topic}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cohort Peers Preview Card (5 cols) */}
+              <div className="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-400" />
+                      <h3 className="text-sm font-bold text-white">Cohort Classmates</h3>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500/20 text-blue-300">
+                      {roster?.students?.length || 0} enrolled
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                    Active learners in this batch. Click any student profile to inspect their code and academic level.
+                  </p>
+
+                  {/* Student Avatars Grid */}
+                  {roster?.students && roster.students.length > 0 ? (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {roster.students.map((stu: any) => (
+                        <div
+                          key={stu._id}
+                          onClick={() => setProfileModalUser(stu)}
+                          className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 hover:border-slate-700 flex items-center justify-between transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {stu.avatar || stu.profilePicture ? (
+                              <img
+                                src={stu.avatar || stu.profilePicture}
+                                alt={stu.name || 'Student'}
+                                className="w-8 h-8 rounded-full object-cover border border-slate-700 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-300 font-bold text-[11px] flex items-center justify-center shrink-0 border border-slate-700">
+                                {(stu.name || 'ST')
+                                  .split(' ')
+                                  .map((n: string) => n[0])
+                                  .slice(0, 2)
+                                  .join('')
+                                  .toUpperCase()}
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors truncate block">
+                                {stu.name || stu.email || 'Student'}
+                              </span>
+                              <span className="text-[10px] text-slate-400 truncate block">
+                                {stu.grade || 'Standard'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {stu.studentCode && (
+                            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              {stu.studentCode}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-6 rounded-2xl bg-slate-950 text-center text-xs text-slate-500">
+                      No other students enrolled yet.
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 text-right">
+                  <button
+                    onClick={() => setActiveTab('roster')}
+                    className="text-xs font-bold text-amber-400 hover:text-amber-300 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View Complete Batch Roster</span>
+                    <ArrowLeft className="w-3 h-3 rotate-180" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tab 1: Combined Study Stream */}
         {activeTab === 'study' && (
           <div className="flex-1 flex flex-col bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden">
@@ -785,11 +1189,34 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   {roster.teachers.map((tch: any) => (
                     <div
                       key={tch._id}
-                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-colors"
+                      onClick={() => setProfileModalUser(tch)}
+                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between hover:border-amber-500/40 transition-colors cursor-pointer group"
                     >
-                      <div>
-                        <div className="text-xs font-bold text-white">{tch.name || tch.email}</div>
-                        <div className="text-[11px] text-slate-400">{tch.email}</div>
+                      <div className="flex items-center gap-3 min-w-0">
+                        {tch.avatar || tch.profilePicture ? (
+                          <img
+                            src={tch.avatar || tch.profilePicture}
+                            alt={tch.name || 'Teacher'}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-700 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-300 font-bold text-xs flex items-center justify-center shrink-0 border border-blue-500/30">
+                            {(tch.name || 'TC')
+                              .split(' ')
+                              .map((n: string) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors truncate">
+                            {tch.name || tch.email}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {tch.qualifications?.[0] || tch.email}
+                          </div>
+                        </div>
                       </div>
                       {tch.teacherCode ? (
                         <span className="font-mono text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30">
@@ -828,11 +1255,34 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   {roster.students.map((stu: any) => (
                     <div
                       key={stu._id}
-                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-colors"
+                      onClick={() => setProfileModalUser(stu)}
+                      className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between hover:border-amber-500/40 transition-colors cursor-pointer group"
                     >
-                      <div>
-                        <div className="text-xs font-bold text-white">{stu.name || stu.email || 'Student'}</div>
-                        {stu.email && <div className="text-[11px] text-slate-400">{stu.email}</div>}
+                      <div className="flex items-center gap-3 min-w-0">
+                        {stu.avatar || stu.profilePicture ? (
+                          <img
+                            src={stu.avatar || stu.profilePicture}
+                            alt={stu.name || 'Student'}
+                            className="w-10 h-10 rounded-full object-cover border border-slate-700 shrink-0"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0 border border-amber-500/30">
+                            {(stu.name || 'ST')
+                              .split(' ')
+                              .map((n: string) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors truncate">
+                            {stu.name || stu.email || 'Student'}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {stu.grade || stu.email || 'Cohort Member'}
+                          </div>
+                        </div>
                       </div>
                       {stu.studentCode && (
                         <span className="font-mono text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -1563,6 +2013,193 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reusable User Profile Modal */}
+      {profileModalUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+            <button
+              onClick={() => setProfileModalUser(null)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Profile Header */}
+            <div className="flex items-center gap-4">
+              {profileModalUser.avatar || profileModalUser.profilePicture ? (
+                <img
+                  src={profileModalUser.avatar || profileModalUser.profilePicture}
+                  alt={profileModalUser.name}
+                  className="w-16 h-16 rounded-2xl object-cover border-2 border-amber-500/40 shrink-0 shadow-lg"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-amber-300 font-extrabold text-xl flex items-center justify-center border-2 border-amber-500/40 shrink-0">
+                  {(profileModalUser.name || 'US')
+                    .split(' ')
+                    .map((n: string) => n[0])
+                    .slice(0, 2)
+                    .join('')
+                    .toUpperCase()}
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-lg font-bold text-white truncate">
+                    {profileModalUser.name || 'EduPye Member'}
+                  </h3>
+                  <span
+                    className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${
+                      profileModalUser.userType === 'teacher' || profileModalUser.teacherCode
+                        ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}
+                  >
+                    {profileModalUser.userType === 'teacher' || profileModalUser.teacherCode ? 'Instructor' : 'Student'}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-400 truncate mt-0.5">{profileModalUser.email}</p>
+                {(profileModalUser.teacherCode || profileModalUser.studentCode) && (
+                  <div className="mt-1">
+                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-slate-950 text-amber-400 border border-amber-500/30">
+                      ID: {profileModalUser.teacherCode || profileModalUser.studentCode}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Profile Content */}
+            <div className="space-y-3 pt-2 border-t border-slate-800 text-xs">
+              {profileModalUser.bio && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">About &amp; Bio</span>
+                  <p className="text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800 leading-relaxed">
+                    {profileModalUser.bio}
+                  </p>
+                </div>
+              )}
+
+              {profileModalUser.qualifications && profileModalUser.qualifications.length > 0 && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Qualifications</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {profileModalUser.qualifications.map((q: string, i: number) => (
+                      <span key={i} className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 font-medium">
+                        {q}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {profileModalUser.experienceYears ? (
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+                  <span>Teaching Experience</span>
+                  <strong className="text-white">{profileModalUser.experienceYears}+ Years</strong>
+                </div>
+              ) : null}
+
+              {profileModalUser.grade && (
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+                  <span>Academic Grade / Level</span>
+                  <strong className="text-white">{profileModalUser.grade}</strong>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => setProfileModalUser(null)}
+              className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-colors cursor-pointer"
+            >
+              Close Profile
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Program Overview Modal (Teachers/Admins) */}
+      {isEditOverviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-5">
+            <button
+              onClick={() => setIsEditOverviewModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <Edit3 className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Edit Program Class Brief &amp; Materials</h3>
+                <p className="text-xs text-slate-400">{program?.title || 'Tuition Program'}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveOverview} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Today's Session Topic / Focus
+                </label>
+                <input
+                  type="text"
+                  value={overviewForm.nextSessionTopic}
+                  onChange={(e) => setOverviewForm({ ...overviewForm, nextSessionTopic: e.target.value })}
+                  placeholder="e.g. Rotational Dynamics & Moment of Inertia"
+                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Required Materials Checklist (one per line)
+                </label>
+                <textarea
+                  rows={3}
+                  value={overviewForm.requiredMaterials}
+                  onChange={(e) => setOverviewForm({ ...overviewForm, requiredMaterials: e.target.value })}
+                  placeholder="Class Notebook & Pen&#10;Physics Part 1 Textbook&#10;Scientific Calculator"
+                  className="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Curriculum Syllabus Topics (one per line)
+                </label>
+                <textarea
+                  rows={4}
+                  value={overviewForm.syllabusTopics}
+                  onChange={(e) => setOverviewForm({ ...overviewForm, syllabusTopics: e.target.value })}
+                  placeholder="Module 1: Mechanics & Newton's Laws&#10;Module 2: Work, Energy & Power&#10;Module 3: Gravitation"
+                  className="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditOverviewModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingOverview}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs transition shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {savingOverview ? 'Saving Changes...' : 'Save Program Brief'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

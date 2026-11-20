@@ -372,8 +372,25 @@ export interface TuitionProgram {
   subject: string;
   grade?: string;
   description?: string;
+  syllabusTopics?: string[];
+  requiredMaterials?: string[];
+  nextSessionTopic?: string;
   schedule: IProgramScheduleSlot[];
   teacherIds: string[] | Array<{ _id: string; name?: string; email?: string; teacherCode?: string }>;
+  teachers?: Array<{
+    _id: string;
+    name?: string;
+    email?: string;
+    avatar?: string;
+    profilePicture?: string;
+    teacherCode?: string;
+    bio?: string;
+    qualifications?: string[];
+    experienceYears?: number;
+    subjects?: string[];
+    platformTier?: string;
+    userType?: string;
+  }>;
   enrolledStudentIds: string[] | Array<{ _id: string; name?: string; email?: string; studentCode?: string }>;
   status: TuitionProgramStatus;
   startDate?: string;

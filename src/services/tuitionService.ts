@@ -582,6 +582,16 @@ export const tuitionService = {
     return await apiRequest(`/tuition/programs/${programId}/roster`);
   },
 
+  updateProgramOverview: async (
+    programId: string,
+    data: { syllabusTopics?: string[]; requiredMaterials?: string[]; nextSessionTopic?: string }
+  ): Promise<{ success: boolean; message: string; program: TuitionProgram }> => {
+    return await apiRequest(`/tuition/programs/${programId}/overview`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
   getTeacherEnrolledStudents: async (): Promise<{
     success: boolean;
     totalPrograms: number;

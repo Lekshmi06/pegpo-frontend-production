@@ -8,6 +8,7 @@ interface ClassroomChatDrawerProps {
   messages: ClassroomChatMessage[];
   onSendMessage: (text: string) => void;
   currentUserId?: string;
+  alternateUserId?: string;
 }
 
 export const ClassroomChatDrawer: React.FC<ClassroomChatDrawerProps> = ({
@@ -16,6 +17,7 @@ export const ClassroomChatDrawer: React.FC<ClassroomChatDrawerProps> = ({
   messages,
   onSendMessage,
   currentUserId,
+  alternateUserId,
 }) => {
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -69,19 +71,28 @@ export const ClassroomChatDrawer: React.FC<ClassroomChatDrawerProps> = ({
           </div>
         ) : (
           messages.map((m) => {
-            const isMe = currentUserId ? m.senderId === currentUserId : false;
+            const isMe =
+              (currentUserId && m.senderId === currentUserId) ||
+              (alternateUserId && m.senderId === alternateUserId);
+            const isHostOrTeacher =
+              m.senderRole === 'host' || m.senderRole === 'teacher';
+
             return (
               <div
                 key={m.id}
                 className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
               >
-                <div className="flex items-center gap-1.5 mb-1 px-1">
+                <div className="flex items-center gap-1.5 mb-1 px-1 flex-wrap">
                   <span className="text-[11px] font-bold text-slate-300">
-                    {m.senderName}
+                    {isMe ? 'You' : m.senderName}
                   </span>
-                  {m.senderRole === 'host' && (
-                    <span className="text-[9px] font-black uppercase text-sky-400 bg-sky-950/60 px-1.5 py-0.2 rounded border border-sky-800/40">
-                      Host
+                  {isHostOrTeacher ? (
+                    <span className="text-[9px] font-black uppercase text-amber-300 bg-amber-950/70 px-1.5 py-0.5 rounded border border-amber-700/50">
+                      Instructor
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-semibold text-slate-400 bg-slate-800/80 px-1.5 py-0.5 rounded border border-slate-700/40">
+                      Student
                     </span>
                   )}
                   <span className="text-[10px] text-slate-500">

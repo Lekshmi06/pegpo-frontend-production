@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   X,
   ShieldCheck,
+  BookOpen,
 } from 'lucide-react';
 import { useWebRTCClassroom } from '../../hooks/useWebRTCClassroom';
 import { liveClassService } from '../../services/liveClassService';
@@ -25,6 +26,7 @@ import { VideoParticipantCard } from './VideoParticipantCard';
 import { ClassroomControlsBar } from './ClassroomControlsBar';
 import { ParticipantListDrawer } from './ParticipantListDrawer';
 import { ClassroomChatDrawer } from './ClassroomChatDrawer';
+import { InMeetingAssessmentDrawer } from './InMeetingAssessmentDrawer';
 import { WhiteboardCanvas } from '../../pages/teacher/smartboard/WhiteboardCanvas';
 
 interface NativeLiveClassroomProps {
@@ -58,6 +60,9 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isSmartBoardOpen, setIsSmartBoardOpen] = useState(false);
+  const [isAssessmentOpen, setIsAssessmentOpen] = useState(false);
+  const [isClassInfoOpen, setIsClassInfoOpen] = useState(false);
+  const [programDetails, setProgramDetails] = useState<any | null>(null);
   const [whiteboardElements, setWhiteboardElements] = useState<any[]>([]);
 
   // Auto-logout compliance state (15-min idle rule)
@@ -107,6 +112,14 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
       try {
         setLoading(true);
         const data = await liveClassService.getLiveClassDetails(activeSessionId);
+        const progLookupId = (data.session as any)?.batchId || (data.session as any)?.tuitionSessionId || activeSessionId;
+        if (progLookupId && isMounted) {
+          tuitionService.getProgramRoster(progLookupId).then((r) => {
+            if (r.success && isMounted) {
+              setProgramDetails(r.program || r);
+            }
+          }).catch(() => {});
+        }
         if (data.session && data.session.status === 'live' && !data.isWaiting) {
           if (isMounted) {
             setSession(data.session);
@@ -233,8 +246,13 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     broadcastWhiteboardDraw,
     broadcastWhiteboardClear,
     broadcastWhiteboardUndo,
+    activeAssessments,
+    studentSubmissions,
+    publishAssessment,
+    submitAssessment,
+    closeAssessment,
   } = useWebRTCClassroom({
-    sessionId: activeSessionId,
+    sessionId: session?._id || activeSessionId,
     role: isHost ? 'host' : 'student',
     userName: currentUserName,
     autoJoin: !isWaitingForTeacher && !loading && Boolean(session && session.status === 'live'),
@@ -252,6 +270,12 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
         setWhiteboardElements(elements);
       } else {
         setWhiteboardElements((prev) => prev.slice(0, -1));
+      }
+    },
+    onAssessmentPublished: (_assessment) => {
+      // Pop open drawer automatically for students when teacher launches a test/quiz
+      if (!isHost) {
+        setIsAssessmentOpen(true);
       }
     },
     onForceLogout: (reason) => {
@@ -564,6 +588,22 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Class Brief & People Toggle */}
+          <button
+            onClick={() => setIsClassInfoOpen(!isClassInfoOpen)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              isClassInfoOpen
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30'
+            }`}
+            title="Toggle Class Brief, Topic & People"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {isClassInfoOpen ? 'Close Brief' : 'Class Info & People'}
+            </span>
+          </button>
+
           {/* SmartBoard Split Toggle */}
           <button
             onClick={() => setIsSmartBoardOpen(!isSmartBoardOpen)}
@@ -709,6 +749,151 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
           localParticipant={localParticipant}
         />
 
+        {/* Class Brief & People Drawer */}
+        {isClassInfoOpen && (
+          <div className="w-80 sm:w-96 bg-slate-900 border-l border-slate-800 flex flex-col h-full z-40 animate-slideLeft shadow-2xl">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+                  <BookOpen className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Class Brief &amp; People</h3>
+                  <p className="text-[10px] text-slate-400">Readiness, Topic &amp; Participants</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsClassInfoOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5">
+              {/* Program & Session Topic */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Today's Session Topic
+                </span>
+                <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                  <p className="text-xs font-bold text-white">
+                    {programDetails?.nextSessionTopic || session?.title || 'Live Interactive Class'}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Synchronized interactive whiteboard derivations &amp; real-time quizzes.
+                  </p>
+                </div>
+              </div>
+
+              {/* Required Materials Checklist */}
+              <div className="space-y-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  Required Materials Checklist
+                </span>
+                <div className="space-y-1.5">
+                  {(programDetails?.requiredMaterials && programDetails.requiredMaterials.length > 0
+                    ? programDetails.requiredMaterials
+                    : ['Class Notebook & Ballpoint Pen', 'Standard Textbook', 'Scientific Calculator / Formula Sheet']
+                  ).map((item: string, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-slate-950/70 border border-slate-800 text-xs text-slate-300"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span className="truncate">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Syllabus Highlights */}
+              {programDetails?.syllabusTopics && programDetails.syllabusTopics.length > 0 && (
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Syllabus Topics
+                  </span>
+                  <div className="space-y-1 max-h-36 overflow-y-auto">
+                    {programDetails.syllabusTopics.map((topic: string, i: number) => (
+                      <div
+                        key={i}
+                        className="flex items-center gap-2 p-1.5 rounded-lg bg-slate-950/50 text-[11px] text-slate-300"
+                      >
+                        <span className="w-4 h-4 rounded-full bg-blue-500/20 text-blue-400 font-bold text-[9px] flex items-center justify-center shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="truncate">{topic}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* People in Room (Live Attendees & Profiles) */}
+              <div className="space-y-2 pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Participants in Room ({participants.length + 1})
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {/* Local User */}
+                  <div className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0 border border-amber-500/30">
+                        {currentUserName[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-white truncate block">
+                          {currentUserName} (You)
+                        </span>
+                        <span className="text-[10px] text-slate-400 block">
+                          {isHost ? 'Instructor / Host' : 'Student'}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300">
+                      {isHost ? 'Host' : 'Member'}
+                    </span>
+                  </div>
+
+                  {/* Remote Participants */}
+                  {participants.map((p) => (
+                    <div
+                      key={p.peerId}
+                      className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-slate-800 text-slate-300 font-bold text-xs flex items-center justify-center shrink-0 border border-slate-700">
+                          {p.name[0]?.toUpperCase() || 'P'}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="text-xs font-bold text-white truncate block">{p.name}</span>
+                          <span className="text-[10px] text-slate-400 block">
+                            {p.role === 'host' ? 'Instructor' : 'Student'}
+                          </span>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                        p.role === 'host' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        {p.role === 'host' ? 'Host' : 'Student'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Persistent Classroom Chat Drawer (Docked Side-by-Side) */}
         <ClassroomChatDrawer
           isOpen={isChatOpen}
@@ -716,6 +901,23 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
           messages={chatMessages}
           onSendMessage={sendChatMessage}
           currentUserId={currentUserId}
+          alternateUserId={(currentUser as any)?._id}
+        />
+
+        {/* In-Meeting Tests, Quizzes & Tasks Drawer */}
+        <InMeetingAssessmentDrawer
+          isOpen={isAssessmentOpen}
+          onClose={() => setIsAssessmentOpen(false)}
+          isHost={Boolean(isHost)}
+          sessionId={session?._id || activeSessionId}
+          programId={(session as any)?.batchId || (session as any)?.tuitionSessionId}
+          assessments={activeAssessments}
+          studentSubmissions={studentSubmissions}
+          onPublishAssessment={publishAssessment}
+          onSubmitAssessment={submitAssessment}
+          onCloseAssessment={closeAssessment}
+          currentUserId={currentUserId}
+          currentUserName={currentUserName}
         />
       </div>
 
@@ -730,18 +932,33 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
         isChatOpen={isChatOpen}
         isParticipantListOpen={isParticipantsOpen}
         isSmartBoardOpen={isSmartBoardOpen}
+        isAssessmentOpen={isAssessmentOpen}
+        activeAssessmentCount={activeAssessments.filter((a) => a.status === 'active').length}
         onToggleAudio={toggleAudio}
         onToggleVideo={toggleVideo}
         onToggleScreenShare={toggleScreenShare}
         onToggleChat={() => {
           setIsChatOpen(!isChatOpen);
-          if (isParticipantsOpen) setIsParticipantsOpen(false);
+          if (!isChatOpen) {
+            setIsParticipantsOpen(false);
+            setIsAssessmentOpen(false);
+          }
         }}
         onToggleParticipantList={() => {
           setIsParticipantsOpen(!isParticipantsOpen);
-          if (isChatOpen) setIsChatOpen(false);
+          if (!isParticipantsOpen) {
+            setIsChatOpen(false);
+            setIsAssessmentOpen(false);
+          }
         }}
         onToggleSmartBoard={() => setIsSmartBoardOpen(!isSmartBoardOpen)}
+        onToggleAssessment={() => {
+          setIsAssessmentOpen(!isAssessmentOpen);
+          if (!isAssessmentOpen) {
+            setIsChatOpen(false);
+            setIsParticipantsOpen(false);
+          }
+        }}
         onLeaveClass={handleExit}
         onEndClass={handleTeacherEndClass}
       />

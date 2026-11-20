@@ -55,9 +55,47 @@ export interface ClassroomChatMessage {
   id: string;
   senderId: string;
   senderName: string;
-  senderRole: LiveClassRole;
+  senderRole: LiveClassRole | 'teacher' | string;
   text: string;
   timestamp: string;
+}
+
+export type LiveAssessmentType = 'quiz' | 'test' | 'assignment';
+
+export interface InMeetingQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctOptionIndex?: number;
+  points: number;
+}
+
+export interface InMeetingSubmission {
+  studentId: string;
+  studentName: string;
+  studentRole?: string;
+  score: number;
+  totalPossible: number;
+  percentage: number;
+  submittedAt: string;
+}
+
+export interface InMeetingAssessment {
+  _id: string;
+  sessionId: string;
+  programId?: string;
+  homeworkId?: string;
+  type: LiveAssessmentType;
+  title: string;
+  instructions?: string;
+  timeLimitMinutes?: number;
+  totalPoints: number;
+  status: 'active' | 'closed';
+  questions: InMeetingQuestion[];
+  submissions: InMeetingSubmission[];
+  publishedBy: string;
+  publishedByName: string;
+  createdAt: string;
 }
 
 export type SignallingIncomingMessage =
@@ -73,6 +111,8 @@ export type SignallingIncomingMessage =
         isVideoMuted: boolean;
       }>;
       whiteboardState?: any[];
+      chatHistory?: ClassroomChatMessage[];
+      activeAssessments?: InMeetingAssessment[];
     }
   | {
       type: 'peer-joined';
@@ -137,6 +177,25 @@ export type SignallingIncomingMessage =
       type: 'whiteboard:sync-state' | 'whiteboard-sync';
       senderId?: string;
       elements: any[];
+    }
+  | {
+      type: 'assessment:published';
+      assessment: InMeetingAssessment;
+    }
+  | {
+      type: 'assessment:graded';
+      assessmentId: string;
+      submission: InMeetingSubmission & { answers?: any[] };
+    }
+  | {
+      type: 'assessment:results';
+      assessmentId: string;
+      totalSubmissions: number;
+      submissions: InMeetingSubmission[];
+    }
+  | {
+      type: 'assessment:closed';
+      assessmentId: string;
     }
   | {
       type: 'session-ended';

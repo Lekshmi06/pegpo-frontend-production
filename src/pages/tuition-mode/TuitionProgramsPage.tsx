@@ -533,6 +533,15 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
   onAccess,
   onRequestEnroll,
 }) => {
+  const instructor =
+    program.teachers && program.teachers.length > 0
+      ? program.teachers[0]
+      : Array.isArray(program.teacherIds) && typeof program.teacherIds[0] === 'object'
+      ? (program.teacherIds[0] as any)
+      : null;
+
+  const studentCount = program.enrolledStudentIds?.length || 0;
+
   return (
     <div className="rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-amber-500/30 transition-all p-5 flex flex-col justify-between shadow-lg shadow-black/20 group">
       <div>
@@ -552,22 +561,66 @@ const ProgramCard: React.FC<ProgramCardProps> = ({
         </h3>
 
         {program.description && (
-          <p className="text-xs text-slate-400 line-clamp-2 mb-4 leading-relaxed">
+          <p className="text-xs text-slate-400 line-clamp-2 mb-3 leading-relaxed">
             {program.description}
           </p>
         )}
 
+        {/* Instructor Spotlight Card */}
+        {instructor && (
+          <div className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/90 mb-3 hover:border-slate-700 transition-colors">
+            {instructor.avatar || instructor.profilePicture ? (
+              <img
+                src={instructor.avatar || instructor.profilePicture}
+                alt={instructor.name || 'Instructor'}
+                className="w-10 h-10 rounded-full object-cover border border-amber-500/40 shrink-0"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-600/30 text-amber-300 font-extrabold text-xs flex items-center justify-center border border-amber-500/40 shrink-0 shadow-inner">
+                {(instructor.name || 'IN')
+                  .split(' ')
+                  .map((n: string) => n[0])
+                  .slice(0, 2)
+                  .join('')
+                  .toUpperCase()}
+              </div>
+            )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-white truncate">{instructor.name || 'Assigned Instructor'}</span>
+                {instructor.teacherCode && (
+                  <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold">
+                    {instructor.teacherCode}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 text-[10px] text-slate-400 truncate mt-0.5">
+                <span className="text-amber-300/90 font-medium">
+                  {instructor.qualifications?.[0] || instructor.subjects?.[0] || program.subject}
+                </span>
+                {instructor.experienceYears ? <span>• {instructor.experienceYears}+ yrs exp</span> : null}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Program Details */}
         <div className="space-y-2 py-3 border-t border-slate-800/80 text-xs text-slate-300">
-          {program.grade && (
-            <div className="flex items-center gap-2 text-slate-400">
-              <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
-              <span>Grade / Level: <strong className="text-slate-200">{program.grade}</strong></span>
+          <div className="flex items-center justify-between text-slate-400">
+            {program.grade && (
+              <div className="flex items-center gap-1.5">
+                <GraduationCap className="w-3.5 h-3.5 text-blue-400" />
+                <span>Grade: <strong className="text-slate-200">{program.grade}</strong></span>
+              </div>
+            )}
+            <div className="flex items-center gap-1 text-[11px] text-slate-400 ml-auto">
+              <Users className="w-3.5 h-3.5 text-slate-400" />
+              <span><strong className="text-white">{studentCount}</strong> enrolled</span>
             </div>
-          )}
+          </div>
 
           {program.schedule && program.schedule.length > 0 && (
-            <div className="flex items-start gap-2 text-slate-400">
+            <div className="flex items-start gap-2 text-slate-400 pt-1">
               <Clock className="w-3.5 h-3.5 text-amber-400 mt-0.5 shrink-0" />
               <div>
                 {program.schedule.map((slot, idx) => (

@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   X,
   Presentation,
+  ClipboardList,
 } from 'lucide-react';
 
 interface ClassroomControlsBarProps {
@@ -23,12 +24,15 @@ interface ClassroomControlsBarProps {
   isChatOpen: boolean;
   isParticipantListOpen: boolean;
   isSmartBoardOpen?: boolean;
+  isAssessmentOpen?: boolean;
+  activeAssessmentCount?: number;
   onToggleAudio: () => void;
   onToggleVideo: () => void;
   onToggleScreenShare: () => void;
   onToggleChat: () => void;
   onToggleParticipantList: () => void;
   onToggleSmartBoard?: () => void;
+  onToggleAssessment?: () => void;
   onLeaveClass: () => void;
   onEndClass: (logoutTuition?: boolean) => void;
 }
@@ -43,12 +47,15 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
   isChatOpen,
   isParticipantListOpen,
   isSmartBoardOpen = false,
+  isAssessmentOpen = false,
+  activeAssessmentCount = 0,
   onToggleAudio,
   onToggleVideo,
   onToggleScreenShare,
   onToggleChat,
   onToggleParticipantList,
   onToggleSmartBoard,
+  onToggleAssessment,
   onLeaveClass,
   onEndClass,
 }) => {
@@ -157,6 +164,26 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
               }`}
             >
               <Presentation className="w-5 h-5 text-amber-400" />
+            </button>
+          )}
+
+          {/* Quizzes, Tests & Tasks Toggle */}
+          {onToggleAssessment && (
+            <button
+              onClick={onToggleAssessment}
+              title={isHost ? "Live Quizzes, Tests & Tasks" : "Active Quizzes & Tests"}
+              className={`relative min-h-[44px] min-w-[44px] w-11 h-11 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all cursor-pointer shadow-sm active:scale-95 ${
+                isAssessmentOpen
+                  ? 'bg-purple-500/20 text-purple-400 border border-purple-400/40'
+                  : 'bg-slate-800 text-white hover:bg-slate-700 border border-slate-700'
+              }`}
+            >
+              <ClipboardList className="w-5 h-5 text-purple-400" />
+              {activeAssessmentCount > 0 && !isAssessmentOpen && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-slate-900 animate-pulse">
+                  {activeAssessmentCount}
+                </span>
+              )}
             </button>
           )}
         </div>
