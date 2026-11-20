@@ -284,82 +284,87 @@ export const FeaturesSection: React.FC<FeaturesSectionProps> = ({ dynamicFeature
                   </div>
 
                   {/* Live Interactive Preview Visual */}
-                  <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800/90 space-y-2 text-xs">
-                    {feat.preview.type === 'simple' && (
-                      <div className="text-[11px] text-slate-300 leading-relaxed font-mono bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
-                        {feat.preview.text}
-                      </div>
-                    )}
+                  {(() => {
+                    const prev = feat.preview as any;
+                    return (
+                      <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800/90 space-y-2 text-xs">
+                        {prev.type === 'simple' && (
+                          <div className="text-[11px] text-slate-300 leading-relaxed font-mono bg-slate-950/60 p-2.5 rounded-xl border border-slate-800">
+                            {prev.text}
+                          </div>
+                        )}
 
-                    {feat.preview.type === 'ai-chat' && (
-                      <div className="space-y-2">
-                        <div className="text-[11px] text-slate-400 font-mono">Q: {feat.preview.prompt}</div>
-                        <div className="text-[11px] text-cyan-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
-                          🤖 {feat.preview.response}
-                        </div>
-                      </div>
-                    )}
-
-                    {feat.preview.type === 'course-card' && (
-                      <div className="space-y-1.5">
-                        <div className="font-bold text-white flex items-center justify-between">
-                          <span>{feat.preview.courseName}</span>
-                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Enrolled</span>
-                        </div>
-                        <div className="text-[11px] text-slate-400">{feat.preview.instructor}</div>
-                        <div className="text-[10px] text-blue-400 font-medium">{feat.preview.lessons}</div>
-                      </div>
-                    )}
-
-                    {feat.preview.type === 'timeline' && feat.preview.steps && (
-                      <div className="space-y-1.5">
-                        <div className="font-bold text-purple-300 text-[11px]">{feat.preview.title}</div>
-                        <div className="space-y-1 pl-2 border-l border-purple-500/30 text-[10px] text-slate-300">
-                          {feat.preview.steps.map((st: string, i: number) => (
-                            <div key={i} className="flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                              <span>{st}</span>
+                        {prev.type === 'ai-chat' && (
+                          <div className="space-y-2">
+                            <div className="text-[11px] text-slate-400 font-mono">Q: {prev.prompt}</div>
+                            <div className="text-[11px] text-cyan-300 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800">
+                              🤖 {prev.response}
                             </div>
-                          ))}
+                          </div>
+                        )}
+
+                        {prev.type === 'course-card' && (
+                          <div className="space-y-1.5">
+                            <div className="font-bold text-white flex items-center justify-between">
+                              <span>{prev.courseName}</span>
+                              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded">Enrolled</span>
+                            </div>
+                            <div className="text-[11px] text-slate-400">{prev.instructor}</div>
+                            <div className="text-[10px] text-blue-400 font-medium">{prev.lessons}</div>
+                          </div>
+                        )}
+
+                        {prev.type === 'timeline' && prev.steps && (
+                          <div className="space-y-1.5">
+                            <div className="font-bold text-purple-300 text-[11px]">{prev.title}</div>
+                            <div className="space-y-1 pl-2 border-l border-purple-500/30 text-[10px] text-slate-300">
+                              {prev.steps.map((st: string, i: number) => (
+                                <div key={i} className="flex items-center gap-1.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                                  <span>{st}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {prev.type === 'smartboard-preview' && (
+                          <div className="space-y-2">
+                            <div className="font-mono text-cyan-300 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
+                              {prev.formula}
+                            </div>
+                            <div className="text-[10px] text-slate-400 text-right">{prev.label}</div>
+                          </div>
+                        )}
+
+                        {prev.type === 'assessment-preview' && (
+                          <div className="space-y-1">
+                            <div className="font-bold text-amber-300 text-[11px]">{prev.exam}</div>
+                            <div className="text-[11px] text-slate-300">{prev.status}</div>
+                          </div>
+                        )}
+
+                        {prev.type === 'research-preview' && (
+                          <div className="space-y-1">
+                            <div className="font-bold text-cyan-300 text-[11px]">{prev.synthesis}</div>
+                            <div className="text-[10px] text-slate-400">{prev.citations}</div>
+                          </div>
+                        )}
+
+                        {prev.type === 'erp-preview' && (
+                          <div className="space-y-1">
+                            <div className="font-bold text-indigo-300 text-[11px]">{prev.campus}</div>
+                            <div className="text-[10px] text-slate-400 font-mono">{prev.metrics}</div>
+                          </div>
+                        )}
+
+                        {/* Metrics Banner */}
+                        <div className="pt-1 text-[10px] font-semibold text-slate-400 border-t border-slate-800/80 flex items-center justify-between">
+                          <span>{feat.metrics}</span>
                         </div>
                       </div>
-                    )}
-
-                    {feat.preview.type === 'smartboard-preview' && (
-                      <div className="space-y-2">
-                        <div className="font-mono text-cyan-300 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-800 text-center">
-                          {feat.preview.formula}
-                        </div>
-                        <div className="text-[10px] text-slate-400 text-right">{feat.preview.label}</div>
-                      </div>
-                    )}
-
-                    {feat.preview.type === 'assessment-preview' && (
-                      <div className="space-y-1">
-                        <div className="font-bold text-amber-300 text-[11px]">{feat.preview.exam}</div>
-                        <div className="text-[11px] text-slate-300">{feat.preview.status}</div>
-                      </div>
-                    )}
-
-                    {feat.preview.type === 'research-preview' && (
-                      <div className="space-y-1">
-                        <div className="font-bold text-cyan-300 text-[11px]">{feat.preview.synthesis}</div>
-                        <div className="text-[10px] text-slate-400">{feat.preview.citations}</div>
-                      </div>
-                    )}
-
-                    {feat.preview.type === 'erp-preview' && (
-                      <div className="space-y-1">
-                        <div className="font-bold text-indigo-300 text-[11px]">{feat.preview.campus}</div>
-                        <div className="text-[10px] text-slate-400 font-mono">{feat.preview.metrics}</div>
-                      </div>
-                    )}
-
-                    {/* Metrics Banner */}
-                    <div className="pt-1 text-[10px] font-semibold text-slate-400 border-t border-slate-800/80 flex items-center justify-between">
-                      <span>{feat.metrics}</span>
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Card Action Link */}
