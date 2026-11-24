@@ -2,7 +2,11 @@ import { apiRequest } from './apiClient';
 import { LiveClassSession, WebRTCConfiguration } from '../types/webrtc';
 
 const getAuthHeaders = (): Record<string, string> => {
-  const token = localStorage.getItem('token') || '';
+  const token =
+    localStorage.getItem('tuition_mode_token') ||
+    localStorage.getItem('token') ||
+    localStorage.getItem('auth_token') ||
+    '';
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };

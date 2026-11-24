@@ -12,6 +12,7 @@ import {
   X,
   Presentation,
   ClipboardList,
+  LogOut,
 } from 'lucide-react';
 
 interface ClassroomControlsBarProps {
@@ -231,40 +232,39 @@ export const ClassroomControlsBar: React.FC<ClassroomControlsBarProps> = ({
             </div>
 
             <div>
-              <h3 className="text-base font-extrabold text-white">End Class for Everyone?</h3>
+              <h3 className="text-base font-extrabold text-white">End Live Class Session?</h3>
               <p className="text-xs text-slate-400 mt-1">
-                This will immediately disconnect all students and finalize attendance for this live session.
+                This will finalize attendance, conclude recording compliance, and disconnect all participating students.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 py-1 px-1 bg-slate-950 rounded-xl border border-slate-800">
-              <input
-                type="checkbox"
-                id="clearTuition"
-                checked={logoutTuition}
-                onChange={(e) => setLogoutTuition(e.target.checked)}
-                className="w-4 h-4 ml-2 accent-amber-500 rounded"
-              />
-              <label htmlFor="clearTuition" className="text-xs text-slate-300 font-medium cursor-pointer">
-                Exit and log out of Tuition Mode
-              </label>
+            {/* Mandatory Session Ended - Log Out Notice */}
+            <div className="p-3.5 bg-amber-500/15 rounded-2xl border border-amber-500/30 text-amber-300 text-xs space-y-1">
+              <div className="flex items-center gap-2 font-bold text-amber-400">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>Session Ended — Please Log Out of Tuition Session</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Centralized Tuition policy requires active session credentials to be terminated upon host departure to protect classroom privacy.
+              </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowEndModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => {
                   setShowEndModal(false);
-                  onEndClass(logoutTuition);
+                  onEndClass(true);
                 }}
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md transition-colors cursor-pointer"
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white text-xs font-bold shadow-md transition-colors cursor-pointer flex items-center gap-1.5"
               >
-                End Class
+                <LogOut className="w-4 h-4" />
+                <span>End &amp; Log Out Now</span>
               </button>
             </div>
           </div>

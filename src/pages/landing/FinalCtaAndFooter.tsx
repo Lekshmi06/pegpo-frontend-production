@@ -3,18 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   ArrowRight, 
   Sparkles, 
-  ShoppingBag,
   GraduationCap, 
-  Building2, 
-  Smartphone, 
   Mail, 
   Phone, 
   MapPin, 
   ShieldCheck, 
   HelpCircle,
-  FileText,
-  Cookie,
-  ExternalLink
+  UserPlus
 } from 'lucide-react';
 import { EdupyeLogo } from '../../components/common/EdupyeLogo';
 import { publicLinksConfig } from '../../config/publicLinks';
@@ -28,254 +23,177 @@ interface FinalCtaAndFooterProps {
 export const FinalCtaAndFooter: React.FC<FinalCtaAndFooterProps> = ({ onOpenDemo, footerContact }) => {
   const navigate = useNavigate();
 
-  const tagline = footerContact?.tagline || "EduPye is the unified LMS platform providing adaptive AI study companions for learners, smart instructional command for educators, and enterprise-grade ERP governance for institutions.";
+  const tagline = footerContact?.tagline || "EduPye provides personalized 1-on-1 and small-batch live online tuition with interactive Dual SmartBoard tools, 24/7 AI practice, and 1-year lecture recordings.";
   const supportEmail = footerContact?.supportEmail || publicLinksConfig.supportEmail;
   const supportPhone = footerContact?.supportPhone || publicLinksConfig.phoneNumbers[0];
-  const address = footerContact?.address || "Global Multi-Region Cloud Operations";
-  const copyrightText = footerContact?.copyrightText || `© ${new Date().getFullYear()} EduPye Inc. All rights reserved. One unified platform. Every learning journey.`;
+  const address = footerContact?.address || "Global Online Operations & Academic Command Center";
+  const copyrightText = footerContact?.copyrightText || `© ${new Date().getFullYear()} EduPye Inc. All rights reserved. Personalized Online Tuition & LMS.`;
 
   return (
-    <footer className="bg-slate-950 text-slate-300 relative border-t border-slate-900 overflow-hidden">
-      {/* Background glow decoration */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-blue-600/10 rounded-full blur-[140px] pointer-events-none" />
-
+    <footer className="bg-white dark:bg-slate-950 text-slate-700 dark:text-slate-300 border-t border-slate-200 dark:border-slate-800">
       {/* FINAL CALL TO ACTION BANNER */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-16 relative">
-        <div className="rounded-3xl bg-gradient-to-r from-blue-950 via-slate-900 to-indigo-950 p-8 sm:p-12 border border-blue-500/30 shadow-2xl relative overflow-hidden text-center max-w-4xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/20 text-cyan-300 border border-blue-400/30 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-3.5 h-3.5" />
-            Connect Your Learning Journey
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-14">
+        <div className="rounded-3xl bg-gradient-to-r from-emerald-50/80 via-white to-teal-50/80 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 p-8 sm:p-12 border border-emerald-500/30 shadow-xs text-center max-w-4xl mx-auto space-y-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold uppercase tracking-wider">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            Start Your Child's Learning Journey
           </div>
 
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
-            Ready to experience next-generation education?
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-950 dark:text-white tracking-tight leading-tight">
+            Ready to experience 1-on-1 personalized tuition?
           </h2>
 
-          <p className="text-sm sm:text-base text-slate-300 max-w-xl mx-auto leading-relaxed">
-            Create a free account in seconds, explore the verified course marketplace, or connect your school or corporate training team with EduPye.
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-xl mx-auto leading-relaxed">
+            Enroll in structured programs, unlock live Dual SmartBoard classes with permanent codes, or apply to join our verified tutor faculty.
           </p>
 
           {/* Action Buttons */}
           <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
             <button
-              onClick={() => navigate('/signup')}
-              className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-xl shadow-blue-600/30 transition-all flex items-center justify-center gap-2 hover:scale-[1.02] cursor-pointer"
+              onClick={() => navigate('/tuition-mode')}
+              className="px-6 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold text-xs sm:text-sm shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Get Started Free</span>
+              <GraduationCap className="w-4 h-4" />
+              <span>Explore Tuition Programs</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <button
-              onClick={() => navigate('/tuition-mode')}
-              className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-sm border border-slate-700 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            <Link
+              to="/become-a-tutor"
+              className="px-6 py-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2"
             >
-              <GraduationCap className="w-4 h-4 text-amber-400" />
-              <span>Explore Tuition Mode</span>
-            </button>
+              <UserPlus className="w-4 h-4 text-amber-600" />
+              <span>Be Our Tutor</span>
+            </Link>
 
             <button
               onClick={onOpenDemo}
-              className="px-5 py-3.5 rounded-xl bg-transparent hover:bg-white/10 text-slate-200 hover:text-white font-medium text-sm transition-colors cursor-pointer"
+              className="px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-colors cursor-pointer"
             >
-              <span>Request Campus Demo</span>
+              <span>Book Free Demo</span>
             </button>
           </div>
 
-          <div className="pt-2 flex items-center justify-center gap-3 text-xs text-slate-400">
-            <span>Free individual access</span>
-            <span>•</span>
-            <Link to="/login" className="underline hover:text-white font-semibold">
-              Already have an account? Sign In
+          <div className="pt-1 flex items-center justify-center gap-3 text-xs text-slate-500">
+            <span>Free diagnostic baseline</span>
+            <span>&bull;</span>
+            <Link to="/login" className="underline hover:text-slate-900 dark:hover:text-white font-semibold">
+              Already enrolled? Sign In
             </Link>
           </div>
         </div>
       </div>
 
-      {/* PUBLIC FOOTER DIRECTORY */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12 pt-8 border-t border-slate-900">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
-          {/* Column 1: Brand & Contact Info */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/95 px-3 py-1.5 rounded-xl shadow-md border border-white/20 inline-block">
+      {/* FOOTER NAVIGATION & DETAILS */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-slate-200 dark:border-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          {/* Brand & Tagline */}
+          <div className="space-y-3 md:col-span-1">
+            <Link to="/" className="inline-block">
+              <div className="bg-white px-2.5 py-1.5 rounded-xl border border-slate-200 shadow-2xs inline-block">
                 <EdupyeLogo className="h-6" />
               </div>
-            </div>
-
-            <p className="text-xs sm:text-sm text-slate-400 max-w-sm leading-relaxed">
+            </Link>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
               {tagline}
             </p>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>System Status: All Systems Operational</span>
-              <span className="text-slate-600">|</span>
-              <span className="text-slate-400">99.98% Cloud SLA</span>
-            </div>
-
-            <div className="space-y-1.5 text-xs text-slate-400 pt-1">
-              <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                <a href={`mailto:${supportEmail}`} className="hover:text-white transition-colors">
-                  {supportEmail}
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <a href={`mailto:${publicLinksConfig.enterpriseEmail}`} className="hover:text-white transition-colors">
-                  {publicLinksConfig.enterpriseEmail} (Institutional)
-                </a>
-              </div>
-              <div className="flex items-center gap-2">
-                <Phone className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span>{supportPhone}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                <span>{address}</span>
-              </div>
-            </div>
           </div>
 
-          {/* Column 2: Public Exploration & Platform */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold text-white uppercase tracking-wider">
-              Public Platform
-            </div>
-            <ul className="space-y-2 text-xs text-slate-400">
+          {/* Quick Links */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+              Programs
+            </h4>
+            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
               <li>
-                <Link to="/marketplace" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Course Marketplace</span>
+                <Link to="/tuition-mode" className="hover:text-emerald-600 transition-colors">
+                  Primary Foundation (Grades 1-5)
                 </Link>
               </li>
               <li>
-                <Link to="/institution" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Institutional ERP Hub</span>
+                <Link to="/tuition-mode" className="hover:text-emerald-600 transition-colors">
+                  Middle School Concept Prep (6-8)
                 </Link>
               </li>
               <li>
-                <Link to="/institution/join" className="hover:text-white transition-colors">
-                  Join Campus with Code
+                <Link to="/tuition-mode" className="hover:text-emerald-600 transition-colors">
+                  Board Exam Coaching (9-10 &amp; 11-12)
                 </Link>
               </li>
               <li>
-                <button
-                  onClick={onOpenDemo}
-                  className="hover:text-white transition-colors text-left cursor-pointer"
-                >
-                  Schedule Campus Walkthrough
-                </button>
-              </li>
-              <li>
-                <a href="#features" className="hover:text-white transition-colors">
-                  Platform Features
-                </a>
+                <Link to="/marketplace" className="hover:text-emerald-600 transition-colors">
+                  Verified Video Courses
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Mobile Applications */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold text-white uppercase tracking-wider">
-              Mobile Applications
-            </div>
-            <ul className="space-y-2 text-xs text-slate-400">
+          {/* Careers & Tutors */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+              Join Us
+            </h4>
+            <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400">
               <li>
-                <a href="#mobile-apps" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-blue-400" />
-                  <span>GeniusSpy</span>
-                </a>
-                <div className="text-[10px] text-slate-500 pl-5">AI Study & Diagnostics</div>
+                <Link to="/become-a-tutor" className="hover:text-emerald-600 transition-colors font-semibold text-amber-700 dark:text-amber-400">
+                  Be Our Tutor (Recruitment)
+                </Link>
               </li>
               <li>
-                <a href="#mobile-apps" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>EduPay</span>
-                </a>
-                <div className="text-[10px] text-slate-500 pl-5">Tuition & Campus Payments</div>
+                <Link to="/institution" className="hover:text-emerald-600 transition-colors">
+                  Campus &amp; ERP Solutions
+                </Link>
               </li>
-              <li className="pt-1">
-                <span className="text-[10px] text-amber-400/90 font-mono">
-                  App Store & Play Store Review Pending
-                </span>
+              <li>
+                <Link to="/help" className="hover:text-emerald-600 transition-colors">
+                  Help Center &amp; Support
+                </Link>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Help, Legal & Security */}
-          <div className="space-y-3">
-            <div className="text-xs font-bold text-white uppercase tracking-wider">
-              Help & Legal Policies
-            </div>
-            <ul className="space-y-2 text-xs text-slate-400">
-              <li>
-                <Link to="/help" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>FAQs & Help Center</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/privacy" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Privacy Policy</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/terms" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <FileText className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Terms & Agreements</span>
-                </Link>
-              </li>
-              <li>
-                <Link to="/cookies" className="hover:text-white transition-colors flex items-center gap-1.5">
-                  <Cookie className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Cookie Policy & Settings</span>
-                </Link>
-              </li>
-              <li className="pt-1">
-                <div className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-[10px] text-slate-400">
-                  <span className="text-emerald-400 font-bold">FERPA & GDPR: </span>
-                  Data security controls & token isolation active.
+          {/* Contact Details */}
+          <div className="space-y-2.5">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
+              Contact Us
+            </h4>
+            <div className="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+              {supportEmail && (
+                <div className="flex items-center gap-2">
+                  <Mail className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <a href={`mailto:${supportEmail}`} className="hover:underline">
+                    {supportEmail}
+                  </a>
                 </div>
-              </li>
-            </ul>
+              )}
+              {supportPhone && (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <a href={`tel:${supportPhone}`} className="hover:underline">
+                    {supportPhone}
+                  </a>
+                </div>
+              )}
+              {address && (
+                <div className="flex items-start gap-2">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>{address}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* BOTTOM COPYRIGHT & PUBLIC LEGAL BAR */}
-        <div className="pt-8 mt-8 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <div>
-            {copyrightText}
+        {/* Bottom Strip */}
+        <div className="pt-8 mt-8 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+          <span>{copyrightText}</span>
+          <div className="flex items-center gap-4">
+            <Link to="/privacy" className="hover:underline">Privacy Policy</Link>
+            <span>&bull;</span>
+            <Link to="/terms" className="hover:underline">Terms of Service</Link>
+            <span>&bull;</span>
+            <Link to="/cookies" className="hover:underline">Cookie Policy</Link>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-slate-400">
-            <Link to="/help" className="hover:text-white transition-colors">
-              FAQs & Help
-            </Link>
-            <Link to="/privacy" className="hover:text-white transition-colors">
-              Privacy Policy
-            </Link>
-            <Link to="/terms" className="hover:text-white transition-colors">
-              Terms of Service
-            </Link>
-            <Link to="/cookies" className="hover:text-white transition-colors">
-              Cookie Settings
-            </Link>
-            <span className="text-slate-700">|</span>
-            <Link to="/login" className="hover:text-white font-medium text-slate-300">
-              Sign In
-            </Link>
-            <Link to="/signup" className="hover:text-white font-medium text-slate-300">
-              Sign Up
-            </Link>
-          </div>
-        </div>
-
-        {/* Social Media Status Notice (Non-fabricated) */}
-        <div className="pt-3 text-center sm:text-left text-[11px] text-slate-600">
-          Official social media channels (LinkedIn, X, YouTube) are currently undergoing organizational verification and will be linked upon approval.
         </div>
       </div>
     </footer>

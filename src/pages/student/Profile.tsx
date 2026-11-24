@@ -29,6 +29,7 @@ import {
   Award,
   KeyRound,
   Copy,
+  QrCode,
 } from 'lucide-react';
 import userImg from '../../assets/user.png';
 import { authService } from '../../services/authService';
@@ -43,6 +44,7 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Loader } from '../../components/ui/Loader';
 import { ErrorState, EmptyState } from '../../components/ui/StateViews';
+import { TuitionIdCardModal } from '../../components/tuition/TuitionIdCardModal';
 import {
   SubscriptionPlan,
   UserSubscription,
@@ -321,6 +323,7 @@ export default function Profile() {
 
   const [currentUserSession, setCurrentUserSession] = useState<UserSession | null>(authService.getCurrentUser());
   const [isRequestingTuition, setIsRequestingTuition] = useState(false);
+  const [isTuitionIdModalOpen, setIsTuitionIdModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -1212,22 +1215,34 @@ export default function Profile() {
 
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
                 {currentUserSession?.studentCode || currentUserSession?.teacherCode ? (
-                  <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-amber-400/30 font-mono text-sm sm:text-base font-extrabold text-amber-300 tracking-wider">
-                    <span>{currentUserSession?.studentCode || currentUserSession?.teacherCode}</span>
+                  <>
+                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-black/40 border border-amber-400/30 font-mono text-sm sm:text-base font-extrabold text-amber-300 tracking-wider">
+                      <span>{currentUserSession?.studentCode || currentUserSession?.teacherCode}</span>
+                      <button
+                        onClick={() => {
+                          const code = currentUserSession?.studentCode || currentUserSession?.teacherCode;
+                          if (code) {
+                            navigator.clipboard.writeText(code);
+                            toast.success('Tuition Code copied to clipboard!');
+                          }
+                        }}
+                        className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                        title="Copy Tuition Code"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+
                     <button
-                      onClick={() => {
-                        const code = currentUserSession?.studentCode || currentUserSession?.teacherCode;
-                        if (code) {
-                          navigator.clipboard.writeText(code);
-                          toast.success('Tuition Code copied to clipboard!');
-                        }
-                      }}
-                      className="p-1 rounded-lg hover:bg-white/10 text-slate-300 hover:text-white transition-colors cursor-pointer"
-                      title="Copy Tuition Code"
+                      type="button"
+                      onClick={() => setIsTuitionIdModalOpen(true)}
+                      className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-extrabold text-xs shadow-md transition-all hover:scale-[1.02] flex items-center gap-2 cursor-pointer"
+                      title="View & Download Official Tuition ID Card"
                     >
-                      <Copy className="w-4 h-4" />
+                      <QrCode className="w-4 h-4" />
+                      <span>Tuition ID Card</span>
                     </button>
-                  </div>
+                  </>
                 ) : currentUserSession?.tuitionApprovalStatus === 'pending' ? (
                   <div className="flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-blue-950/60 border border-blue-400/40 text-blue-200">
                     <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
@@ -2709,6 +2724,13 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {/* Tuition ID Card Modal */}
+      <TuitionIdCardModal
+        isOpen={isTuitionIdModalOpen}
+        onClose={() => setIsTuitionIdModalOpen(false)}
+        user={currentUserSession}
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   Home, BookOpen, Library, Upload, CalendarDays,
   Tv, Layers, LineChart, NotebookPen, FlaskConical, Bookmark,
@@ -13,6 +13,7 @@ import EduPyeAIChat from '../components/student/EduPyeAIChat';
 import { LearningModeProvider } from '../context/LearningModeContext';
 import { PageContextProvider } from '../context/PageContext';
 import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
+import { ThemeToggle } from '../context/ThemeContext';
 
 interface StudentMenuGroup {
   color: string;
@@ -76,6 +77,43 @@ export default function StudentLayout() {
   const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
   const [copiedCode, setCopiedCode] = useState(false);
 
+  // Embedded LMS check (via query param ?embeddedLms=1 or in an iframe)
+  const isEmbedded =
+    (typeof window !== 'undefined' && window.self !== window.top) ||
+    new URLSearchParams(location.search).get('embeddedLms') === '1';
+
+  // Resolve effective user: LMS user, Tuition Mode user, or fallback in embedded mode
+  const tuitionSessionRaw = typeof localStorage !== 'undefined' ? localStorage.getItem('tuition_mode_session') : null;
+  let tuitionUser: any = null;
+  if (tuitionSessionRaw) {
+    try {
+      tuitionUser = JSON.parse(tuitionSessionRaw).user || null;
+    } catch {}
+  }
+  const effectiveUser =
+    currentUser ||
+    tuitionUser ||
+    (isEmbedded
+      ? {
+          name: 'Tuition Student',
+          role: 'student',
+          email: 'student@edupye.com',
+          studentCode: typeof localStorage !== 'undefined' ? localStorage.getItem('tuition_mode_student_code') || 'STU-ONLINE' : 'STU-ONLINE',
+        }
+      : null);
+
+  const handleNavigate = (path: string) => {
+    setMobileMenuOpen(false);
+    // Prevent recursive meeting room nesting inside embedded iframe!
+    if (isEmbedded && (path === '/student/live-classes' || path === '/tuition-mode')) {
+      if (window.top && window.top !== window.self) {
+        window.top.location.href = path;
+        return;
+      }
+    }
+    navigate(path);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -128,10 +166,15 @@ export default function StudentLayout() {
     location.pathname.startsWith('/student/workbook') ||
     location.pathname.startsWith('/student/quiz');
 
+  const token = authService.getToken() || (typeof localStorage !== 'undefined' ? localStorage.getItem('tuition_mode_token') : null);
+  if (!isEmbedded && (!effectiveUser || !token)) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <LearningModeProvider>
       <PageContextProvider>
-        <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
+        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans">
         {/* Mobile Backdrop Overlay */}
         {mobileMenuOpen && (
           <div
@@ -148,10 +191,7 @@ export default function StudentLayout() {
         >
           <div className="space-y-3">
             <div
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/student');
-              }}
+              onClick={() => handleNavigate('/student')}
               className="flex h-12 items-center justify-center rounded-xl bg-white px-3 shadow-xs cursor-pointer hover:bg-slate-50 transition-colors"
             >
               <EdupyeLogo />
@@ -175,10 +215,7 @@ export default function StudentLayout() {
                     return (
                       <button
                         key={item.path}
-                        onClick={() => {
-                          setMobileMenuOpen(false);
-                          navigate(item.path);
-                        }}
+                        onClick={() => handleNavigate(item.path)}
                         className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs leading-tight transition-colors cursor-pointer ${
                           isActive
                             ? 'bg-white/20 text-white font-extrabold'
@@ -217,19 +254,19 @@ export default function StudentLayout() {
                 <span>EduPye Centralized Tuition</span>
               </span>
               {(() => {
-                const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.studentCode ? 'approved' : 'none');
-                if (approvalStatus === 'approved' && currentUser?.studentCode) {
+                const approvalStatus = effectiveUser?.tuitionApprovalStatus || (effectiveUser?.studentCode ? 'approved' : 'none');
+                if (approvalStatus === 'approved' && effectiveUser?.studentCode) {
                   return (
                     <span
                       onClick={() => {
-                        navigator.clipboard.writeText(currentUser.studentCode!);
+                        navigator.clipboard.writeText(effectiveUser.studentCode!);
                         setCopiedCode(true);
                         setTimeout(() => setCopiedCode(false), 2000);
                       }}
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-400/20 text-amber-300 border border-amber-400/30 font-mono text-[11px] font-bold cursor-pointer hover:bg-amber-400/30 transition-colors"
                       title="Click to copy your permanent Student Code"
                     >
-                      <span>Code:</span> {currentUser.studentCode}
+                      <span>Code:</span> {effectiveUser.studentCode}
                       {copiedCode && <span className="text-[9px] text-emerald-300 font-sans ml-1">Copied!</span>}
                     </span>
                   );
@@ -246,11 +283,11 @@ export default function StudentLayout() {
             </div>
             <div className="flex items-center gap-2">
               {(() => {
-                const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.studentCode ? 'approved' : 'none');
-                if (approvalStatus === 'approved' && currentUser?.studentCode) {
+                const approvalStatus = effectiveUser?.tuitionApprovalStatus || (effectiveUser?.studentCode ? 'approved' : 'none');
+                if (approvalStatus === 'approved' && effectiveUser?.studentCode) {
                   return (
                     <button
-                      onClick={() => navigate('/tuition-mode')}
+                      onClick={() => handleNavigate('/tuition-mode')}
                       className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-[11px] shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <span>Change to Tuition Mode</span>
@@ -260,7 +297,7 @@ export default function StudentLayout() {
                 } else if (approvalStatus !== 'pending') {
                   return (
                     <button
-                      onClick={() => navigate('/student/profile')}
+                      onClick={() => handleNavigate('/student/profile')}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 hover:text-white text-[11px] font-semibold border border-slate-600 transition-colors cursor-pointer"
                     >
                       Request Tuition Access
@@ -306,6 +343,7 @@ export default function StudentLayout() {
               </div>
 
               <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+                <ThemeToggle />
                 <button className="p-1 rounded-full hover:bg-slate-100 transition-colors" aria-label="Language">
                   <Globe className="w-5 h-5 md:w-6 md:h-6 text-[#1c3352] stroke-[2.2]" />
                 </button>

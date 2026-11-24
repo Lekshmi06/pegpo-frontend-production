@@ -401,6 +401,38 @@ export default function Tests() {
     loadTests();
   };
 
+  // Track-aware filtering and live search
+  const filteredTests = useMemo(() => {
+    let list = tests;
+
+    // A. Track Awareness: Do not display school or competitive entrance tests to Higher Education (UG/PG) students
+    if (activeTrack === 'undergraduate' || activeTrack === 'postgraduate') {
+      list = list.filter((t) => {
+        const isSchoolBoard =
+          t.board === 'CBSE' || t.board === 'State Board' || t.board === 'ICSE';
+        const isSchoolClass = /Class\s*\d+|Grade\s*\d+/i.test(t.classLevel || '');
+        const isCompetitive = Boolean(t.isCompetitiveExam);
+        return !isSchoolBoard && !isSchoolClass && !isCompetitive;
+      });
+    } else if (activeTrack === 'competitive_exam') {
+      list = list.filter((t) => t.isCompetitiveExam);
+    }
+
+    // B. Live Search Filtering: title, description, subject
+    if (!searchQuery.trim()) return list;
+
+    const query = searchQuery.toLowerCase().trim();
+    return list.filter((t) => {
+      const titleMatch = t.title ? t.title.toLowerCase().includes(query) : false;
+      const descMatch = t.description ? t.description.toLowerCase().includes(query) : false;
+      const subjectMatch = t.subject ? t.subject.toLowerCase().includes(query) : false;
+      return titleMatch || descMatch || subjectMatch;
+    });
+  }, [tests, activeTrack, searchQuery]);
+
+  const unlocked = useMemo(() => filteredTests.filter((t) => !t.isLocked), [filteredTests]);
+  const locked = useMemo(() => filteredTests.filter((t) => t.isLocked), [filteredTests]);
+
   // If in active test mode (Image 1)
   if (activeTest && !testResult) {
     return (
@@ -500,38 +532,6 @@ export default function Tests() {
       />
     );
   }
-
-  // Track-aware filtering and live search
-  const filteredTests = useMemo(() => {
-    let list = tests;
-
-    // A. Track Awareness: Do not display school or competitive entrance tests to Higher Education (UG/PG) students
-    if (activeTrack === 'undergraduate' || activeTrack === 'postgraduate') {
-      list = list.filter((t) => {
-        const isSchoolBoard =
-          t.board === 'CBSE' || t.board === 'State Board' || t.board === 'ICSE';
-        const isSchoolClass = /Class\s*\d+|Grade\s*\d+/i.test(t.classLevel || '');
-        const isCompetitive = Boolean(t.isCompetitiveExam);
-        return !isSchoolBoard && !isSchoolClass && !isCompetitive;
-      });
-    } else if (activeTrack === 'competitive_exam') {
-      list = list.filter((t) => t.isCompetitiveExam);
-    }
-
-    // B. Live Search Filtering: title, description, subject
-    if (!searchQuery.trim()) return list;
-
-    const query = searchQuery.toLowerCase().trim();
-    return list.filter((t) => {
-      const titleMatch = t.title ? t.title.toLowerCase().includes(query) : false;
-      const descMatch = t.description ? t.description.toLowerCase().includes(query) : false;
-      const subjectMatch = t.subject ? t.subject.toLowerCase().includes(query) : false;
-      return titleMatch || descMatch || subjectMatch;
-    });
-  }, [tests, activeTrack, searchQuery]);
-
-  const unlocked = useMemo(() => filteredTests.filter((t) => !t.isLocked), [filteredTests]);
-  const locked = useMemo(() => filteredTests.filter((t) => t.isLocked), [filteredTests]);
 
   const getSubscriptionModalTitle = () => {
     if (activeTrack === 'undergraduate') {

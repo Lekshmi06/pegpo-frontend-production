@@ -25,7 +25,10 @@ import {
 } from "../types/tuition";
 
 export const TUITION_MODE_TOKEN_KEY = "tuition_mode_token";
+export const TUITION_MODE_SESSION_KEY = "tuition_mode_session";
 export const TUITION_PROGRAM_CONTEXT_KEY = "tuition_program_context";
+export const TUITION_VERIFIED_PREFIX = "tuition_verified_program_";
+export const TUITION_CODE_ONLY_KEY = "tuition_code_only_session";
 
 export interface SearchProvidersQuery {
   search?: string;
@@ -169,6 +172,96 @@ export interface SubmitHomeworkPayload {
   content?: string;
   attachmentUrl?: string;
   attachmentName?: string;
+}
+
+export interface TuitionMCQQuestion {
+  questionText: string;
+  options: string[];
+  correctOptionIndex?: number;
+  marks?: number;
+  explanation?: string;
+}
+
+export interface TuitionMCQStudentAnswer {
+  questionIndex: number;
+  questionText?: string;
+  selectedOptionIndex: number;
+  isCorrect: boolean;
+  marksAwarded: number;
+}
+
+export interface TuitionAssessmentSubmission {
+  _id?: string;
+  studentId: string | { _id: string; name?: string; studentCode?: string; email?: string; avatarUrl?: string };
+  studentName?: string;
+  studentCode?: string;
+  studentEmail?: string;
+  submittedAt: string;
+  // MCQ fields
+  answers?: TuitionMCQStudentAnswer[];
+  score?: number;
+  totalMarks?: number;
+  percentage?: number;
+  // Assignment fields
+  fileUrl?: string;
+  submissionPdfUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  notes?: string;
+  grade?: number;
+  feedback?: string;
+  gradedAt?: string;
+  gradedBy?: string;
+}
+
+export interface TuitionProgramAssessmentItem {
+  _id: string;
+  programId: string;
+  assignedBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+    teacherCode?: string;
+    avatarUrl?: string;
+  };
+  assignedByName?: string;
+  createdBy?: {
+    _id: string;
+    name?: string;
+    email?: string;
+  };
+  type: "mcq_test" | "assignment";
+  title: string;
+  subject?: string;
+  topic?: string;
+  instructions?: string;
+  durationMinutes?: number;
+  dueDate?: string;
+  referenceFileUrl?: string;
+  referenceFileName?: string;
+  totalMarks: number;
+  questions?: TuitionMCQQuestion[];
+  submissionsCount?: number;
+  hasSubmitted?: boolean;
+  mySubmission?: TuitionAssessmentSubmission | null;
+  submissions?: TuitionAssessmentSubmission[];
+  status?: "active" | "closed";
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateAssessmentPayload {
+  type: "mcq_test" | "assignment";
+  title: string;
+  subject?: string;
+  topic?: string;
+  instructions?: string;
+  durationMinutes?: number;
+  dueDate?: string;
+  referenceFileUrl?: string;
+  referenceFileName?: string;
+  totalMarks?: number;
+  questions?: TuitionMCQQuestion[];
 }
 
 export const tuitionService = {
@@ -618,10 +711,20 @@ export const tuitionService = {
   },
 
   codeLogin: async (payload: TuitionCodeLoginPayload): Promise<TuitionCodeLoginResponse> => {
-    return await apiRequest(`/tuition/auth/code-login`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    try {
+      return await apiRequest(`/tuition/programs/code-login`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (err?.message?.includes("404")) {
+        return await apiRequest(`/tuition/auth/code-login`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+      }
+      throw err;
+    }
   },
 
   getCombinedStudyMessages: async (
@@ -775,11 +878,133 @@ export const tuitionService = {
     });
   },
 
+  // Program Assessments (MCQ Tests & Homework/Assignments)
+  getProgramAssessments: async (
+    programId: string
+  ): Promise<{ success: boolean; count: number; assessments: TuitionProgramAssessmentItem[] }> => {
+    return await apiRequest(`/tuition/programs/${programId}/assessments`);
+  },
+
+  createProgramAssessment: async (
+    programId: string,
+    payload: CreateAssessmentPayload
+  ): Promise<{ success: boolean; message: string; assessment: TuitionProgramAssessmentItem }> => {
+    return await apiRequest(`/tuition/programs/${programId}/assessments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  submitMcqTest: async (
+    assessmentId: string,
+    answers: Array<{ questionIndex: number; selectedOptionIndex: number }>
+  ): Promise<{
+    success: boolean;
+    message: string;
+    score: number;
+    totalMarks: number;
+    percentage: number;
+    answers: TuitionMCQStudentAnswer[];
+    submission: TuitionAssessmentSubmission;
+  }> => {
+    return await apiRequest(`/tuition/assessments/${assessmentId}/submit-mcq`, {
+      method: "POST",
+      body: JSON.stringify({ answers }),
+    });
+  },
+
+  submitAssignmentPdf: async (
+    assessmentId: string,
+    file: File | Blob,
+    notes?: string
+  ): Promise<{
+    success: boolean;
+    message: string;
+    submission: TuitionAssessmentSubmission;
+    fileUrl: string;
+    fileName: string;
+  }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    if (notes) formData.append("notes", notes);
+    return await apiRequest(`/tuition/assessments/${assessmentId}/submit-pdf`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  getAssessmentSubmissions: async (
+    assessmentId: string
+  ): Promise<{
+    success: boolean;
+    assessmentTitle: string;
+    type: string;
+    totalMarks: number;
+    submissionsCount: number;
+    submissions: TuitionAssessmentSubmission[];
+  }> => {
+    return await apiRequest(`/tuition/assessments/${assessmentId}/submissions`);
+  },
+
+  uploadTuitionMedia: async (
+    file: File | Blob,
+    filename?: string
+  ): Promise<{
+    success: boolean;
+    url: string;
+    fileUrl: string;
+    fileName: string;
+    fileType: string;
+    size: number;
+  }> => {
+    const formData = new FormData();
+    if (filename && file instanceof Blob && !(file instanceof File)) {
+      formData.append("file", file, filename);
+    } else {
+      formData.append("file", file);
+    }
+    return await apiRequest("/tuition/upload-media", {
+      method: "POST",
+      body: formData,
+    });
+  },
+
   // Session & Storage Management
   setTuitionModeSession: (token: string, programContext?: TuitionProgramContext, user?: any) => {
     localStorage.setItem(TUITION_MODE_TOKEN_KEY, token);
+    localStorage.setItem(TUITION_MODE_SESSION_KEY, JSON.stringify({ token, programContext, user }));
+
+    const existingMainToken = localStorage.getItem('token');
+    const existingUserEmail = localStorage.getItem('userEmail');
+
+    // If there was no verified primary LMS session prior to entering Tuition Mode, mark as guest/code-only
+    if (!existingMainToken || !existingUserEmail) {
+      localStorage.setItem('token', token);
+      localStorage.setItem('tuition_guest_session', 'true');
+      sessionStorage.setItem(TUITION_CODE_ONLY_KEY, 'true');
+    }
+
+    // If user has synthetic or tuition code email, strictly flag as tuition guest
+    const userEmailRaw = (user?.email || '').toLowerCase().trim();
+    if (
+      userEmailRaw.includes('@tuition.edupye.com') ||
+      userEmailRaw.includes('tuition.edupye') ||
+      userEmailRaw.includes('@tuition') ||
+      userEmailRaw.startsWith('stu-') ||
+      userEmailRaw.startsWith('tch-') ||
+      user?.isTuitionGuest === true ||
+      user?.isGuest === true
+    ) {
+      localStorage.setItem('tuition_guest_session', 'true');
+      sessionStorage.setItem(TUITION_CODE_ONLY_KEY, 'true');
+    }
+
     if (programContext) {
       localStorage.setItem(TUITION_PROGRAM_CONTEXT_KEY, JSON.stringify(programContext));
+      const progContextId = programContext._id || programContext.programId;
+      if (progContextId) {
+        tuitionService.setProgramVerified(progContextId, programContext.code);
+      }
     }
     if (user) {
       const existing = localStorage.getItem("user");
@@ -802,6 +1027,79 @@ export const tuitionService = {
     }
   },
 
+  hasPrimaryLmsSession: (): boolean => {
+    try {
+      // 1. If flagged as guest / code-only session, strictly return false
+      if (
+        sessionStorage.getItem(TUITION_CODE_ONLY_KEY) === "true" ||
+        localStorage.getItem("tuition_guest_session") === "true" ||
+        localStorage.getItem("is_tuition_code_session") === "true"
+      ) {
+        return false;
+      }
+
+      const mainToken = localStorage.getItem("token");
+      const tuitionToken = localStorage.getItem(TUITION_MODE_TOKEN_KEY);
+      const userEmail = localStorage.getItem("userEmail");
+      const userStr = localStorage.getItem("user");
+
+      // Must have a real token
+      if (!mainToken || !mainToken.trim()) return false;
+      if (!userStr) return false;
+
+      const user = JSON.parse(userStr);
+      if (!user || typeof user !== "object") return false;
+
+      // 2. Strict synthetic / guest email checks
+      const email = (user.email || userEmail || "").toLowerCase().trim();
+      if (
+        !email ||
+        email.includes("temporary") ||
+        email.includes("@tuition.edupye.com") ||
+        email.includes("tuition.edupye") ||
+        email.includes("@tuition") ||
+        email.startsWith("stu-") ||
+        email.startsWith("tch-") ||
+        user.isTuitionGuest === true ||
+        user.isGuest === true
+      ) {
+        return false;
+      }
+
+      // 3. User must have userEmail key in localStorage (set exclusively by real LMS authService login/register)
+      if (!userEmail || userEmail.toLowerCase().trim() !== email) {
+        return false;
+      }
+
+      // 4. If user is in a student role, they MUST possess studentProfileId in localStorage
+      const role = (user.role || user.activeRole || "student").toLowerCase();
+      if (role === "student" || role === "learner" || role === "personal") {
+        const studentProfileId = localStorage.getItem("studentProfileId");
+        if (!studentProfileId || !studentProfileId.trim()) {
+          return false;
+        }
+      } else if (role === "teacher") {
+        const teacherProfileId = localStorage.getItem("teacherProfileId");
+        if (!teacherProfileId || !teacherProfileId.trim()) {
+          return false;
+        }
+      }
+
+      // 5. If main token is identical to tuition token without LMS profile IDs, return false
+      if (
+        mainToken === tuitionToken &&
+        !localStorage.getItem("studentProfileId") &&
+        !localStorage.getItem("teacherProfileId")
+      ) {
+        return false;
+      }
+
+      return !!(user && (user.id || user._id));
+    } catch {
+      return false;
+    }
+  },
+
   getTuitionModeSession: (): { token: string | null; programContext: TuitionProgramContext | null } => {
     const token = localStorage.getItem(TUITION_MODE_TOKEN_KEY);
     const rawContext = localStorage.getItem(TUITION_PROGRAM_CONTEXT_KEY);
@@ -816,9 +1114,159 @@ export const tuitionService = {
     return { token, programContext };
   },
 
+  hasAnyVerifiedProgram: (): boolean => {
+    try {
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith(TUITION_VERIFIED_PREFIX) && sessionStorage.getItem(key) === "true") {
+          return true;
+        }
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
+  isProgramVerified: (programId?: string, programCode?: string): boolean => {
+    try {
+      // 1. Direct programId match in sessionStorage
+      if (programId && sessionStorage.getItem(`${TUITION_VERIFIED_PREFIX}${programId}`) === "true") {
+        return true;
+      }
+      // 2. Direct programCode match in sessionStorage
+      if (programCode && sessionStorage.getItem(`${TUITION_VERIFIED_PREFIX}${programCode}`) === "true") {
+        return true;
+      }
+
+      // 3. Active Tuition Mode session recognition
+      const { token, programContext } = tuitionService.getTuitionModeSession();
+      if (token) {
+        // If programId or code matches active program context
+        if (programContext) {
+          const progCtxId = programContext._id || programContext.programId;
+          if (programId && (progCtxId === programId || programContext.code === programId)) {
+            return true;
+          }
+          if (programCode && (programContext.code === programCode || progCtxId === programCode)) {
+            return true;
+          }
+        }
+
+        // If user is already authenticated in Tuition Mode with a studentCode or teacherCode
+        const userJson = localStorage.getItem("user");
+        if (userJson) {
+          try {
+            const user = JSON.parse(userJson);
+            if (user?.studentCode || user?.teacherCode || user?.code) {
+              return true;
+            }
+          } catch {}
+        }
+
+        // If user has any verified program flag in sessionStorage
+        if (tuitionService.hasAnyVerifiedProgram()) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
+  setProgramVerified: (programId: string, programCode?: string): void => {
+    try {
+      if (programId) {
+        sessionStorage.setItem(`${TUITION_VERIFIED_PREFIX}${programId}`, "true");
+      }
+      if (programCode) {
+        sessionStorage.setItem(`${TUITION_VERIFIED_PREFIX}${programCode}`, "true");
+      }
+    } catch {}
+  },
+
+  clearProgramVerified: (programId?: string): void => {
+    try {
+      if (programId) {
+        sessionStorage.removeItem(`${TUITION_VERIFIED_PREFIX}${programId}`);
+      } else {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key && key.startsWith(TUITION_VERIFIED_PREFIX)) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => sessionStorage.removeItem(k));
+      }
+    } catch {}
+  },
+
   clearTuitionModeSession: () => {
+    // Strictly clear all Tuition Mode storage keys
     localStorage.removeItem(TUITION_MODE_TOKEN_KEY);
+    localStorage.removeItem(TUITION_MODE_SESSION_KEY);
     localStorage.removeItem(TUITION_PROGRAM_CONTEXT_KEY);
+    localStorage.removeItem("tuition_guest_session");
+    localStorage.removeItem("is_tuition_code_session");
+    sessionStorage.removeItem("tuition_redirect_after_login");
+    sessionStorage.removeItem(TUITION_CODE_ONLY_KEY);
+    tuitionService.clearProgramVerified();
+  },
+
+  exitTuitionMode: (): void => {
+    const isPrimary = tuitionService.hasPrimaryLmsSession();
+    let currentUser: any = null;
+    try {
+      const rawUser = localStorage.getItem("user");
+      if (rawUser) currentUser = JSON.parse(rawUser);
+    } catch {}
+
+    // 1. Clear all Tuition Mode storage keys cleanly
+    tuitionService.clearTuitionModeSession();
+
+    // 2. If the user does NOT have a verified primary LMS session, remove temp token/user & hard redirect to '/'
+    if (!isPrimary) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("userEmail");
+      localStorage.removeItem("userRole");
+
+      if (typeof window !== "undefined") {
+        window.location.replace("/");
+      }
+      return;
+    }
+
+    // 3. If the user DOES have a verified primary LMS session, hard redirect to their dashboard
+    const role = (currentUser?.role || currentUser?.activeRole || "").toLowerCase();
+    const targetPath = role === "teacher" ? "/teacher/dashboard" : "/student/dashboard";
+    if (typeof window !== "undefined") {
+      window.location.replace(targetPath);
+    }
+  },
+
+  applyForTutor: (payload: {
+    fullName: string;
+    email: string;
+    phone: string;
+    password: string;
+    qualification?: string;
+    subjects?: string[];
+    grades?: string[];
+    experienceYears?: number;
+    bio?: string;
+    demoLink?: string;
+  }): Promise<{ success: boolean; message: string; user: any; profile: any }> => {
+    return apiRequest<{ success: boolean; message: string; user: any; profile: any }>(
+      "/tuition/tutor-apply",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
   },
 };
 

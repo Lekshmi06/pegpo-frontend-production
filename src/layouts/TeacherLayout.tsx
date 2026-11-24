@@ -18,6 +18,7 @@ import { TeacherMenuGroup } from '../types/teacher';
 import { CreateAction, QuickLink } from '../types/common';
 import TeacherAIChatBot from '../components/teacher/TeacherAIChatBot';
 import { ProfileDropdownMenu } from '../components/common/ProfileDropdownMenu';
+import { ThemeToggle } from '../context/ThemeContext';
 
 const menuGroups: TeacherMenuGroup[] = [
   {
@@ -108,6 +109,23 @@ export default function TeacherLayout() {
   const [subject, setSubject] = useState('Subject');
   const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
 
+  // Embedded LMS check (via query param ?embeddedLms=1 or in an iframe)
+  const isEmbedded =
+    (typeof window !== 'undefined' && window.self !== window.top) ||
+    new URLSearchParams(location.search).get('embeddedLms') === '1';
+
+  const handleTeacherNav = (path: string) => {
+    setMobileNavOpen(false);
+    // Prevent recursive meeting room nesting inside embedded iframe!
+    if (isEmbedded && (path === '/teacher/live-classes' || path === '/teacher/smartboard' || path === '/tuition-mode')) {
+      if (window.top && window.top !== window.self) {
+        window.top.location.href = path;
+        return;
+      }
+    }
+    navigate(path);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -176,10 +194,7 @@ export default function TeacherLayout() {
       >
         <div className="space-y-3">
           <div
-            onClick={() => {
-              setMobileNavOpen(false);
-              navigate('/teacher');
-            }}
+            onClick={() => handleTeacherNav('/teacher')}
             className="flex h-12 items-center justify-center rounded-xl bg-white px-3 shadow-xs cursor-pointer hover:bg-slate-50 transition-colors"
           >
             <EdupyeLogo />
@@ -194,10 +209,7 @@ export default function TeacherLayout() {
                   return (
                     <button
                       key={item.path}
-                      onClick={() => {
-                        setMobileNavOpen(false);
-                        navigate(item.path);
-                      }}
+                      onClick={() => handleTeacherNav(item.path)}
                       className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-xs leading-tight transition-colors cursor-pointer ${isActive ? 'bg-white/20 text-white font-extrabold' : 'hover:bg-white/10 text-white/90 font-medium'
                         }`}
                     >
@@ -263,6 +275,7 @@ export default function TeacherLayout() {
           </div>
 
           <div className="flex items-center gap-3 md:gap-5 text-[#214d7d]">
+            <ThemeToggle />
             <button aria-label="Language" className="p-1 rounded-full hover:bg-slate-100 transition-colors cursor-pointer hidden sm:block">
               <Globe className="h-5 w-5 text-[#1c3352] stroke-[2]" />
             </button>
@@ -296,7 +309,7 @@ export default function TeacherLayout() {
                       <span className="text-amber-600 font-semibold">TCH:</span> {currentUser.teacherCode}
                     </span>
                     <button
-                      onClick={() => navigate('/tuition-mode')}
+                      onClick={() => handleTeacherNav('/tuition-mode')}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 md:py-2 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-sm transition-all hover:scale-[1.02] cursor-pointer"
                       title="Switch to EduPye Centralized Tuition Mode"
                     >
@@ -383,9 +396,9 @@ export default function TeacherLayout() {
                   key={card.id}
                   onClick={() => {
                     if (card.id === 'smartboard') {
-                      navigate('/teacher/smartboard');
+                      handleTeacherNav('/teacher/smartboard');
                     } else if (card.id === 'combine') {
-                      navigate('/tuition-mode');
+                      handleTeacherNav('/tuition-mode');
                     }
                   }}
                   className="flex items-center justify-between p-3 bg-[#d6e8f6] hover:bg-[#c5dff2] rounded-2xl cursor-pointer transition-all group shadow-2xs"

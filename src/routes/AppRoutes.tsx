@@ -4,6 +4,7 @@ import { Loader } from '../components/ui/Loader';
 
 // Public Landing Page
 const LandingPage = lazy(() => import('../pages/landing/LandingPage'));
+const BecomeTutorPage = lazy(() => import('../pages/landing/BecomeTutorPage'));
 
 // Auth Pages
 const ChooseJourney = lazy(() => import('../pages/auth/ChooseJourney'));
@@ -150,6 +151,7 @@ export default function AppRoutes() {
         {/* Public SaaS Landing Page */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/become-a-tutor" element={<BecomeTutorPage />} />
 
         {/* Public Informational, Help & Legal Pages */}
         <Route path="/help" element={<HelpFaq />} />

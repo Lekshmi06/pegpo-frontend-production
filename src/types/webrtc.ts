@@ -57,6 +57,15 @@ export interface ClassroomChatMessage {
   senderName: string;
   senderRole: LiveClassRole | 'teacher' | string;
   text: string;
+  messageType?: 'text' | 'voice' | 'attachment';
+  voiceUrl?: string;
+  voiceDuration?: number;
+  attachment?: {
+    name: string;
+    url: string;
+    fileType?: string;
+    size?: number;
+  };
   timestamp: string;
 }
 
@@ -157,6 +166,15 @@ export type SignallingIncomingMessage =
       senderName: string;
       senderRole: LiveClassRole;
       text: string;
+      messageType?: 'text' | 'voice' | 'attachment';
+      voiceUrl?: string;
+      voiceDuration?: number;
+      attachment?: {
+        name: string;
+        url: string;
+        fileType?: string;
+        size?: number;
+      };
       timestamp: string;
     }
   | {

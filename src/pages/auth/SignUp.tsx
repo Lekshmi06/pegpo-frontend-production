@@ -171,6 +171,22 @@ export default function SignUp() {
           </Link>
         </div>
 
+        {/* Tuition Tutor Application Callout */}
+        <div className="p-3 rounded-2xl bg-amber-50/90 border border-amber-200/80 text-left flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+            <span className="text-amber-900 font-semibold">
+              Looking to teach on EduPye Tuition?
+            </span>
+          </div>
+          <Link
+            to="/become-a-tutor"
+            className="text-amber-700 hover:text-amber-950 font-bold underline shrink-0 cursor-pointer text-[11px]"
+          >
+            Apply as Tutor &rarr;
+          </Link>
+        </div>
+
         {/* Page Title & Contextual Subtitle */}
         <div className="space-y-1.5">
           <h1 className="text-2xl font-black text-stone-900 tracking-tight">

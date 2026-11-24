@@ -72,6 +72,26 @@ export default function StudentDashboard() {
     };
   }, []);
 
+  const upcomingTasks = analytics?.upcomingTasks || [];
+  const mergedUpcomingTasks = useMemo(() => {
+    const existingTitles = new Set(upcomingTasks.map((t) => t.title.toLowerCase().trim()));
+    const converted = realAssignments
+      .filter((a) => !existingTitles.has(a.assignment.title.toLowerCase().trim()))
+      .map((a) => ({
+        id: a.assignment._id,
+        title: a.assignment.title,
+        dueDate: new Date(a.assignment.dueDate).toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+        }),
+        time: a.assignment.dueTime,
+        eventType: a.assignment.type === 'homework' ? 'Homework' : 'Assignment',
+        isOverdue: a.submissionStatus === 'overdue',
+        isRealAssignment: true,
+      }));
+    return [...converted, ...upcomingTasks];
+  }, [upcomingTasks, realAssignments]);
+
   // Time-of-day greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -184,31 +204,49 @@ export default function StudentDashboard() {
     );
   }
 
-  const { student, summaryCards, weeklyStudyActivity, subjectProgress, recentAssessments, recentActivity, upcomingTasks, continueLearning, aiStudyRecommendations } = analytics;
-
-  const mergedUpcomingTasks = useMemo(() => {
-    const existingTitles = new Set(upcomingTasks.map((t) => t.title.toLowerCase().trim()));
-    const converted = realAssignments
-      .filter((a) => !existingTitles.has(a.assignment.title.toLowerCase().trim()))
-      .map((a) => ({
-        id: a.assignment._id,
-        title: a.assignment.title,
-        dueDate: new Date(a.assignment.dueDate).toLocaleDateString(undefined, {
-          month: 'short',
-          day: 'numeric',
-        }),
-        time: a.assignment.dueTime,
-        eventType: a.assignment.type === 'homework' ? 'Homework' : 'Assignment',
-        isOverdue: a.submissionStatus === 'overdue',
-        isRealAssignment: true,
-      }));
-    return [...converted, ...upcomingTasks];
-  }, [upcomingTasks, realAssignments]);
+  const student = {
+    name: analytics?.student?.name || 'Student',
+    email: analytics?.student?.email || 'student@edupye.com',
+    institution: analytics?.student?.institution || 'EduPye Academy',
+    gradeOrLevel: analytics?.student?.gradeOrLevel || 'Class 10',
+    learningPath: analytics?.student?.learningPath || 'School Curriculum',
+  };
+  const summaryCards = {
+    studyTimeThisWeek: {
+      totalMinutes: analytics?.summaryCards?.studyTimeThisWeek?.totalMinutes ?? 0,
+      formatted: analytics?.summaryCards?.studyTimeThisWeek?.formatted || '0m',
+      percentageChange: analytics?.summaryCards?.studyTimeThisWeek?.percentageChange ?? null,
+      hasActivity: Boolean(analytics?.summaryCards?.studyTimeThisWeek?.hasActivity),
+      measurementNotice: analytics?.summaryCards?.studyTimeThisWeek?.measurementNotice || 'Active test & study time',
+    },
+    learningMaterialsCompleted: {
+      total: analytics?.summaryCards?.learningMaterialsCompleted?.total ?? 0,
+      lessonsCompleted: analytics?.summaryCards?.learningMaterialsCompleted?.lessonsCompleted ?? 0,
+      quizzesCompleted: analytics?.summaryCards?.learningMaterialsCompleted?.quizzesCompleted ?? 0,
+      hasActivity: Boolean(analytics?.summaryCards?.learningMaterialsCompleted?.hasActivity),
+    },
+    quizAverage: {
+      formatted: analytics?.summaryCards?.quizAverage?.formatted || '0%',
+      hasActivity: Boolean(analytics?.summaryCards?.quizAverage?.hasActivity),
+      totalQuizzesTaken: analytics?.summaryCards?.quizAverage?.totalQuizzesTaken ?? 0,
+    },
+    currentStudyStreak: {
+      days: analytics?.summaryCards?.currentStudyStreak?.days ?? 0,
+      hasActivity: Boolean(analytics?.summaryCards?.currentStudyStreak?.hasActivity),
+      bestStreakDays: analytics?.summaryCards?.currentStudyStreak?.bestStreakDays ?? 0,
+    },
+  };
+  const weeklyStudyActivity = analytics.weeklyStudyActivity || [];
+  const subjectProgress = analytics.subjectProgress || [];
+  const recentAssessments = analytics.recentAssessments || [];
+  const recentActivity = analytics.recentActivity || [];
+  const continueLearning = analytics.continueLearning || [];
+  const aiStudyRecommendations = analytics.aiStudyRecommendations || [];
 
   // Max minutes calculation for weekly chart scale
   const maxWeeklyMinutes = Math.max(
     60,
-    ...weeklyStudyActivity.map((d) => d.totalMinutes)
+    ...(weeklyStudyActivity.length > 0 ? weeklyStudyActivity.map((d) => d.totalMinutes || 0) : [60])
   );
 
   return (

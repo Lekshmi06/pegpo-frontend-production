@@ -436,6 +436,7 @@ export interface GetTuitionScheduleResponse {
 
 export interface TuitionProgramContext {
   _id: string;
+  programId?: string;
   title: string;
   code: string;
   subject: string;

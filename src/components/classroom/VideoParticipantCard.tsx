@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from 'react';
-import { Mic, MicOff, VideoOff, ShieldCheck, User } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Mic, MicOff, VideoOff, ShieldCheck, User, VolumeX } from 'lucide-react';
 import { ICallParticipant } from '../../types/webrtc';
 
 interface VideoParticipantCardProps {
@@ -16,14 +16,50 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
   isSpeaking = false,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   useEffect(() => {
-    if (videoRef.current && participant.stream) {
-      videoRef.current.srcObject = participant.stream;
-    }
-  }, [participant.stream]);
+    const videoEl = videoRef.current;
+    if (!videoEl) return;
 
-  const isVideoOff = participant.isVideoMuted || !participant.stream;
+    if (participant.stream) {
+      if (videoEl.srcObject !== participant.stream) {
+        videoEl.srcObject = participant.stream;
+      }
+      const playPromise = videoEl.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setAutoplayBlocked(false);
+          })
+          .catch((err) => {
+            console.warn('[VideoParticipantCard] Autoplay suspended by browser:', err?.name);
+            if (!isLocal) {
+              setAutoplayBlocked(true);
+            }
+          });
+      }
+    } else {
+      videoEl.srcObject = null;
+    }
+  }, [participant.stream, isLocal]);
+
+  const handleEnableAudio = () => {
+    if (videoRef.current) {
+      videoRef.current
+        .play()
+        .then(() => {
+          setAutoplayBlocked(false);
+        })
+        .catch(console.error);
+    }
+  };
+
+  const hasLiveVideoTrack = Boolean(
+    participant.stream &&
+      participant.stream.getVideoTracks().some((t) => t.enabled && t.readyState === 'live')
+  );
+  const isVideoOff = participant.isVideoMuted || !participant.stream || !hasLiveVideoTrack;
 
   return (
     <div
@@ -41,6 +77,18 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
           isVideoOff ? 'opacity-0 absolute pointer-events-none' : 'opacity-100'
         } ${isLocal ? 'scale-x-[-1]' : ''}`}
       />
+
+      {/* Browser Autoplay Blocked Banner */}
+      {autoplayBlocked && !isLocal && (
+        <button
+          onClick={handleEnableAudio}
+          className="absolute top-10 inset-x-4 z-30 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-transform hover:scale-105 cursor-pointer animate-pulse"
+          title="Browser autoplay policy requires user interaction to enable remote audio"
+        >
+          <VolumeX className="w-3.5 h-3.5" />
+          <span>Click to Enable Audio</span>
+        </button>
+      )}
 
       {/* Avatar Placeholder when video is off */}
       {isVideoOff && (

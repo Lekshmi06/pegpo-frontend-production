@@ -1,5 +1,8 @@
 const getApiBaseUrl = (): string => {
-  const envUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  const envUrl = (
+    (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+    (import.meta.env.VITE_API_URL as string | undefined)
+  )?.trim();
 
   // If running locally in development or test preview on localhost, ensure we communicate with local backend
   if (
@@ -82,7 +85,10 @@ export const resolveAssetUrl = (url?: string): string => {
     return url;
   }
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
-  const envUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
+  const envUrl = (
+    (import.meta.env.VITE_API_BASE_URL as string | undefined) ||
+    (import.meta.env.VITE_API_URL as string | undefined)
+  )?.trim();
   if (envUrl && /^https?:\/\//i.test(envUrl)) {
     const origin = envUrl.replace(/\/api\/?$/, '');
     return `${origin}${cleanPath}`;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { liveClassService } from '../services/liveClassService';
+import { getClientWebRTCConfig } from '../config/webrtc_config';
 import {
   ICallParticipant,
   ClassroomChatMessage,
@@ -9,6 +10,43 @@ import {
   InMeetingAssessment,
   InMeetingSubmission,
 } from '../types/webrtc';
+
+export function resolveClassroomWsUrl(sessionId: string, token: string): string {
+  const explicitWs = import.meta.env.VITE_WS_URL;
+  if (explicitWs && typeof explicitWs === 'string' && explicitWs.trim()) {
+    let cleanWs = explicitWs.trim().replace(/\/+$/, '');
+    if (cleanWs.startsWith('http://')) {
+      cleanWs = cleanWs.replace(/^http:\/\//, 'ws://');
+    } else if (cleanWs.startsWith('https://')) {
+      cleanWs = cleanWs.replace(/^https:\/\//, 'wss://');
+    } else if (!cleanWs.startsWith('ws://') && !cleanWs.startsWith('wss://')) {
+      const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+      cleanWs = `${isHttps ? 'wss:' : 'ws:'}//${cleanWs}`;
+    }
+    cleanWs = cleanWs.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    const wsEndpoint = cleanWs.endsWith('/ws/classroom') ? cleanWs : `${cleanWs}/ws/classroom`;
+    return `${wsEndpoint}?token=${encodeURIComponent(token)}&sessionId=${encodeURIComponent(sessionId)}`;
+  }
+
+  const rawBase =
+    import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000');
+
+  const trimmed = String(rawBase).trim();
+  const isSecure =
+    trimmed.startsWith('https://') ||
+    (typeof window !== 'undefined' && window.location.protocol === 'https:' && !trimmed.startsWith('http://'));
+
+  const protocol = isSecure ? 'wss:' : 'ws:';
+  const cleanHost = trimmed
+    .replace(/^https?:\/\//, '')
+    .replace(/^wss?:\/\//, '')
+    .replace(/\/api\/?$/, '')
+    .replace(/\/+$/, '');
+
+  return `${protocol}//${cleanHost}/ws/classroom?token=${encodeURIComponent(token)}&sessionId=${encodeURIComponent(sessionId)}`;
+}
 
 export interface UseWebRTCClassroomOptions {
   sessionId: string;
@@ -65,9 +103,8 @@ export function useWebRTCClassroom({
   const socketRef = useRef<WebSocket | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
-  const iceServersRef = useRef<RTCIceServerConfig[]>([
-    { urls: 'stun:stun.l.google.com:19302' },
-  ]);
+  const iceServersRef = useRef<RTCIceServerConfig[]>(getClientWebRTCConfig().iceServers);
+  const heartbeatTimerRef = useRef<any>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const originalVideoTrackRef = useRef<MediaStreamTrack | null>(null);
   const myPeerIdRef = useRef<string>('');
@@ -137,6 +174,21 @@ export function useWebRTCClassroom({
       if (vTrack) {
         originalVideoTrackRef.current = vTrack;
       }
+
+      // Add tracks to any peer connections that were initialized before media resolved
+      peerConnectionsRef.current.forEach((pc) => {
+        const senders = pc.getSenders();
+        stream.getTracks().forEach((track) => {
+          const alreadyAdded = senders.some((s) => s.track && s.track.kind === track.kind);
+          if (!alreadyAdded) {
+            try {
+              pc.addTrack(track, stream);
+            } catch (err) {
+              console.warn('[WebRTC] Error adding track to existing PC:', err);
+            }
+          }
+        });
+      });
     }
     return stream;
   }, []);
@@ -144,12 +196,27 @@ export function useWebRTCClassroom({
   // 2. Fetch configured ICE servers (STUN/TURN)
   const fetchIceConfig = useCallback(async () => {
     try {
+      const clientConfig = getClientWebRTCConfig();
       const config = await liveClassService.getIceServers();
       if (config && config.iceServers && config.iceServers.length > 0) {
-        iceServersRef.current = config.iceServers;
+        const merged: RTCIceServerConfig[] = [...clientConfig.iceServers];
+        config.iceServers.forEach((srv) => {
+          const srvUrls = Array.isArray(srv.urls) ? srv.urls : [srv.urls];
+          const exists = merged.some((m) => {
+            const mUrls = Array.isArray(m.urls) ? m.urls : [m.urls];
+            return srvUrls.some((u) => mUrls.includes(u));
+          });
+          if (!exists) {
+            merged.push(srv);
+          }
+        });
+        iceServersRef.current = merged;
+      } else {
+        iceServersRef.current = clientConfig.iceServers;
       }
     } catch (e) {
-      console.warn('[WebRTC] Could not fetch server ICE config, using default STUN:', e);
+      console.warn('[WebRTC] Could not fetch server ICE config, using client STUN/TURN config:', e);
+      iceServersRef.current = getClientWebRTCConfig().iceServers;
     }
   }, []);
 
@@ -184,6 +251,7 @@ export function useWebRTCClassroom({
 
       // Handle remote tracks
       pc.ontrack = (event) => {
+        const incomingStream = event.streams && event.streams[0] ? event.streams[0] : null;
         setParticipants((prev) => {
           const next = new Map(prev);
           const existing = next.get(remotePeerId) || {
@@ -193,13 +261,20 @@ export function useWebRTCClassroom({
             isMicMuted: false,
             isVideoMuted: false,
           };
-          let remoteStream = event.streams[0];
-          if (!remoteStream) {
-            remoteStream = existing.stream || new MediaStream();
-            if (!remoteStream.getTracks().some((t) => t.id === event.track.id)) {
-              remoteStream.addTrack(event.track);
+
+          let remoteStream: MediaStream;
+          if (incomingStream) {
+            // Re-instantiate MediaStream with all tracks to guarantee React state detects a reference change
+            remoteStream = new MediaStream(incomingStream.getTracks());
+          } else {
+            const currentTracks = existing.stream ? existing.stream.getTracks() : [];
+            if (!currentTracks.some((t) => t.id === event.track.id)) {
+              remoteStream = new MediaStream([...currentTracks, event.track]);
+            } else {
+              remoteStream = new MediaStream(currentTracks);
             }
           }
+
           next.set(remotePeerId, {
             ...existing,
             stream: remoteStream,
@@ -234,7 +309,37 @@ export function useWebRTCClassroom({
 
         if (state === 'failed') {
           console.warn(`[WebRTC] Peer ${remotePeerId} connection failed, attempting ICE restart`);
-          pc?.restartIce?.();
+          try {
+            pc?.restartIce?.();
+          } catch (err) {
+            console.warn(`[WebRTC] restartIce error for ${remotePeerId}:`, err);
+          }
+        }
+      };
+
+      // Monitor ICE connection state with automatic restartIce recovery for mobile/Wi-Fi handover
+      pc.oniceconnectionstatechange = async () => {
+        const iceState = pc.iceConnectionState;
+        console.log(`[WebRTC ICE] Peer ${remotePeerId} iceConnectionState: ${iceState}`);
+
+        if (iceState === 'disconnected' || iceState === 'failed') {
+          console.warn(`[WebRTC ICE] Peer ${remotePeerId} entered ${iceState}, attempting ICE restart...`);
+          try {
+            if (typeof pc.restartIce === 'function') {
+              pc.restartIce();
+            }
+            if (pc.signalingState === 'stable') {
+              const restartOffer = await pc.createOffer({ iceRestart: true });
+              await pc.setLocalDescription(restartOffer);
+              sendSignalling({
+                type: 'offer',
+                to: remotePeerId,
+                offer: pc.localDescription,
+              });
+            }
+          } catch (restartErr) {
+            console.warn(`[WebRTC ICE] Restart attempt for ${remotePeerId} failed:`, restartErr);
+          }
         }
       };
 
@@ -261,28 +366,40 @@ export function useWebRTCClassroom({
   // 4. WebSocket Signalling Handler
   const connectSignalling = useCallback(
     async (stream: MediaStream | null) => {
-      const token = localStorage.getItem('token') || localStorage.getItem('auth_token') || '';
+      const token =
+        localStorage.getItem('tuition_mode_token') ||
+        localStorage.getItem('token') ||
+        localStorage.getItem('auth_token') ||
+        '';
       if (!token) {
         setConnectionStatus('failed');
-        console.error('[WebRTC] No auth token found in localStorage');
+        console.error('[WebRTC] No auth token found in localStorage (checked tuition_mode_token, token, auth_token)');
         return;
       }
 
       await fetchIceConfig();
 
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      const wsProtocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
-      const host = apiBase.replace(/^https?:\/\//, '').replace(/\/api\/?$/, '');
-      const wsUrl = `${wsProtocol}//${host}/ws/classroom?token=${encodeURIComponent(
-        token
-      )}&sessionId=${encodeURIComponent(sessionId)}`;
+      const wsUrl = resolveClassroomWsUrl(sessionId, token);
 
       setConnectionStatus('connecting');
       const ws = new WebSocket(wsUrl);
       socketRef.current = ws;
 
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+
       ws.onopen = () => {
         setConnectionStatus('connected');
+        // Render & proxy keepalive heartbeat (fires every 20s)
+        heartbeatTimerRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({ type: 'heartbeat', timestamp: Date.now() }));
+            } catch {}
+          }
+        }, 20000);
       };
 
       ws.onerror = (err) => {
@@ -291,8 +408,15 @@ export function useWebRTCClassroom({
       };
 
       ws.onclose = (event) => {
+        if (heartbeatTimerRef.current) {
+          clearInterval(heartbeatTimerRef.current);
+          heartbeatTimerRef.current = null;
+        }
         if (!isClassEnded) {
           setConnectionStatus('disconnected');
+          if (event.reason === 'Replaced by new connection') {
+            setEndReason('Disconnected: This account joined from another window or tab. To test two participants simultaneously, open the second account in an Incognito window.');
+          }
         }
       };
 
@@ -467,6 +591,10 @@ export function useWebRTCClassroom({
                     senderName: data.senderName,
                     senderRole: data.senderRole,
                     text: data.text,
+                    messageType: data.messageType || 'text',
+                    voiceUrl: data.voiceUrl,
+                    voiceDuration: data.voiceDuration,
+                    attachment: data.attachment,
                     timestamp: data.timestamp,
                   },
                 ];
@@ -682,11 +810,29 @@ export function useWebRTCClassroom({
   }, [isScreenSharing, screenStream]);
 
   const sendChatMessage = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
+    (
+      text: string,
+      metadata?: {
+        messageType?: 'text' | 'voice' | 'attachment';
+        voiceUrl?: string;
+        voiceDuration?: number;
+        attachment?: {
+          name: string;
+          url: string;
+          fileType?: string;
+          size?: number;
+        };
+      }
+    ) => {
+      const cleanText = text?.trim() || '';
+      if (!cleanText && !metadata?.voiceUrl && !metadata?.attachment) return;
       sendSignalling({
         type: 'chat-message',
-        text: text.trim(),
+        text: cleanText,
+        messageType: metadata?.messageType || (metadata?.voiceUrl ? 'voice' : metadata?.attachment ? 'attachment' : 'text'),
+        voiceUrl: metadata?.voiceUrl,
+        voiceDuration: metadata?.voiceDuration,
+        attachment: metadata?.attachment,
       });
     },
     [sendSignalling]
@@ -744,6 +890,11 @@ export function useWebRTCClassroom({
     peerConnectionsRef.current.forEach((pc) => pc.close());
     peerConnectionsRef.current.clear();
     pendingCandidatesRef.current.clear();
+
+    if (heartbeatTimerRef.current) {
+      clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
 
     // Close socket
     if (socketRef.current) {

@@ -4,12 +4,14 @@ import {
   ArrowRight, 
   Sparkles, 
   GraduationCap, 
-  Layers, 
-  Building2, 
-  ShoppingBag,
   CheckCircle2, 
-  Brain,
   ShieldCheck,
+  Video,
+  Presentation,
+  Star,
+  Users,
+  Clock,
+  BookOpen
 } from 'lucide-react';
 import type { HeroContent, LandingPageContentData } from '../../services/contentService';
 
@@ -21,148 +23,187 @@ interface HeroSectionProps {
 export const HeroSection: React.FC<HeroSectionProps> = ({ onOpenDemo, content }) => {
   const navigate = useNavigate();
 
-  const tagBadge = (content as any)?.badgeText || (content as any)?.tagBadge || "Intelligent Unified LMS & Campus Platform";
+  const tagBadge = (content as any)?.badgeText || (content as any)?.tagBadge || "Personalized 1-on-1 & Small-Batch Online Tuition";
   const title = (content as any)?.title;
-  const headlineLine1 = (content as any)?.headlineLine1 || (title ? title.split('.')[0] + (title.includes('.') ? '.' : '') : "One platform.");
-  const headlineLine2Gradient = (content as any)?.headlineLine2Gradient || (title && title.includes('.') ? title.split('.').slice(1).join('.').trim() : (title ? "" : "Every learning journey."));
-  const subtitle = content?.subtitle || "EduPye brings students, educators, campuses, and corporate training teams into one connected cloud ecosystem. Unifying adaptive AI tutoring, smart teacher studios, verified course marketplace, and campus ERP operations.";
-  const primaryCtaText = content?.primaryCtaText || "Get Started Free";
-  const primaryCtaLink = (content as any)?.primaryCtaLink || "/signup";
-  const secondaryCtaText = content?.secondaryCtaText || "Sign In to Portal";
-  const secondaryCtaLink = (content as any)?.secondaryCtaLink || "/login";
+  const headlineLine1 = (content as any)?.headlineLine1 || (title ? title.split('.')[0] + (title.includes('.') ? '.' : '') : "Personalized Learning.");
+  const headlineLine2 = (content as any)?.headlineLine2Gradient || (title && title.includes('.') ? title.split('.').slice(1).join('.').trim() : (title ? "" : "Real Academic Results."));
+  const subtitle = content?.subtitle || "EduPye connects students with India & GCC's top verified subject mentors for live 1-on-1 and small-batch tuition. Backed by interactive Dual SmartBoard tools, 24/7 adaptive practice, and full-year recorded lectures.";
+  const primaryCtaText = content?.primaryCtaText || "Explore Tuition Programs";
+  const primaryCtaLink = (content as any)?.primaryCtaLink || "/tuition-mode";
+  const secondaryCtaText = content?.secondaryCtaText || "Be Our Tutor";
+  const secondaryCtaLink = (content as any)?.secondaryCtaLink || "/become-a-tutor";
 
   return (
-    <section id="hero" className="relative pt-32 pb-20 md:pt-40 md:pb-28 overflow-hidden bg-radial-[at_top] from-slate-900 via-slate-950 to-slate-950 text-slate-100">
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] sm:w-[900px] h-[450px] bg-gradient-to-tr from-blue-600/20 via-indigo-600/20 to-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute -top-10 left-10 w-72 h-72 bg-blue-500/10 rounded-full blur-[90px] pointer-events-none" />
-      <div className="absolute top-1/2 right-10 w-80 h-80 bg-purple-500/10 rounded-full blur-[110px] pointer-events-none" />
-
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b12_1px,transparent_1px),linear-gradient(to_bottom,#1e293b12_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top Eyebrow Badge */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/90 border border-blue-500/30 text-slate-200 text-xs sm:text-sm font-semibold shadow-xl shadow-blue-900/20 backdrop-blur-md">
-            <span className="flex h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
-            <span className="bg-gradient-to-r from-blue-400 to-cyan-300 bg-clip-text text-transparent font-bold">
-              {tagBadge}
-            </span>
-            <span className="text-slate-600">|</span>
-            <span className="text-slate-300 hidden sm:inline">All-in-One Cloud Architecture</span>
+    <section id="hero" className="relative bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 pt-10 pb-16 md:pt-16 md:pb-24 border-b border-slate-100 dark:border-slate-800/80">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Top Trust Eyebrow Pill */}
+        <div className="flex justify-center md:justify-start mb-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-2xs">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500" />
+            <span>{tagBadge}</span>
+            <span className="text-emerald-300 dark:text-emerald-700 hidden sm:inline">&bull;</span>
+            <span className="hidden sm:inline font-medium">Individual Attention Guaranteed</span>
           </div>
         </div>
 
-        {/* Headline & Concise LMS Description */}
-        <div className="text-center max-w-4xl mx-auto space-y-6">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white leading-[1.1]">
-            {headlineLine1}{' '}
-            <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-cyan-300 bg-clip-text text-transparent">
-              {headlineLine2Gradient}
-            </span>
-          </h1>
+        {/* 2-Column Split: Left Copy & CTAs, Right Static Visual Showcase */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
+          {/* Left Column: Headlines & CTAs (7 cols) */}
+          <div className="lg:col-span-7 space-y-6 text-center md:text-left">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-950 dark:text-white leading-[1.15]">
+              {headlineLine1}{' '}
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {headlineLine2}
+              </span>
+            </h1>
 
-          <p className="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            {subtitle}
-          </p>
+            <p className="text-base sm:text-lg text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
+              {subtitle}
+            </p>
 
-          {/* Prominent Sign Up / Log In / Demo Calls to Action */}
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-            <button
-              onClick={() => navigate(primaryCtaLink)}
-              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-blue-600/30 hover:shadow-blue-500/40 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <Sparkles className="w-5 h-5 text-cyan-200" />
-              <span>{primaryCtaText}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Key Trust Checkmarks */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>100% Individualized Pace &amp; Attention</span>
+              </div>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Top 5% Screened Subject Specialist Mentors</span>
+              </div>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>Dual-Dock SmartBoard &amp; Live Annotation</span>
+              </div>
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>1-Year Class Recordings &amp; AI Practice LMS</span>
+              </div>
+            </div>
 
-            <button
-              onClick={() => navigate(secondaryCtaLink)}
-              className="w-full sm:w-auto px-7 py-4 rounded-2xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white font-semibold text-base transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg"
-            >
-              <span>{secondaryCtaText}</span>
-            </button>
+            {/* CTAs */}
+            <div className="pt-3 flex flex-col sm:flex-row items-center gap-3 justify-center sm:justify-start">
+              <button
+                onClick={() => navigate(primaryCtaLink)}
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>{primaryCtaText}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
 
-            <button
-              onClick={onOpenDemo}
-              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-900/40 hover:bg-slate-800/60 border border-slate-800 text-slate-300 hover:text-white font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Building2 className="w-4 h-4 text-indigo-400" />
-              <span>Request Campus Demo</span>
-            </button>
+              <button
+                onClick={() => navigate(secondaryCtaLink)}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 font-bold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>{secondaryCtaText}</span>
+              </button>
+
+              <button
+                onClick={onOpenDemo}
+                className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>Book Free Demo</span>
+              </button>
+            </div>
           </div>
 
-          {/* Trust Metrics Bar */}
-          <div className="pt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto border-t border-slate-800/80 mt-6 text-center">
-            <div className="p-2">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">450+</div>
-              <div className="text-xs text-slate-400 font-medium">Connected Campuses</div>
-            </div>
-            <div className="p-2">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">180K+</div>
-              <div className="text-xs text-slate-400 font-medium">Active Learners</div>
-            </div>
-            <div className="p-2">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">99.4%</div>
-              <div className="text-xs text-slate-400 font-medium">Assessment Accuracy</div>
-            </div>
-            <div className="p-2">
-              <div className="text-2xl sm:text-3xl font-extrabold text-white">100%</div>
-              <div className="text-xs text-slate-400 font-medium">Unified Cloud Fabric</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Clean, Focused Preview Card */}
-        <div className="mt-14 max-w-4xl mx-auto">
-          <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center justify-between pb-6 border-b border-slate-800">
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full bg-red-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-                <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
-                <span className="text-xs text-slate-400 font-mono pl-2">
-                  🔒 https://app.edupye.com
+          {/* Right Column: Clean Static Showcase Card (5 cols) */}
+          <div className="lg:col-span-5">
+            <div className="bg-slate-50 dark:bg-slate-900 rounded-3xl border border-slate-200/90 dark:border-slate-800 p-6 shadow-sm space-y-4">
+              {/* Header pill */}
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Live 1:1 SmartBoard Session
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                  Active Classroom
                 </span>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">
-                Connected Core
-              </span>
+
+              {/* Mentor Profile Preview */}
+              <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white font-bold text-base flex items-center justify-center shrink-0">
+                  Dr
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                      Dr. Priya Sundaram
+                    </h3>
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    Senior Mathematics Specialist &bull; 9+ Yrs Exp
+                  </p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Star key={s} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                    ))}
+                    <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 ml-1">
+                      5.0 (240+ Classes)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* SmartBoard Derivation Snippet */}
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                  <span className="flex items-center gap-1.5">
+                    <Presentation className="w-3.5 h-3.5 text-emerald-500" />
+                    Topic: Quadratic Equations &amp; Parabolic Trajectories
+                  </span>
+                  <span className="text-[10px] text-emerald-600 font-mono">LaTeX Sync</span>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-xl font-mono text-xs text-slate-800 dark:text-emerald-300 border border-slate-200/60 dark:border-slate-800">
+                  f(x) = ax² + bx + c = 0 &rarr; x = (-b &plusmn; &radic;(b² - 4ac)) / 2a
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 pt-1">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-medium">
+                    <Video className="w-3 h-3 text-emerald-500" /> HD Two-Way Audio/Video
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-medium">
+                    <BookOpen className="w-3 h-3 text-blue-500" /> Instant LMS Split-Screen
+                  </span>
+                </div>
+              </div>
+
+              {/* Student Feedback Quote */}
+              <div className="text-xs text-slate-600 dark:text-slate-400 italic bg-amber-50/60 dark:bg-slate-950 p-3 rounded-xl border border-amber-200/50 dark:border-slate-800">
+                &ldquo;My daughter went from 62% to 94% in CBSE Grade 10 Math within 3 months. The 1-on-1 focus and recorded sessions made all the difference.&rdquo;
+                <div className="text-[10px] font-bold not-italic text-slate-800 dark:text-slate-300 mt-1">
+                  — Rajesh K., Parent (Dubai, UAE)
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-6">
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                  <Brain className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-sm text-white">Adaptive Learning</div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  24/7 AI tutor, PYQ solvers, and personalized diagnostic test analytics.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                  <Layers className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-sm text-white">Instructional Studio</div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  1-Click AI lesson blueprints, cloud SmartBoards, and automated grading.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div className="font-bold text-sm text-white">Institutional ERP</div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Multi-tier SIS, automated tuition collection, and single sign-on sync.
-                </p>
-              </div>
-            </div>
+        {/* Trust & Impact Stats Strip (Clean 4-Column Static Metric Bar) */}
+        <div className="mt-14 pt-8 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
+          <div className="p-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">100%</div>
+            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">Individual Focus</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">1:1 &amp; Micro-Batch Batches</div>
+          </div>
+          <div className="p-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">Top 5%</div>
+            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">Verified Mentors</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Rigorous 4-Step Selection</div>
+          </div>
+          <div className="p-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">Zero Lag</div>
+            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">Dual SmartBoard</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Real-Time Stylus Annotations</div>
+          </div>
+          <div className="p-3">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">365 Days</div>
+            <div className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-0.5">Class Recordings &amp; LMS</div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Revisit Anytime On Any Device</div>
           </div>
         </div>
       </div>
