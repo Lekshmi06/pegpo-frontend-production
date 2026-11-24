@@ -19,6 +19,11 @@ import {
   Minimize2,
   Minus,
   RotateCcw,
+  PanelLeft,
+  ChevronRight,
+  ClipboardList,
+  LayoutGrid,
+  Sparkles,
 } from 'lucide-react';
 import { useWebRTCClassroom } from '../../hooks/useWebRTCClassroom';
 import { liveClassService } from '../../services/liveClassService';
@@ -74,16 +79,16 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     attendees: Array<{ name: string; role: string }>;
   } | null>(null);
 
-  // 6-Pane Multi-Window State Management
-  const [smartboardState, setSmartboardState] = useState<WindowViewState>('open');
+  // 6-Pane Multi-Window State Management - All secondary panes default to closed on room entry
+  const [smartboardState, setSmartboardState] = useState<WindowViewState>('closed');
   const [teacherLmsState, setTeacherLmsState] = useState<WindowViewState>('closed');
-  const [studentLmsState, setStudentLmsState] = useState<WindowViewState>('open');
-  const [videoState, setVideoState] = useState<WindowViewState>('open');
+  const [studentLmsState, setStudentLmsState] = useState<WindowViewState>('closed');
+  const [videoState, setVideoState] = useState<WindowViewState>('open'); // Primary active canvas on entry
 
-  // Column 3 Utility Panels State
-  const [isTasksOpen, setIsTasksOpen] = useState(true);
+  // Column 3 Utility Panels State - Closed by default on room entry
+  const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [utilityTab, setUtilityTab] = useState<'quizzes' | 'tasks'>('quizzes');
-  const [isChatOpen, setIsChatOpen] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Focus / Expand Full-Stage Window
   const [expandedWindow, setExpandedWindow] = useState<'smartboard' | 'teacher_lms' | 'student_lms' | 'video' | null>(null);
@@ -91,9 +96,10 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   // Passport-Sized Student PiP inside Video Window
   const [isStudentPipOpen, setIsStudentPipOpen] = useState(true);
 
-  // Supplementary Drawers
+  // Supplementary Drawers & Left Tuition Menu - Closed by default on room entry
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false);
   const [isClassInfoOpen, setIsClassInfoOpen] = useState(false);
+  const [isTuitionMenuOpen, setIsTuitionMenuOpen] = useState(false);
   const [programDetails, setProgramDetails] = useState<any | null>(null);
   const [whiteboardElements, setWhiteboardElements] = useState<any[]>([]);
 
@@ -516,22 +522,88 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
             <ArrowLeft className="w-4 h-4" />
           </button>
 
+          {/* Left Tuition Menu Toggle Button */}
+          <button
+            onClick={() => setIsTuitionMenuOpen(!isTuitionMenuOpen)}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border shrink-0 ${
+              isTuitionMenuOpen
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-xs'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+            title={isTuitionMenuOpen ? 'Collapse Tuition Menu' : 'Expand Tuition Menu'}
+          >
+            <PanelLeft className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Tuition Menu</span>
+          </button>
+
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-            <h1 className="text-xs sm:text-sm font-bold text-white truncate max-w-[180px] sm:max-w-xs md:max-w-md">
+            <h1 className="text-xs sm:text-sm font-bold text-white truncate max-w-[140px] sm:max-w-xs md:max-w-sm">
               {session?.title || programDetails?.title || `Classroom #${activeSessionId}`}
             </h1>
-            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700 shrink-0 font-bold hidden sm:inline-block">
+            <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-400 border border-slate-700 shrink-0 font-bold hidden md:inline-block">
               {session?.sessionType === 'tuition' ? 'Tuition Batch' : 'Live SmartBoard'}
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* SmartBoard Button */}
+          <button
+            onClick={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              setSmartboardState(smartboardState === 'open' ? 'closed' : 'open');
+            }}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              smartboardState === 'open'
+                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 shadow-xs'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+            title={smartboardState === 'open' ? 'Close SmartBoard' : 'Open SmartBoard'}
+          >
+            <Presentation className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">SmartBoard</span>
+          </button>
+
+          {/* EduPye LMS Button */}
+          <button
+            onClick={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              if (isHost) {
+                setTeacherLmsState(teacherLmsState === 'open' ? 'closed' : 'open');
+              } else {
+                setStudentLmsState(studentLmsState === 'open' ? 'closed' : 'open');
+              }
+            }}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              (isHost ? teacherLmsState === 'open' : studentLmsState === 'open')
+                ? 'bg-blue-500/20 text-blue-300 border-blue-500/40 shadow-xs'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+            title={(isHost ? teacherLmsState === 'open' : studentLmsState === 'open') ? 'Close EduPye LMS' : 'Open EduPye LMS'}
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">EduPye LMS</span>
+          </button>
+
+          {/* Tests, Quizzes & Tasks Button */}
+          <button
+            onClick={() => setIsTasksOpen(!isTasksOpen)}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+              isTasksOpen
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-xs'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+            }`}
+            title={isTasksOpen ? 'Close Tests & Tasks' : 'Open Tests & Tasks'}
+          >
+            <ClipboardList className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Tests &amp; Tasks</span>
+          </button>
+
           {/* Class Brief & Topic Button */}
           <button
             onClick={() => setIsClassInfoOpen(!isClassInfoOpen)}
-            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`inline-flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               isClassInfoOpen
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30'
@@ -539,7 +611,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
             title="Class Brief & Syllabus Topic"
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Topic &amp; People</span>
+            <span className="hidden lg:inline">Topic</span>
           </button>
 
           {/* Present Count */}
@@ -549,7 +621,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
           </div>
 
           {/* User Role Tag */}
-          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40">
+          <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800/40 hidden sm:inline-block">
             {isHost ? 'Instructor' : 'Student'}
           </span>
         </div>
@@ -571,47 +643,62 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
         </div>
       )}
 
-      {/* Main Classroom Viewport: Persistent Left Tuition Menu Rail + 3-Column Multi-Window Grid */}
+      {/* Main Classroom Viewport: Collapsible Left Tuition Menu Rail + 3-Column Multi-Window Grid */}
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Task 1: Far-Left Persistent Tuition Menu Bar */}
-        <TuitionMenuSidebar
-          isHost={Boolean(isHost)}
-          smartboardState={smartboardState}
-          onToggleSmartboard={() => {
-            if (expandedWindow) setExpandedWindow(null);
-            setSmartboardState((prev) => (prev === 'open' ? 'minimized' : 'open'));
-          }}
-          teacherLmsState={teacherLmsState}
-          onToggleTeacherLms={() => {
-            if (expandedWindow) setExpandedWindow(null);
-            setTeacherLmsState((prev) => (prev === 'open' ? 'minimized' : 'open'));
-          }}
-          studentLmsState={studentLmsState}
-          onToggleStudentLms={() => {
-            if (expandedWindow) setExpandedWindow(null);
-            setStudentLmsState((prev) => (prev === 'open' ? 'minimized' : 'open'));
-          }}
-          videoState={videoState}
-          onToggleVideo={() => {
-            if (expandedWindow) setExpandedWindow(null);
-            setVideoState((prev) => (prev === 'open' ? 'minimized' : 'open'));
-          }}
-          isTasksOpen={isTasksOpen}
-          onToggleTasks={() => {
-            setIsTasksOpen(!isTasksOpen);
-            setUtilityTab('tasks');
-          }}
-          isQuizzesOpen={isTasksOpen && utilityTab === 'quizzes'}
-          onToggleQuizzes={() => {
-            setIsTasksOpen(true);
-            setUtilityTab('quizzes');
-          }}
-          isChatOpen={isChatOpen}
-          onToggleChat={() => setIsChatOpen(!isChatOpen)}
-          unreadChatCount={0}
-          activeAssessmentCount={activeAssessments.length}
-          isScreenSharing={isScreenSharing}
-        />
+        {/* Task 1: Far-Left Tuition Menu Bar (Collapsed by default, opens in exact slot) */}
+        {isTuitionMenuOpen && (
+          <TuitionMenuSidebar
+            isHost={Boolean(isHost)}
+            smartboardState={smartboardState}
+            onToggleSmartboard={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              setSmartboardState((prev) => (prev === 'open' ? 'closed' : 'open'));
+            }}
+            teacherLmsState={teacherLmsState}
+            onToggleTeacherLms={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              setTeacherLmsState((prev) => (prev === 'open' ? 'closed' : 'open'));
+            }}
+            studentLmsState={studentLmsState}
+            onToggleStudentLms={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              setStudentLmsState((prev) => (prev === 'open' ? 'closed' : 'open'));
+            }}
+            videoState={videoState}
+            onToggleVideo={() => {
+              if (expandedWindow) setExpandedWindow(null);
+              setVideoState((prev) => (prev === 'open' ? 'minimized' : 'open'));
+            }}
+            isTasksOpen={isTasksOpen}
+            onToggleTasks={() => {
+              setIsTasksOpen(!isTasksOpen);
+              setUtilityTab('tasks');
+            }}
+            isQuizzesOpen={isTasksOpen && utilityTab === 'quizzes'}
+            onToggleQuizzes={() => {
+              setIsTasksOpen(true);
+              setUtilityTab('quizzes');
+            }}
+            isChatOpen={isChatOpen}
+            onToggleChat={() => setIsChatOpen(!isChatOpen)}
+            unreadChatCount={0}
+            activeAssessmentCount={activeAssessments.length}
+            isScreenSharing={isScreenSharing}
+            onClose={() => setIsTuitionMenuOpen(false)}
+          />
+        )}
+
+        {/* Crisp left-edge toggle handle when Tuition Menu is collapsed */}
+        {!isTuitionMenuOpen && (
+          <button
+            onClick={() => setIsTuitionMenuOpen(true)}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-40 bg-slate-900/95 hover:bg-slate-800 text-amber-400 border-r border-y border-slate-700/80 rounded-r-xl p-1.5 shadow-2xl transition-all hover:pl-2.5 cursor-pointer group"
+            title="Expand Tuition Menu Sidebar"
+            aria-label="Expand Tuition Menu Sidebar"
+          >
+            <ChevronRight className="w-4 h-4 group-hover:scale-110 transition-transform" />
+          </button>
+        )}
 
         {/* Focus / Full Stage Window Mode */}
         {expandedWindow ? (

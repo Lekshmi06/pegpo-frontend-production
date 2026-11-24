@@ -647,7 +647,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
   if (isRevoked) {
     return (
       <div className="flex-1 bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 min-h-[70vh]">
-        <div className="max-w-md w-full bg-white dark:bg-slate-900 border border-red-500/30 rounded-2xl p-8 text-center shadow-2xl">
+        <div className="max-w-md w-full bg-white dark:bg-[#0d1424] border border-red-500/30 rounded-2xl p-8 text-center shadow-2xl">
           <div className="w-16 h-16 bg-red-500/10 border border-red-500/30 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8" />
           </div>
@@ -682,9 +682,9 @@ export const TuitionProgramWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col min-h-0 transition-colors">
+    <div className="flex-1 bg-slate-50 dark:bg-[#060913] text-slate-900 dark:text-slate-100 flex flex-col min-h-0 transition-colors">
       {/* Workspace Sub-Header */}
-      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 py-4 shrink-0 shadow-2xs">
+      <div className="bg-white/95 dark:bg-[#0a0f1d]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 lg:px-8 py-4 shrink-0 shadow-2xs">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button
@@ -1557,16 +1557,16 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {activeTab === 'study' && !isTeacher && (
           <div className="space-y-4 animate-fadeIn">
             {/* Top: Co-Students Enrolled Bar */}
-            <div className="p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-lg">
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-white flex items-center gap-2">
-                  <Users className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Users className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                   <span>Enrolled Classmates</span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300">
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300">
                     {roster?.students?.length || 0}
                   </span>
                 </span>
-                <span className="text-[11px] text-slate-400">Collaborating in this batch</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Collaborating in this batch</span>
               </div>
 
               {roster?.students && roster.students.length > 0 ? (
@@ -1575,25 +1575,25 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     <div
                       key={stu._id}
                       onClick={() => setProfileModalUser(stu)}
-                      className="flex items-center gap-2 p-2 rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/30 transition-colors cursor-pointer shrink-0"
+                      className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 hover:border-amber-500/30 transition-colors cursor-pointer shrink-0"
                     >
                       {stu.avatar || stu.profilePicture ? (
                         <img
                           src={stu.avatar || stu.profilePicture}
                           alt={stu.name || 'Student'}
-                          className="w-7 h-7 rounded-full object-cover border border-slate-700 shrink-0"
+                          className="w-7 h-7 rounded-full object-cover border border-slate-200 dark:border-slate-700 shrink-0"
                         />
                       ) : (
-                        <div className="w-7 h-7 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-500/30">
+                        <div className="w-7 h-7 rounded-full bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 font-bold text-[10px] flex items-center justify-center shrink-0 border border-amber-500/30">
                           {(stu.name || 'ST').slice(0, 2).toUpperCase()}
                         </div>
                       )}
                       <div className="text-left">
-                        <div className="text-xs font-bold text-white truncate max-w-[100px]">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white truncate max-w-[100px]">
                           {stu.name || 'Student'}
                         </div>
                         {stu.studentCode && (
-                          <div className="text-[10px] font-mono text-amber-400 font-bold">
+                          <div className="text-[10px] font-mono text-amber-600 dark:text-amber-400 font-bold">
                             {stu.studentCode}
                           </div>
                         )}
@@ -1607,27 +1607,27 @@ export const TuitionProgramWorkspace: React.FC = () => {
             </div>
 
             {/* Prominent Peer-Chat Callout Notice (Video Call Disabled) */}
-            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-300 shadow-sm">
+            <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-xs text-amber-700 dark:text-amber-300 shadow-sm">
               <div className="flex items-center gap-2">
-                <VideoOff className="w-4 h-4 text-amber-400 shrink-0" />
+                <VideoOff className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                 <span className="font-semibold">
                   Peer chat &amp; document sharing only; supervised live video coming in a future update
                 </span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 hidden sm:inline">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hidden sm:inline">
                 Live Video Restricted
               </span>
             </div>
 
             {/* Combined Study Stream Chat & Document Sharing */}
-            <div className="flex flex-col h-[520px] bg-slate-900/60 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+            <div className="flex flex-col h-[520px] bg-white dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
               {/* Stream Header Notification */}
-              <div className="bg-slate-950/80 px-4 py-2 border-b border-slate-800 flex items-center justify-between text-[11px] text-slate-400">
+              <div className="bg-slate-100 dark:bg-slate-950/80 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
                   Combined Study Stream &bull; Chat, PDF, image, and video exchange enabled
                 </span>
-                <span className="flex items-center gap-1 text-slate-500">
+                <span className="flex items-center gap-1 text-slate-400">
                   <ShieldCheck className="w-3 h-3 text-emerald-500" />
                   1-Year Retained Archive
                 </span>
@@ -1673,34 +1673,34 @@ export const TuitionProgramWorkspace: React.FC = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs text-slate-200 max-w-2xl">
+                        <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 max-w-2xl">
                           {msg.content && <p className="whitespace-pre-wrap mb-1">{msg.content}</p>}
 
                               {msg.fileUrl && (
-                                <div className="mt-2 pt-2 border-t border-slate-800">
+                                <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-800">
                                   {msg.content === '🎙️ Voice Note' || msg.fileUrl.endsWith('.webm') || msg.fileUrl.endsWith('.mp3') || msg.fileUrl.endsWith('.wav') ? (
-                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-900 border border-slate-700/80">
-                                      <Volume2 className="w-4 h-4 text-amber-400 shrink-0" />
+                                    <div className="flex items-center gap-2 p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80">
+                                      <Volume2 className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                                       <audio src={resolveMediaUrl(msg.fileUrl)} controls className="w-full max-w-sm rounded" />
                                     </div>
                                   ) : msg.messageType === 'image' ? (
                                     <img
                                       src={resolveMediaUrl(msg.fileUrl)}
                                       alt={msg.fileName || 'Shared Image'}
-                                      className="max-h-60 rounded-lg object-contain border border-slate-700"
+                                      className="max-h-60 rounded-lg object-contain border border-slate-200 dark:border-slate-700"
                                     />
                                   ) : msg.messageType === 'video' ? (
                                     <video
                                       src={resolveMediaUrl(msg.fileUrl)}
                                       controls
-                                      className="max-h-60 rounded-lg w-full border border-slate-700"
+                                      className="max-h-60 rounded-lg w-full border border-slate-200 dark:border-slate-700"
                                     />
                                   ) : (
                                     <a
                                       href={resolveMediaUrl(msg.fileUrl)}
                                       target="_blank"
                                       rel="noreferrer"
-                                      className="inline-flex items-center gap-2 text-amber-400 hover:text-amber-300 font-semibold"
+                                      className="inline-flex items-center gap-2 text-amber-600 dark:text-amber-400 hover:underline font-semibold"
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>{msg.fileName || 'View Shared Document (PDF)'}</span>
@@ -1717,14 +1717,14 @@ export const TuitionProgramWorkspace: React.FC = () => {
               </div>
 
               {/* Input Composer */}
-              <form onSubmit={handleSendMessage} className="p-3 bg-slate-950 border-t border-slate-800">
+              <form onSubmit={handleSendMessage} className="p-3 bg-slate-50 dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
                 {selectedFile && (
-                  <div className="mb-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-300 flex items-center justify-between">
+                  <div className="mb-2 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 flex items-center justify-between">
                     <span className="truncate">Attached: {selectedFile.name}</span>
                     <button
                       type="button"
                       onClick={() => setSelectedFile(null)}
-                      className="text-red-400 hover:text-red-300 text-xs ml-2 cursor-pointer font-bold"
+                      className="text-red-500 hover:text-red-600 text-xs ml-2 cursor-pointer font-bold"
                     >
                       Remove
                     </button>
@@ -1747,7 +1747,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                     title="Share PDF, image, or video (1-year retained)"
                   >
                     <Paperclip className="w-4 h-4" />
@@ -1770,7 +1770,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     <button
                       type="button"
                       onClick={handleStartAudioRecording}
-                      className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-amber-400 transition-colors cursor-pointer"
+                      className="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-amber-500 dark:hover:text-amber-400 transition-colors cursor-pointer"
                       title="Record and send voice note"
                     >
                       <Mic className="w-4 h-4" />
@@ -1782,7 +1782,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     placeholder="Type a message or share notes with your cohort..."
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    className="flex-1 bg-slate-900 border border-slate-700 px-4 py-2.5 rounded-xl text-xs sm:text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 px-4 py-2.5 rounded-xl text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-amber-400"
                   />
 
                   <button
@@ -1803,13 +1803,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {activeTab === 'live' && (
           <div className="space-y-6">
             {/* Next 5 Upcoming Scheduled Live Sessions */}
-            <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424] border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Tv className="w-5 h-5 text-red-500" />
                   Upcoming Live SmartBoard Sessions
                 </h2>
-                <span className="text-xs font-bold text-amber-400">Next 5 Scheduled Dates</span>
+                <span className="text-xs font-bold text-amber-600 dark:text-amber-400">Next 5 Scheduled Dates</span>
               </div>
 
               {upcomingSessions.length > 0 ? (
@@ -1817,22 +1817,22 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   {upcomingSessions.map((item, idx) => (
                     <div
                       key={idx}
-                      className="p-4 rounded-xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-300 hover:border-slate-700 transition-colors"
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center font-bold text-xs">
+                        <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 dark:text-red-400 flex items-center justify-center font-bold text-xs">
                           #{idx + 1}
                         </div>
                         <div>
-                          <div className="font-bold text-white text-sm flex items-center gap-2">
+                          <div className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                             <span>{item.dateStr}</span>
                             {item.canJoinNow && (
-                              <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 border border-red-500/30 text-[10px] font-black animate-pulse">
+                              <span className="px-2 py-0.5 rounded-full bg-red-500/20 text-red-600 dark:text-red-300 border border-red-500/30 text-[10px] font-black animate-pulse">
                                 LIVE NOW
                               </span>
                             )}
                           </div>
-                          <div className="text-xs text-amber-400 font-mono mt-0.5">
+                          <div className="text-xs text-amber-600 dark:text-amber-400 font-mono mt-0.5">
                             {item.dayLabel} &bull; {item.startTime} &ndash; {item.endTime}
                           </div>
                         </div>
@@ -1856,13 +1856,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">No upcoming dates scheduled for this program.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">No upcoming dates scheduled for this program.</p>
               )}
             </div>
 
-            <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-              <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-amber-400" />
+            <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424] border border-slate-200 dark:border-slate-800 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                 Weekly Class Schedule
               </h2>
 
@@ -1871,28 +1871,28 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   {program.schedule.map((slot, idx) => (
                     <div
                       key={idx}
-                      className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-slate-300"
+                      className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300"
                     >
-                      <div className="font-bold text-white text-sm">{slot.day}</div>
-                      <div className="text-xs text-amber-400 font-mono mt-1">
+                      <div className="font-bold text-slate-900 dark:text-white text-sm">{slot.day}</div>
+                      <div className="text-xs text-amber-600 dark:text-amber-400 font-mono mt-1">
                         {slot.startTime} &ndash; {slot.endTime}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-xs text-slate-400">No scheduled slots configured for this program.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">No scheduled slots configured for this program.</p>
               )}
             </div>
 
-            <div className="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30">
+            <div className="p-6 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30">
               <div className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+                <Clock className="w-5 h-5 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" />
                 <div>
-                  <h3 className="text-sm font-bold text-amber-300">
+                  <h3 className="text-sm font-bold text-amber-800 dark:text-amber-300">
                     Mandatory 15-Minute Post-Session Idle Auto-Logout Rule
                   </h3>
-                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                  <p className="text-xs text-slate-700 dark:text-slate-300 mt-1 leading-relaxed">
                     Under EduPye Centralized Tuition compliance policies, all participants (students and teachers) are granted a 15-minute grace period following class conclusion. After 15 minutes of inactivity or session completion, live classroom WebSockets automatically close and the user session is gracefully logged out to safeguard student privacy.
                   </p>
                 </div>
@@ -1905,19 +1905,19 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {activeTab === 'recordings' && (
           <div className="space-y-6 animate-fadeIn">
             {/* 1-Year Compliance Vault Banner */}
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+            <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-100 via-white to-slate-50 dark:from-slate-900 dark:via-slate-900 dark:to-slate-950 border border-amber-300 dark:border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
-                  <Film className="w-6 h-6 text-amber-400" />
+                <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Film className="w-6 h-6 text-amber-500 dark:text-amber-400" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-white">365-Day Recording &amp; Attendance Vault</h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">365-Day Recording &amp; Attendance Vault</h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                       Compliance Active
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                     All completed lectures and verified student attendance records are securely archived for 1 year with instant video replay.
                   </p>
                 </div>
@@ -1926,7 +1926,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
               {isTeacher && (
                 <button
                   onClick={() => navigate('/teacher/tuition-earnings')}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 border border-amber-500/30 text-xs font-bold transition-all shrink-0 cursor-pointer shadow-xs"
                 >
                   <Receipt className="w-3.5 h-3.5" />
                   <span>View Tuition Earnings</span>
@@ -1943,26 +1943,26 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 return (
                   <div
                     key={recId}
-                    className="p-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-amber-500/30 transition-all flex flex-col justify-between space-y-4 shadow-lg group"
+                    className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-500/30 transition-all flex flex-col justify-between space-y-4 shadow-sm group"
                   >
                     <div className="space-y-3">
                       <div className="flex items-center justify-between gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
                           {rec.subject || program?.subject || 'Tuition Lecture'}
                         </span>
-                        <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-400" />
+                        <span className="text-[10px] font-mono font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-950 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-800 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-500 dark:text-amber-400" />
                           <span>{rec.durationMinutes} mins</span>
                         </span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors">
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors">
                         {rec.title}
                       </h4>
 
-                      <div className="space-y-1.5 text-xs text-slate-400 pt-1">
+                      <div className="space-y-1.5 text-xs text-slate-600 dark:text-slate-400 pt-1">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                          <Calendar className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
                           <span>
                             {new Date(rec.sessionDate).toLocaleDateString('en-IN', {
                               day: 'numeric',
@@ -1974,34 +1974,34 @@ export const TuitionProgramWorkspace: React.FC = () => {
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Users className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <Users className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400 shrink-0" />
                           <span>{rec.totalAttendees} Attendees Logged</span>
                         </div>
                       </div>
 
                       {/* Retention Countdown Pill */}
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-amber-300">
-                        <ShieldCheck className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-[11px] font-mono text-amber-700 dark:text-amber-300">
+                        <ShieldCheck className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                         <span>{rec.retentionBadge}</span>
                       </div>
                     </div>
 
                     {/* Attendance Log Drawer / Accordion */}
                     {isExpanded && rec.attendanceLogs && rec.attendanceLogs.length > 0 && (
-                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 text-xs space-y-2 animate-fadeIn">
-                        <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wide">
+                      <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs space-y-2 animate-fadeIn">
+                        <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                           Session Attendance Log
                         </div>
                         <div className="space-y-1 max-h-32 overflow-y-auto">
                           {rec.attendanceLogs.map((log: any, idx: number) => (
-                            <div key={idx} className="flex items-center justify-between py-0.5 text-[11px] border-b border-slate-900 last:border-0">
-                              <span className="text-slate-300">{log.name}</span>
+                            <div key={idx} className="flex items-center justify-between py-0.5 text-[11px] border-b border-slate-200 dark:border-slate-900 last:border-0">
+                              <span className="text-slate-700 dark:text-slate-300">{log.name}</span>
                               <div className="flex items-center gap-2">
                                 {log.durationMinutes && (
                                   <span className="text-slate-500 font-mono">{log.durationMinutes}m</span>
                                 )}
                                 <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                                  log.role === 'host' ? 'bg-amber-500/20 text-amber-300' : 'bg-slate-800 text-slate-400'
+                                  log.role === 'host' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400'
                                 }`}>
                                   {log.role === 'host' ? 'Host' : 'Student'}
                                 </span>
@@ -2013,7 +2013,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     )}
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-slate-800/80">
+                    <div className="flex items-center gap-2 pt-2 border-t border-slate-200 dark:border-slate-800/80">
                       <button
                         onClick={() => setSelectedRecording(rec)}
                         className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs cursor-pointer"
@@ -2025,7 +2025,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                       {rec.attendanceLogs && rec.attendanceLogs.length > 0 && (
                         <button
                           onClick={() => setExpandedLogId(isExpanded ? null : recId)}
-                          className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
+                          className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                           title="Inspect attendance roster"
                         >
                           <Users className="w-3.5 h-3.5" />
@@ -2039,9 +2039,9 @@ export const TuitionProgramWorkspace: React.FC = () => {
               })}
 
               {recordings.length === 0 && (
-                <div className="col-span-full p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
-                  <Film className="w-10 h-10 mx-auto text-slate-600" />
-                  <h4 className="text-sm font-bold text-slate-300">No Past Recordings Archived Yet</h4>
+                <div className="col-span-full p-12 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                  <Film className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600" />
+                  <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Past Recordings Archived Yet</h4>
                   <p className="text-xs text-slate-500 max-w-sm mx-auto">
                     When live SmartBoard classes for this program conclude, they will automatically appear here with attendance logs and a 365-day replay countdown.
                   </p>
@@ -2054,13 +2054,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {/* Tab 5: Per-Batch Homework, Tasks & Centralized Assessments */}
         {activeTab === 'homework' && (
           <div className="flex-1 flex flex-col space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
               <div>
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-amber-400" />
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-amber-500 dark:text-amber-400" />
                   <span>Cohort Assessments, Tasks &amp; Homework</span>
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
                   Interactive MCQ tests with auto-grading, topic assignment submissions (PDF), and cohort homework.
                 </p>
               </div>
@@ -2076,14 +2076,14 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   </button>
                   <button
                     onClick={() => setIsPostAssignmentOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-white border border-amber-500/30 font-bold text-xs shadow-md transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-bold text-xs shadow-md transition-all cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Post Assignment Topic</span>
                   </button>
                   <button
                     onClick={() => setIsCreateHomeworkModalOpen(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition-all cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white border border-slate-300 dark:border-slate-700 text-xs font-semibold transition-all cursor-pointer"
                     title="Assign Standard Practice Homework"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
@@ -2094,13 +2094,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-800/80 pb-3">
+            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-3">
               <button
                 onClick={() => setAssessmentFilter('all')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   assessmentFilter === 'all'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                 }`}
               >
                 All Tasks &amp; Tests ({programAssessments.length + homeworkList.length})
@@ -2110,7 +2110,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   assessmentFilter === 'mcq'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                 }`}
               >
                 MCQ Tests ({programAssessments.filter((a) => a.type === 'mcq_test').length})
@@ -2120,7 +2120,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                   assessmentFilter === 'assignments'
                     ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50'
                 }`}
               >
                 Assignments &amp; PDF Submissions ({programAssessments.filter((a) => a.type === 'assignment').length + homeworkList.length})
@@ -2128,14 +2128,14 @@ export const TuitionProgramWorkspace: React.FC = () => {
             </div>
 
             {loadingAssessments && loadingHomework ? (
-              <div className="p-12 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
+              <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-sm flex items-center justify-center gap-2">
                 <Loader2 className="w-5 h-5 animate-spin text-amber-400" />
                 <span>Loading cohort assessments &amp; assignments...</span>
               </div>
             ) : programAssessments.length === 0 && homeworkList.length === 0 ? (
-              <div className="p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
-                <BookOpen className="w-10 h-10 mx-auto text-slate-600" />
-                <h4 className="text-sm font-bold text-slate-300">No Assessments or Homework Assigned Yet</h4>
+              <div className="p-12 rounded-2xl bg-white/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+                <BookOpen className="w-10 h-10 mx-auto text-slate-400 dark:text-slate-600" />
+                <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300">No Assessments or Homework Assigned Yet</h4>
                 <p className="text-xs text-slate-500 max-w-sm mx-auto">
                   {isTeacher
                     ? 'Create an interactive MCQ test, post an assignment topic with PDF submission, or assign practice tasks for this cohort.'
@@ -2151,7 +2151,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     </button>
                     <button
                       onClick={() => setIsPostAssignmentOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 font-bold text-xs cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/30 font-bold text-xs cursor-pointer"
                     >
                       Post Assignment Topic
                     </button>
@@ -2182,7 +2182,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                         return (
                           <div
                             key={item._id}
-                            className="rounded-2xl bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 p-5 sm:p-6 flex flex-col justify-between space-y-4 shadow-lg transition-all"
+                            className="rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700/80 p-5 sm:p-6 flex flex-col justify-between space-y-4 shadow-sm transition-all"
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between gap-3">
@@ -2191,21 +2191,21 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                     <span
                                       className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
                                         isMCQ
-                                          ? 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
-                                          : 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
+                                          ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30'
+                                          : 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30'
                                       }`}
                                     >
                                       {isMCQ ? 'Interactive MCQ Test' : 'PDF Assignment'}
                                     </span>
                                     {item.subject && (
-                                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
+                                      <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                                         {item.subject}
                                       </span>
                                     )}
                                   </div>
-                                  <h4 className="text-base font-bold text-white leading-snug">{item.title}</h4>
+                                  <h4 className="text-base font-bold text-slate-900 dark:text-white leading-snug">{item.title}</h4>
                                   {item.topic && (
-                                    <p className="text-xs font-semibold text-amber-300/90">Topic: {item.topic}</p>
+                                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300/90">Topic: {item.topic}</p>
                                   )}
                                 </div>
                                 <span className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold">
@@ -2213,7 +2213,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                 </span>
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
                                 {isMCQ && item.durationMinutes && (
                                   <span className="flex items-center gap-1.5">
                                     <Clock className="w-3.5 h-3.5 text-slate-500" />
@@ -2245,7 +2245,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                               </div>
 
                               {item.instructions && (
-                                <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed bg-slate-950/40 p-3 rounded-xl border border-slate-800/80">
+                                <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed bg-slate-50 dark:bg-slate-950/40 p-3 rounded-xl border border-slate-200 dark:border-slate-800/80">
                                   {item.instructions}
                                 </p>
                               )}
@@ -2257,7 +2257,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                     href={resolveMediaUrl(item.referenceFileUrl)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300 text-xs border border-amber-500/30 transition-colors"
+                                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-amber-800 dark:text-amber-300 text-xs border border-amber-300 dark:border-amber-500/30 transition-colors"
                                   >
                                     <Paperclip className="w-3.5 h-3.5 text-amber-400" />
                                     <span className="truncate max-w-[240px]">
@@ -2270,7 +2270,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                               {isTeacher ? (
                                 <>
                                   <div className="text-xs text-slate-400">
@@ -2281,7 +2281,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                   </div>
                                   <button
                                     onClick={() => setViewingSubmissionsAssessment(item)}
-                                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                                   >
                                     <Award className="w-3.5 h-3.5 text-amber-400" />
                                     <span>Review Submissions &amp; Scores</span>
@@ -2403,17 +2403,17 @@ export const TuitionProgramWorkspace: React.FC = () => {
                         return (
                           <div
                             key={hw._id}
-                            className="rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-slate-700/80 p-5 sm:p-6 flex flex-col justify-between space-y-4 shadow-lg transition-all"
+                            className="rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700/80 p-5 sm:p-6 flex flex-col justify-between space-y-4 shadow-sm transition-all"
                           >
                             <div className="space-y-3">
                               <div className="flex items-start justify-between gap-3">
-                                <h4 className="text-base font-bold text-white leading-snug">{hw.title}</h4>
+                                <h4 className="text-base font-bold text-slate-900 dark:text-white leading-snug">{hw.title}</h4>
                                 <span className="shrink-0 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-mono font-bold">
                                   {hw.totalPoints} pts
                                 </span>
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+                              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-slate-400">
                                 <span className="flex items-center gap-1.5">
                                   <Clock className="w-3.5 h-3.5 text-slate-500" />
                                   <span>Due: {dueDateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
@@ -2427,7 +2427,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                 <span>Assigned by {teacherLabel}</span>
                               </div>
 
-                              <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
                                 {hw.description}
                               </p>
 
@@ -2455,7 +2455,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="pt-3 border-t border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                               {isTeacher ? (
                                 <>
                                   <span className="text-xs text-slate-400">
@@ -2466,7 +2466,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                       setReviewingHomework(hw);
                                       setGradingSubmission(null);
                                     }}
-                                    className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                                   >
                                     <Award className="w-3.5 h-3.5 text-amber-400" />
                                     <span>Review &amp; Grade</span>
@@ -2532,7 +2532,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Video Replay Modal */}
       {selectedRecording && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-3xl w-full shadow-2xl space-y-4 relative">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-3xl w-full shadow-2xl space-y-4 relative">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
@@ -2583,7 +2583,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Create Homework Modal (Teacher) */}
       {isCreateHomeworkModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4 relative">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-amber-400" />
@@ -2690,7 +2690,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Submit Homework Modal (Student) */}
       {submittingHomeworkItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4 relative">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-lg w-full shadow-2xl space-y-4 relative">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div>
                 <h3 className="text-base font-bold text-white">Submit Homework</h3>
@@ -2754,7 +2754,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Review & Grade Submissions Modal (Teacher) */}
       {reviewingHomework && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-2xl w-full shadow-2xl space-y-4 relative max-h-[90vh] flex flex-col">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-3xl p-5 sm:p-6 max-w-2xl w-full shadow-2xl space-y-4 relative max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800 shrink-0">
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
@@ -2806,7 +2806,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                       </div>
 
                       {sub.content && (
-                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 whitespace-pre-line text-xs">
+                        <div className="p-2.5 rounded-lg bg-slate-100 dark:bg-[#0a0f1d] border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-300 whitespace-pre-line text-xs">
                           {sub.content}
                         </div>
                       )}
@@ -2839,7 +2839,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                 max={reviewingHomework.totalPoints}
                                 value={gradingScore}
                                 onChange={(e) => setGradingScore(e.target.value === '' ? '' : Number(e.target.value))}
-                                className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono focus:outline-none focus:border-amber-400"
+                                className="w-full px-3 py-1.5 bg-white dark:bg-[#0a0f1d] border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white font-mono focus:outline-none focus:border-amber-400"
                               />
                             </div>
                             <div className="sm:col-span-2">
@@ -2849,7 +2849,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                                 placeholder="e.g. Great reasoning on question 3. Watch your signs on 4b."
                                 value={gradingFeedback}
                                 onChange={(e) => setGradingFeedback(e.target.value)}
-                                className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                                className="w-full px-3 py-1.5 bg-white dark:bg-[#0a0f1d] border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-amber-400"
                               />
                             </div>
                           </div>
@@ -2926,7 +2926,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Reusable User Profile Modal */}
       {profileModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
             <button
               onClick={() => setProfileModalUser(null)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
@@ -2971,7 +2971,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 <p className="text-xs text-slate-400 truncate mt-0.5">{profileModalUser.email}</p>
                 {(profileModalUser.teacherCode || profileModalUser.studentCode) && (
                   <div className="mt-2 space-y-2">
-                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-slate-950 text-amber-400 border border-amber-500/30 inline-block">
+                    <span className="font-mono text-xs font-black px-2 py-0.5 rounded bg-slate-100 dark:bg-[#060913] text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30 inline-block">
                       ID: {profileModalUser.teacherCode || profileModalUser.studentCode}
                     </span>
                     <button
@@ -2992,7 +2992,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
               {profileModalUser.bio && (
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">About &amp; Bio</span>
-                  <p className="text-slate-300 bg-slate-950 p-3 rounded-xl border border-slate-800 leading-relaxed">
+                  <p className="text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-[#060913] p-3 rounded-xl border border-slate-200 dark:border-slate-800 leading-relaxed">
                     {profileModalUser.bio}
                   </p>
                 </div>
@@ -3012,14 +3012,14 @@ export const TuitionProgramWorkspace: React.FC = () => {
               )}
 
               {profileModalUser.experienceYears ? (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#060913] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                   <span>Teaching Experience</span>
                   <strong className="text-white">{profileModalUser.experienceYears}+ Years</strong>
                 </div>
               ) : null}
 
               {profileModalUser.grade && (
-                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-400">
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-[#060913] border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400">
                   <span>Academic Grade / Level</span>
                   <strong className="text-white">{profileModalUser.grade}</strong>
                 </div>
@@ -3039,7 +3039,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Edit Program Overview Modal (Teachers/Admins) */}
       {isEditOverviewModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-5">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-5">
             <button
               onClick={() => setIsEditOverviewModalOpen(false)}
               className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
@@ -3067,7 +3067,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   value={overviewForm.nextSessionTopic}
                   onChange={(e) => setOverviewForm({ ...overviewForm, nextSessionTopic: e.target.value })}
                   placeholder="e.g. Rotational Dynamics & Moment of Inertia"
-                  className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-[#060913] border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -3080,7 +3080,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   value={overviewForm.requiredMaterials}
                   onChange={(e) => setOverviewForm({ ...overviewForm, requiredMaterials: e.target.value })}
                   placeholder="Class Notebook & Pen&#10;Physics Part 1 Textbook&#10;Scientific Calculator"
-                  className="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                  className="w-full px-4 py-2 rounded-xl bg-white dark:bg-[#060913] border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -3093,7 +3093,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   value={overviewForm.syllabusTopics}
                   onChange={(e) => setOverviewForm({ ...overviewForm, syllabusTopics: e.target.value })}
                   placeholder="Module 1: Mechanics & Newton's Laws&#10;Module 2: Work, Energy & Power&#10;Module 3: Gravitation"
-                  className="w-full px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-amber-400"
+                  className="w-full px-4 py-2 rounded-xl bg-white dark:bg-[#060913] border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-amber-400"
                 />
               </div>
 
@@ -3121,7 +3121,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
       {/* Teacher Direct Announcement Modal */}
       {announcementModalUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-4">
             <button
               onClick={() => {
                 setAnnouncementModalUser(null);
@@ -3161,7 +3161,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
                     value={announcementText}
                     onChange={(e) => setAnnouncementText(e.target.value)}
                     placeholder="Enter instructions, homework feedback, or preparation notes for this student..."
-                    className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-400 placeholder-slate-500"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white dark:bg-[#060913] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-xs focus:outline-none focus:border-amber-400 placeholder-slate-400 dark:placeholder-slate-500"
                   />
                 </div>
 

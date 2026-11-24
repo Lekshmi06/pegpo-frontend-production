@@ -19,6 +19,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     // Strictly default to 'light' mode across the platform
     // Only use 'dark' if the user explicitly previously toggled and saved 'dark'
     try {
+      if (typeof window !== 'undefined' && window.location.pathname.includes('tuition-mode')) {
+        const tuitionSaved = localStorage.getItem('tuition_theme');
+        if (tuitionSaved === 'dark') return 'dark';
+        if (tuitionSaved === 'light') return 'light';
+        return 'light'; // Always default to light mode in Tuition Mode
+      }
       const saved = localStorage.getItem('theme') || localStorage.getItem(THEME_STORAGE_KEY);
       if (saved === 'dark') return 'dark';
       return 'light';
@@ -39,6 +45,9 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       localStorage.setItem('theme', theme);
       localStorage.setItem(THEME_STORAGE_KEY, theme);
+      if (typeof window !== 'undefined' && window.location.pathname.includes('tuition-mode')) {
+        localStorage.setItem('tuition_theme', theme);
+      }
     } catch {
       // storage unavailable
     }

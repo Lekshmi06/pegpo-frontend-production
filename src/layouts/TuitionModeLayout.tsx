@@ -21,23 +21,28 @@ import { TuitionIdCardModal } from '../components/tuition/TuitionIdCardModal';
 export const TuitionModeLayout: React.FC = () => {
   const navigate = useNavigate();
   const currentUser = authService.getCurrentUser();
-  const { theme, toggleTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { token, programContext } = tuitionService.getTuitionModeSession();
   const [isIdCardOpen, setIsIdCardOpen] = React.useState(false);
 
-  // Default to Light Mode on mount if no explicit theme preference is set
+  // Default to Light Mode on mount if no explicit tuition_theme preference is set
   React.useEffect(() => {
-    const saved = localStorage.getItem('theme') || localStorage.getItem('edupye_theme');
-    if (!saved) {
-      setTheme('light');
-      document.documentElement.classList.remove('dark');
-      document.documentElement.setAttribute('data-theme', 'light');
+    const saved = localStorage.getItem('tuition_theme');
+    const initialTheme: 'light' | 'dark' = saved === 'dark' ? 'dark' : 'light';
+    setTheme(initialTheme);
+    const root = document.documentElement;
+    if (initialTheme === 'dark') {
+      root.classList.add('dark');
+      root.setAttribute('data-theme', 'dark');
+    } else {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
     }
   }, [setTheme]);
 
-  // Synchronous, rock-solid toggle handler for Light/Dark mode
+  // Synchronous, rock-solid toggle handler for Light/Dark mode in Tuition Mode
   const handleToggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    const nextTheme: 'light' | 'dark' = theme === 'dark' ? 'light' : 'dark';
     const root = document.documentElement;
     if (nextTheme === 'dark') {
       root.classList.add('dark');
@@ -46,9 +51,10 @@ export const TuitionModeLayout: React.FC = () => {
       root.classList.remove('dark');
       root.setAttribute('data-theme', 'light');
     }
+    localStorage.setItem('tuition_theme', nextTheme);
     localStorage.setItem('theme', nextTheme);
     localStorage.setItem('edupye_theme', nextTheme);
-    toggleTheme();
+    setTheme(nextTheme);
   };
 
   // 15-Minute Idle Auto-Logout Compliance Tracker across Tuition Mode
@@ -90,9 +96,9 @@ export const TuitionModeLayout: React.FC = () => {
   const userCode = currentUser?.studentCode || currentUser?.teacherCode;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#060913] text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950 transition-colors">
       {/* Top Tuition Header */}
-      <header className="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs dark:shadow-black/30">
+      <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0a0f1d]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-xs dark:shadow-black/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Brand + Tuition Mode Tag */}
           <div className="flex items-center gap-3">
@@ -189,7 +195,7 @@ export const TuitionModeLayout: React.FC = () => {
 
       {/* Main Body */}
       <main className="flex-1 flex flex-col min-h-0">
-        <Outlet />
+        <Outlet context={{ theme, isDark: theme === 'dark' }} />
       </main>
 
       {/* ID Card Modal */}
@@ -200,7 +206,7 @@ export const TuitionModeLayout: React.FC = () => {
       />
 
       {/* Footer Strip */}
-      <footer className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
+      <footer className="bg-white dark:bg-[#0a0f1d] border-t border-slate-200 dark:border-slate-800/80 py-4 px-4 text-center text-xs text-slate-500 dark:text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>EduPye Centralized Tuition &bull; 1:1 Scheduled Learning &amp; SmartBoard Classroom</span>
           <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">

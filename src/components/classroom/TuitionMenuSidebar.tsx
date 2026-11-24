@@ -8,6 +8,7 @@ import {
   HelpCircle,
   MessageSquare,
   Sparkles,
+  ChevronLeft,
 } from 'lucide-react';
 
 export type WindowViewState = 'open' | 'minimized' | 'closed';
@@ -31,6 +32,7 @@ interface TuitionMenuSidebarProps {
   unreadChatCount?: number;
   activeAssessmentCount?: number;
   isScreenSharing?: boolean;
+  onClose?: () => void;
 }
 
 export const TuitionMenuSidebar: React.FC<TuitionMenuSidebarProps> = ({
@@ -52,6 +54,7 @@ export const TuitionMenuSidebar: React.FC<TuitionMenuSidebarProps> = ({
   unreadChatCount = 0,
   activeAssessmentCount = 0,
   isScreenSharing = false,
+  onClose,
 }) => {
   const getStatusDot = (state: WindowViewState) => {
     if (state === 'open') {
@@ -74,14 +77,18 @@ export const TuitionMenuSidebar: React.FC<TuitionMenuSidebarProps> = ({
       aria-label="Tuition Workspace Menu"
       className="w-14 sm:w-16 bg-slate-950 border-r border-slate-800/90 flex flex-col items-center py-3 select-none shrink-0 z-30 shadow-xl"
     >
-      {/* Top Brand / Stage Glyph */}
-      <div className="mb-4">
-        <div
-          title="EduPye Tuition Mode"
-          className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20"
+      {/* Top Brand / Stage Glyph with quick collapse */}
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={onClose}
+          title={onClose ? "Tuition Mode (Click to collapse)" : "EduPye Tuition Mode"}
+          className={`w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 transition-transform ${
+            onClose ? 'cursor-pointer hover:scale-105 active:scale-95' : ''
+          }`}
         >
           <Sparkles className="w-5 h-5 text-white" />
-        </div>
+        </button>
       </div>
 
       {/* Main Workspace Tools Rail */}
@@ -246,6 +253,21 @@ export const TuitionMenuSidebar: React.FC<TuitionMenuSidebarProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Bottom Collapse Button */}
+      {onClose && (
+        <div className="mt-auto pt-2 border-t border-slate-800/80 w-full flex justify-center">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-900 transition-colors cursor-pointer"
+            title="Collapse Tuition Menu"
+            aria-label="Collapse Tuition Menu"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </aside>
   );
 };
