@@ -369,10 +369,14 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     userName: currentUserName,
     autoJoin: !isWaitingForTeacher && !loading && Boolean(session && session.status === 'live'),
     onWhiteboardSync: (elements) => {
-      setWhiteboardElements(elements);
+      setWhiteboardElements(elements || []);
     },
     onWhiteboardDraw: (element) => {
-      setWhiteboardElements((prev) => [...prev, element]);
+      if (!element || !element.id) return;
+      setWhiteboardElements((prev) => {
+        if (prev.some((e) => e.id === element.id)) return prev;
+        return [...prev, element];
+      });
     },
     onWhiteboardClear: () => {
       setWhiteboardElements([]);

@@ -103,6 +103,8 @@ export function useWebRTCClassroom({
   const socketRef = useRef<WebSocket | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const pendingCandidatesRef = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
+  const makingOfferRef = useRef<Map<string, boolean>>(new Map());
+  const iceWatchdogsRef = useRef<Map<string, any>>(new Map());
   const iceServersRef = useRef<RTCIceServerConfig[]>(getClientWebRTCConfig().iceServers);
   const heartbeatTimerRef = useRef<any>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -237,7 +239,7 @@ export function useWebRTCClassroom({
 
       pc = new RTCPeerConnection({
         iceServers: iceServersRef.current,
-        iceCandidatePoolSize: 2,
+        iceCandidatePoolSize: 4,
       });
 
       peerConnectionsRef.current.set(remotePeerId, pc);
@@ -248,6 +250,25 @@ export function useWebRTCClassroom({
           pc?.addTrack(track, localStreamRef.current!);
         });
       }
+
+      // Handle automatic renegotiation when tracks change
+      pc.onnegotiationneeded = async () => {
+        try {
+          if (pc.signalingState !== 'stable') return;
+          makingOfferRef.current.set(remotePeerId, true);
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          sendSignalling({
+            type: 'offer',
+            to: remotePeerId,
+            offer: pc.localDescription,
+          });
+        } catch (negErr) {
+          console.warn(`[WebRTC] onnegotiationneeded error for ${remotePeerId}:`, negErr);
+        } finally {
+          makingOfferRef.current.set(remotePeerId, false);
+        }
+      };
 
       // Handle remote tracks
       pc.ontrack = (event) => {
@@ -286,7 +307,7 @@ export function useWebRTCClassroom({
 
       // Handle ICE candidates generated locally
       pc.onicecandidate = (event) => {
-        if (event.candidate) {
+        if (event.candidate && event.candidate.candidate) {
           sendSignalling({
             type: 'ice-candidate',
             to: remotePeerId,
@@ -317,18 +338,76 @@ export function useWebRTCClassroom({
         }
       };
 
-      // Monitor ICE connection state with automatic restartIce recovery for mobile/Wi-Fi handover
+      // Monitor ICE connection state with automatic restartIce watchdog for mobile/Wi-Fi handover and checking hangs
       pc.oniceconnectionstatechange = async () => {
         const iceState = pc.iceConnectionState;
         console.log(`[WebRTC ICE] Peer ${remotePeerId} iceConnectionState: ${iceState}`);
 
-        if (iceState === 'disconnected' || iceState === 'failed') {
+        if (iceState === 'connected' || iceState === 'completed') {
+          // Clear watchdog timer once connected
+          if (iceWatchdogsRef.current.has(remotePeerId)) {
+            clearTimeout(iceWatchdogsRef.current.get(remotePeerId));
+            iceWatchdogsRef.current.delete(remotePeerId);
+          }
+          setParticipants((prev) => {
+            const next = new Map(prev);
+            const current = next.get(remotePeerId);
+            if (current) {
+              next.set(remotePeerId, { ...current, connectionState: 'connected' });
+            }
+            return next;
+          });
+        } else if (iceState === 'checking') {
+          // If stuck in checking for > 6 seconds, initiate auto-recovery
+          if (!iceWatchdogsRef.current.has(remotePeerId)) {
+            const timer = setTimeout(async () => {
+              iceWatchdogsRef.current.delete(remotePeerId);
+              if (pc.iceConnectionState === 'checking') {
+                console.warn(`[WebRTC ICE Watchdog] Peer ${remotePeerId} stuck in checking > 6s, restarting ICE...`);
+                try {
+                  if (typeof pc.restartIce === 'function') {
+                    pc.restartIce();
+                  }
+                  if (pc.signalingState === 'stable') {
+                    makingOfferRef.current.set(remotePeerId, true);
+                    const restartOffer = await pc.createOffer({ iceRestart: true });
+                    await pc.setLocalDescription(restartOffer);
+                    sendSignalling({
+                      type: 'offer',
+                      to: remotePeerId,
+                      offer: pc.localDescription,
+                    });
+                  }
+                } catch (recErr) {
+                  console.warn(`[WebRTC ICE Watchdog] Restart failed for ${remotePeerId}:`, recErr);
+                } finally {
+                  makingOfferRef.current.set(remotePeerId, false);
+                }
+              }
+            }, 6000);
+            iceWatchdogsRef.current.set(remotePeerId, timer);
+          }
+        } else if (iceState === 'disconnected' || iceState === 'failed') {
+          if (iceWatchdogsRef.current.has(remotePeerId)) {
+            clearTimeout(iceWatchdogsRef.current.get(remotePeerId));
+            iceWatchdogsRef.current.delete(remotePeerId);
+          }
+          setParticipants((prev) => {
+            const next = new Map(prev);
+            const current = next.get(remotePeerId);
+            if (current) {
+              next.set(remotePeerId, { ...current, connectionState: 'disconnected' });
+            }
+            return next;
+          });
+
           console.warn(`[WebRTC ICE] Peer ${remotePeerId} entered ${iceState}, attempting ICE restart...`);
           try {
             if (typeof pc.restartIce === 'function') {
               pc.restartIce();
             }
             if (pc.signalingState === 'stable') {
+              makingOfferRef.current.set(remotePeerId, true);
               const restartOffer = await pc.createOffer({ iceRestart: true });
               await pc.setLocalDescription(restartOffer);
               sendSignalling({
@@ -339,6 +418,8 @@ export function useWebRTCClassroom({
             }
           } catch (restartErr) {
             console.warn(`[WebRTC ICE] Restart attempt for ${remotePeerId} failed:`, restartErr);
+          } finally {
+            makingOfferRef.current.set(remotePeerId, false);
           }
         }
       };
@@ -448,6 +529,7 @@ export function useWebRTCClassroom({
               for (const p of data.peers) {
                 const pc = getOrCreatePeerConnection(p.peerId, p.name, p.role);
                 try {
+                  makingOfferRef.current.set(p.peerId, true);
                   const offer = await pc.createOffer({
                     offerToReceiveAudio: true,
                     offerToReceiveVideo: true,
@@ -460,6 +542,8 @@ export function useWebRTCClassroom({
                   });
                 } catch (offerErr) {
                   console.error(`[WebRTC] Failed to create offer to ${p.peerId}:`, offerErr);
+                } finally {
+                  makingOfferRef.current.set(p.peerId, false);
                 }
               }
               // Initial whiteboard sync if room has existing strokes
@@ -497,6 +581,12 @@ export function useWebRTCClassroom({
 
             case 'peer-left': {
               const { peerId } = data;
+              if (iceWatchdogsRef.current.has(peerId)) {
+                clearTimeout(iceWatchdogsRef.current.get(peerId));
+                iceWatchdogsRef.current.delete(peerId);
+              }
+              makingOfferRef.current.delete(peerId);
+
               const pc = peerConnectionsRef.current.get(peerId);
               if (pc) {
                 pc.close();
@@ -516,6 +606,20 @@ export function useWebRTCClassroom({
               const { from, fromName, offer } = data;
               const pc = getOrCreatePeerConnection(from, fromName || 'Participant', 'student');
               try {
+                // W3C Perfect Negotiation: polite peer yields on collision, impolite peer ignores colliding offer
+                const isPolite = role !== 'host';
+                const isCollision = Boolean(makingOfferRef.current.get(from)) || pc.signalingState !== 'stable';
+
+                if (isCollision && !isPolite) {
+                  console.warn(`[WebRTC] Glare collision on impolite host from ${from}, ignoring colliding offer`);
+                  break;
+                }
+
+                if (isCollision && isPolite) {
+                  console.log(`[WebRTC] Glare collision on polite peer from ${from}, rolling back local offer`);
+                  await pc.setRemoteDescription({ type: 'rollback' });
+                }
+
                 await pc.setRemoteDescription(new RTCSessionDescription(offer));
                 await drainCandidateQueue(from, pc);
 
@@ -537,8 +641,10 @@ export function useWebRTCClassroom({
               const pc = peerConnectionsRef.current.get(from);
               if (pc) {
                 try {
-                  await pc.setRemoteDescription(new RTCSessionDescription(answer));
-                  await drainCandidateQueue(from, pc);
+                  if (pc.signalingState === 'have-local-offer') {
+                    await pc.setRemoteDescription(new RTCSessionDescription(answer));
+                    await drainCandidateQueue(from, pc);
+                  }
                 } catch (ansErr) {
                   console.error(`[WebRTC] Error handling answer from ${from}:`, ansErr);
                 }
@@ -548,6 +654,10 @@ export function useWebRTCClassroom({
 
             case 'ice-candidate': {
               const { from, candidate } = data;
+              if (!candidate || !candidate.candidate) {
+                // Ignore empty or end-of-candidate markers safely
+                break;
+              }
               const pc = peerConnectionsRef.current.get(from);
               if (pc && pc.remoteDescription && pc.remoteDescription.type) {
                 try {
@@ -885,6 +995,11 @@ export function useWebRTCClassroom({
       screenStream.getTracks().forEach((t) => t.stop());
       setScreenStream(null);
     }
+
+    // Clear all ICE watchdogs & active offer flags
+    iceWatchdogsRef.current.forEach((t) => clearTimeout(t));
+    iceWatchdogsRef.current.clear();
+    makingOfferRef.current.clear();
 
     // Close all peer connections
     peerConnectionsRef.current.forEach((pc) => pc.close());

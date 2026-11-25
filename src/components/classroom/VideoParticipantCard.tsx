@@ -69,7 +69,13 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
     >
       {/* Video Element */}
       <video
-        ref={videoRef}
+        ref={(el) => {
+          videoRef.current = el;
+          if (el && participant.stream && el.srcObject !== participant.stream) {
+            el.srcObject = participant.stream;
+            el.play().catch(() => {});
+          }
+        }}
         autoPlay
         playsInline
         muted={isLocal}
@@ -122,11 +128,39 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
           )}
         </div>
 
-        {participant.connectionState && participant.connectionState !== 'connected' && (
-          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/80 text-white backdrop-blur-xs">
-            {participant.connectionState}
-          </span>
-        )}
+        <div className="flex items-center gap-1">
+          {participant.connectionState && participant.connectionState !== 'connected' && (
+            <span
+              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold backdrop-blur-xs flex items-center gap-1 ${
+                participant.connectionState === 'connecting'
+                  ? 'bg-amber-500/80 text-white'
+                  : participant.connectionState === 'disconnected'
+                  ? 'bg-orange-600/90 text-white'
+                  : 'bg-rose-600/90 text-white'
+              }`}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+              {participant.connectionState === 'connecting'
+                ? 'Connecting...'
+                : participant.connectionState === 'disconnected'
+                ? 'Reconnecting...'
+                : participant.connectionState}
+            </span>
+          )}
+
+          {participant.connectionState === 'connected' && !hasLiveVideoTrack && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/80 text-white backdrop-blur-xs flex items-center gap-1">
+              <Mic className="w-2.5 h-2.5" />
+              Audio Only
+            </span>
+          )}
+
+          {participant.connectionState === 'connected' && hasLiveVideoTrack && !isLocal && (
+            <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/80 text-white backdrop-blur-xs">
+              HD Live
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Bottom overlay bar: Name & Mic status */}

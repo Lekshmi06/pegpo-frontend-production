@@ -414,16 +414,13 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     lastSizeRef.current = { width, height };
     const dpr = window.devicePixelRatio || 1;
 
-    // Reset transform and fill entire canvas backing store with solid white
-    ctx.save();
+    // Reset transform to identity and fill entire canvas backing store with solid white
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width || width * dpr, canvas.height || height * dpr);
-    ctx.restore();
+    ctx.fillRect(0, 0, canvas.width || Math.floor(width * dpr), canvas.height || Math.floor(height * dpr));
 
-    // Replay elements scaled to DPR
-    ctx.save();
-    ctx.scale(dpr, dpr);
+    // Replay elements scaled strictly to DPR (idempotent setTransform to prevent compounding scale)
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const list = elementsToDraw !== undefined ? elementsToDraw : elementsRef.current;
     for (let i = 0; i < list.length; i++) {
       try {
@@ -432,7 +429,6 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
         console.warn('Error drawing element:', err);
       }
     }
-    ctx.restore();
   }, [drawElement]);
 
   // Expose imperative API for parent components (IntegratedSmartBoard & StandardSmartBoard)
@@ -491,17 +487,14 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       if (dataUrl) {
         const bgImg = new window.Image();
         bgImg.onload = () => {
-          ctx.save();
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.fillStyle = '#ffffff';
           ctx.fillRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-          ctx.restore();
 
           // Render any vector elements on top
           if (safeElements.length > 0) {
-            ctx.save();
-            ctx.scale(dpr, dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             for (let i = 0; i < safeElements.length; i++) {
               try {
                 drawElement(ctx, safeElements[i]);
@@ -509,7 +502,6 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
                 console.warn('Error drawing element:', err);
               }
             }
-            ctx.restore();
           }
         };
         bgImg.onerror = () => {
@@ -559,7 +551,10 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     if (remoteElements !== undefined) {
       setElements(remoteElements);
       elementsRef.current = remoteElements;
-      renderAllElements(remoteElements);
+      // Protect active user stroke from being erased mid-draw
+      if (!isDrawingRef.current) {
+        renderAllElements(remoteElements);
+      }
     }
   }, [remoteElements, renderAllElements]);
 
@@ -573,10 +568,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     const dpr = window.devicePixelRatio || 1;
     const { width, height } = lastSizeRef.current;
 
-    ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width || width * dpr, canvas.height || height * dpr);
-    ctx.restore();
+    ctx.clearRect(0, 0, canvas.width || Math.floor(width * dpr), canvas.height || Math.floor(height * dpr));
 
     if (!selectedId) return;
 
@@ -584,8 +577,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     const el = list.find((item) => item.id === selectedId);
     if (!el) return;
 
-    ctx.save();
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     const bounds = getElementBounds(el);
     const pad = 6;
@@ -613,8 +605,6 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       ctx.fill();
       ctx.stroke();
     }
-
-    ctx.restore();
   }, []);
 
   const handleSelectTool = (tool: ToolType) => {
@@ -687,12 +677,12 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
 
     const mainCtx = mainCanvas.getContext('2d');
     if (mainCtx) {
-      mainCtx.scale(dpr, dpr);
+      mainCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     const previewCtx = previewCanvas.getContext('2d');
     if (previewCtx) {
-      previewCtx.scale(dpr, dpr);
+      previewCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
     renderAllElements();
@@ -702,17 +692,27 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
   }, [renderAllElements, renderSelectionOverlay]);
 
   useEffect(() => {
-    handleResize();
+    let animFrame: number;
+    const debouncedResize = () => {
+      cancelAnimationFrame(animFrame);
+      animFrame = requestAnimationFrame(() => {
+        handleResize();
+      });
+    };
+
+    debouncedResize();
+
     const observer = new ResizeObserver(() => {
-      handleResize();
+      debouncedResize();
     });
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
-    window.addEventListener('resize', handleResize);
+    window.addEventListener('resize', debouncedResize);
     return () => {
+      cancelAnimationFrame(animFrame);
       observer.disconnect();
-      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('resize', debouncedResize);
     };
   }, [handleResize]);
 
@@ -852,6 +852,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       if (mainCanvas) {
         const ctx = mainCanvas.getContext('2d');
         if (ctx) {
+          const dpr = window.devicePixelRatio || 1;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.save();
           if (activeTool === 'highlighter') {
             ctx.globalAlpha = 0.35;
@@ -1035,6 +1037,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       if (mainCanvas) {
         const ctx = mainCanvas.getContext('2d');
         if (ctx) {
+          const dpr = window.devicePixelRatio || 1;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
           ctx.save();
           if (current.tool === 'highlighter') {
             ctx.globalAlpha = 0.35;
@@ -1072,8 +1076,10 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       const pCtx = previewCanvas.getContext('2d');
       if (!pCtx) return;
 
-      const { width, height } = lastSizeRef.current;
-      pCtx.clearRect(0, 0, width, height);
+      const dpr = window.devicePixelRatio || 1;
+      pCtx.setTransform(1, 0, 0, 1, 0, 0);
+      pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      pCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       if (current.tool === 'rect' || current.tool === 'circle') {
         if (current.x !== undefined && current.y !== undefined) {
