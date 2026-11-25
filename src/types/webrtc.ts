@@ -163,7 +163,7 @@ export type SignallingIncomingMessage =
       isVideoMuted: boolean;
     }
   | {
-      type: 'chat-message';
+      type: 'chat-message' | 'chat:message';
       id: string;
       senderId: string;
       senderName: string;

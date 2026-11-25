@@ -19,6 +19,7 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [, setTrackUpdateCount] = useState(0);
 
   useEffect(() => {
     const videoEl = videoRef.current;
@@ -42,22 +43,40 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
           });
       }
 
-      // Re-trigger play on dynamic track additions/removals
+      // Re-trigger play on dynamic track additions/removals and mobile mute/unmute
       const handleTrackChange = () => {
-        if (videoRef.current && videoRef.current.paused) {
+        if (videoRef.current) {
+          if (videoRef.current.srcObject !== participant.stream) {
+            videoRef.current.srcObject = participant.stream || null;
+          }
           videoRef.current.play().catch(() => {});
         }
+        setTrackUpdateCount((prev) => prev + 1);
       };
+
       participant.stream.addEventListener('addtrack', handleTrackChange);
       participant.stream.addEventListener('removetrack', handleTrackChange);
+
+      const tracks = participant.stream.getTracks();
+      tracks.forEach((track) => {
+        track.addEventListener('unmute', handleTrackChange);
+        track.addEventListener('mute', handleTrackChange);
+        track.addEventListener('ended', handleTrackChange);
+      });
+
       return () => {
         participant.stream?.removeEventListener('addtrack', handleTrackChange);
         participant.stream?.removeEventListener('removetrack', handleTrackChange);
+        tracks.forEach((track) => {
+          track.removeEventListener('unmute', handleTrackChange);
+          track.removeEventListener('mute', handleTrackChange);
+          track.removeEventListener('ended', handleTrackChange);
+        });
       };
     } else {
       videoEl.srcObject = null;
     }
-  }, [participant.stream, isLocal]);
+  }, [participant.stream, isLocal, className]);
 
   const handleEnableAudio = () => {
     if (videoRef.current) {
@@ -72,7 +91,7 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
 
   const hasLiveVideoTrack = Boolean(
     participant.stream &&
-      participant.stream.getVideoTracks().some((t) => t.enabled && t.readyState === 'live')
+      participant.stream.getVideoTracks().some((t) => t.enabled && t.readyState !== 'ended')
   );
   const isVideoOff = participant.isVideoMuted || !participant.stream || !hasLiveVideoTrack;
 

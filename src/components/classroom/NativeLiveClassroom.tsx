@@ -777,6 +777,8 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                         : "View Only — Teacher drawing mode"
                     }
                     onRequestSync={requestWhiteboardSync}
+                    isOpen={true}
+                    isExpanded={true}
                   />
                 </div>
               )}
@@ -951,6 +953,8 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                               : "View Only — Teacher drawing mode"
                           }
                           onRequestSync={requestWhiteboardSync}
+                          isOpen={smartboardState === 'open'}
+                          isExpanded={false}
                         />
                       </div>
                     )}
@@ -1205,7 +1209,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                       onClose={() => setIsChatOpen(false)}
                       messages={chatMessages}
                       onSendMessage={sendChatMessage}
-                      currentUserId={currentUserId}
+                      currentUserId={currentUserId || (isHost ? 'host' : 'student')}
                       alternateUserId={(currentUser as any)?._id}
                       isDocked={true}
                     />

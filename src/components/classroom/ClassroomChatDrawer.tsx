@@ -362,11 +362,12 @@ export const ClassroomChatDrawer: React.FC<ClassroomChatDrawerProps> = ({
           </div>
         ) : (
           messages.map((m) => {
-            const isMe =
-              (currentUserId && m.senderId === currentUserId) ||
-              (alternateUserId && m.senderId === alternateUserId);
             const isTeacher =
               m.senderRole === 'host' || m.senderRole === 'teacher';
+            const isMe =
+              (currentUserId && m.senderId === currentUserId) ||
+              (alternateUserId && m.senderId === alternateUserId) ||
+              (m.senderId === 'host' && (currentUserId === 'host' || isTeacher));
 
             // Alignment rule: Teacher messages aligned left, Student messages aligned right
             const alignLeft = isTeacher;

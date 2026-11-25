@@ -422,14 +422,14 @@ export function useWebRTCClassroom({
           });
           console.warn(`[WebRTC ICE] Peer ${remotePeerId} iceConnectionState failed, triggering immediate ICE restart`);
           triggerIceRestart(remotePeerId, pc);
-        } else if (iceState === 'disconnected' || iceState === 'checking') {
+        } else if (iceState === 'disconnected') {
           setParticipants((prev) => {
             const next = new Map(prev);
             const current = next.get(remotePeerId);
             if (current && current.connectionState !== 'connected') {
               next.set(remotePeerId, {
                 ...current,
-                connectionState: iceState === 'checking' ? 'connecting' : 'disconnected',
+                connectionState: 'disconnected',
               });
             }
             return next;
@@ -440,15 +440,14 @@ export function useWebRTCClassroom({
               iceWatchdogsRef.current.delete(remotePeerId);
               if (
                 pc.iceConnectionState === 'disconnected' ||
-                pc.iceConnectionState === 'checking' ||
                 pc.iceConnectionState === 'failed'
               ) {
                 console.warn(
-                  `[WebRTC ICE Watchdog] Peer ${remotePeerId} in ${pc.iceConnectionState} > 4s, restarting ICE...`
+                  `[WebRTC ICE Watchdog] Peer ${remotePeerId} in ${pc.iceConnectionState} > 5s, restarting ICE...`
                 );
                 triggerIceRestart(remotePeerId, pc);
               }
-            }, 4000);
+            }, 5000);
             iceWatchdogsRef.current.set(remotePeerId, timer);
           }
         }
@@ -539,24 +538,32 @@ export function useWebRTCClassroom({
             case 'room-state': {
               myPeerIdRef.current = data.self.peerId;
 
-              // Populate initial participants
+              // Populate initial participants, preserving existing streams if already established
               setParticipants((prev) => {
                 const next = new Map(prev);
                 data.peers.forEach((p) => {
+                  const existing = next.get(p.peerId);
                   next.set(p.peerId, {
+                    ...(existing || {}),
                     peerId: p.peerId,
                     name: p.name,
                     role: p.role,
                     isMicMuted: p.isMicMuted,
                     isVideoMuted: p.isVideoMuted,
-                    connectionState: 'connecting',
+                    connectionState: existing?.connectionState || 'connecting',
+                    stream: existing?.stream,
                   });
                 });
                 return next;
               });
 
-              // As the newly joined peer, initiate WebRTC offer to each existing peer
+              // As the newly joined peer, initiate WebRTC offer to each existing peer (if not already connected)
               for (const p of data.peers) {
+                const existingPc = peerConnectionsRef.current.get(p.peerId);
+                if (existingPc && (existingPc.connectionState === 'connected' || existingPc.iceConnectionState === 'connected')) {
+                  console.log(`[WebRTC] Peer ${p.peerId} already connected; preserving existing peer connection.`);
+                  continue;
+                }
                 const pc = getOrCreatePeerConnection(p.peerId, p.name, p.role);
                 try {
                   makingOfferRef.current.set(p.peerId, true);
@@ -602,13 +609,27 @@ export function useWebRTCClassroom({
               const { peer } = data;
               setParticipants((prev) => {
                 const next = new Map(prev);
+                const existing = next.get(peer.peerId);
+                if (existing && (existing.connectionState === 'connected' || existing.stream)) {
+                  // Do not tear down an active connected stream on duplicate peer-joined from mobile visibilitychange/resize
+                  next.set(peer.peerId, {
+                    ...existing,
+                    name: peer.name || existing.name,
+                    role: peer.role || existing.role,
+                    isMicMuted: peer.isMicMuted ?? existing.isMicMuted,
+                    isVideoMuted: peer.isVideoMuted ?? existing.isVideoMuted,
+                  });
+                  return next;
+                }
                 next.set(peer.peerId, {
+                  ...(existing || {}),
                   peerId: peer.peerId,
                   name: peer.name,
                   role: peer.role,
                   isMicMuted: peer.isMicMuted,
                   isVideoMuted: peer.isVideoMuted,
-                  connectionState: 'connecting',
+                  connectionState: existing?.connectionState || 'connecting',
+                  stream: existing?.stream,
                 });
                 return next;
               });
@@ -727,7 +748,8 @@ export function useWebRTCClassroom({
               break;
             }
 
-            case 'chat-message': {
+            case 'chat-message':
+            case 'chat:message': {
               setChatMessages((prev) => {
                 if (prev.some((m) => m.id === data.id)) return prev;
                 return [
@@ -986,16 +1008,41 @@ export function useWebRTCClassroom({
     ) => {
       const cleanText = text?.trim() || '';
       if (!cleanText && !metadata?.voiceUrl && !metadata?.attachment) return;
+
+      const clientMsgId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      const now = new Date().toISOString();
+      const messageType = metadata?.messageType || (metadata?.voiceUrl ? 'voice' : metadata?.attachment ? 'attachment' : 'text');
+
+      // Optimistically append message to local chatMessages stream so sender (teacher or student) sees it immediately
+      const optimisticMsg: ClassroomChatMessage = {
+        id: clientMsgId,
+        senderId: myPeerIdRef.current || (role === 'host' ? 'host' : 'student'),
+        senderName: userName || (role === 'host' ? 'Teacher' : 'Student'),
+        senderRole: role,
+        text: cleanText,
+        messageType,
+        voiceUrl: metadata?.voiceUrl,
+        voiceDuration: metadata?.voiceDuration,
+        attachment: metadata?.attachment,
+        timestamp: now,
+      };
+
+      setChatMessages((prev) => {
+        if (prev.some((m) => m.id === clientMsgId)) return prev;
+        return [...prev, optimisticMsg];
+      });
+
       sendSignalling({
         type: 'chat-message',
+        id: clientMsgId,
         text: cleanText,
-        messageType: metadata?.messageType || (metadata?.voiceUrl ? 'voice' : metadata?.attachment ? 'attachment' : 'text'),
+        messageType,
         voiceUrl: metadata?.voiceUrl,
         voiceDuration: metadata?.voiceDuration,
         attachment: metadata?.attachment,
       });
     },
-    [sendSignalling]
+    [sendSignalling, role, userName]
   );
 
   const broadcastWhiteboardDraw = useCallback(

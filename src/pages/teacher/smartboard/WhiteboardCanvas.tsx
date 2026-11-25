@@ -243,6 +243,8 @@ export interface WhiteboardCanvasProps {
   canDraw?: boolean;
   drawPermissionNotice?: string;
   onRequestSync?: () => void;
+  isOpen?: boolean;
+  isExpanded?: boolean;
 }
 
 const COLOR_PALETTE = [
@@ -277,10 +279,13 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       canDraw = true,
       drawPermissionNotice,
       onRequestSync,
+      isOpen,
+      isExpanded,
     },
     ref
   ) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -669,14 +674,18 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     }
   }, [onSave, renderAllElements, renderSelectionOverlay]);
 
-  // Resize canvases strictly to parent container while preserving DPI and avoiding unnecessary buffer resets
+  // Resize canvases strictly to parent container / wrapper while preserving DPI and avoiding unnecessary buffer resets
   const handleResize = useCallback(() => {
+    const wrapper = canvasWrapperRef.current;
     const container = containerRef.current;
     const mainCanvas = mainCanvasRef.current;
     const previewCanvas = previewCanvasRef.current;
-    if (!container || !mainCanvas || !previewCanvas) return;
+    if (!mainCanvas || !previewCanvas) return;
 
-    const rect = container.getBoundingClientRect();
+    const targetEl = wrapper || container;
+    if (!targetEl) return;
+
+    const rect = targetEl.getBoundingClientRect();
     const width = Math.floor(rect.width);
     const height = Math.floor(rect.height);
     if (width <= 0 || height <= 0) return;
@@ -725,26 +734,54 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     };
 
     debouncedResize();
+    const t1 = setTimeout(debouncedResize, 50);
+    const t2 = setTimeout(debouncedResize, 150);
+    const t3 = setTimeout(debouncedResize, 350);
+    const t4 = setTimeout(debouncedResize, 600);
 
     const observer = new ResizeObserver(() => {
       debouncedResize();
     });
+    if (canvasWrapperRef.current) {
+      observer.observe(canvasWrapperRef.current);
+    }
     if (containerRef.current) {
       observer.observe(containerRef.current);
     }
     window.addEventListener('resize', debouncedResize);
     return () => {
       cancelAnimationFrame(animFrame);
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
       observer.disconnect();
       window.removeEventListener('resize', debouncedResize);
     };
   }, [handleResize]);
 
+  // Additional multi-frame initialization when isOpen or isExpanded changes (e.g. Dual-Dock or Expand toggles)
+  useEffect(() => {
+    handleResize();
+    const t1 = setTimeout(handleResize, 50);
+    const t2 = setTimeout(handleResize, 150);
+    const t3 = setTimeout(handleResize, 350);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [isOpen, isExpanded, handleResize]);
+
   // Compute pointer position in CSS coordinates
   const getCanvasCoords = (e: React.PointerEvent<HTMLCanvasElement>): { x: number; y: number } => {
     const canvas = mainCanvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
+    let rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0 || canvas.width === 0 || canvas.height === 0) {
+      handleResize();
+      rect = canvas.getBoundingClientRect();
+    }
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -754,6 +791,12 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
   // 1. Pointer Down: Selection or start stroke/shape
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (canDraw === false) return;
+
+    // Safety check: ensure canvas dimensions are properly initialized if mounted during CSS transitions
+    const mainCanvas = mainCanvasRef.current;
+    if (!mainCanvas || mainCanvas.width === 0 || mainCanvas.height === 0 || lastSizeRef.current.width === 0) {
+      handleResize();
+    }
 
     // If text input is open, commit first
     if (textInput) {
@@ -1710,7 +1753,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
       </div>
 
       {/* Canvas Layer Container */}
-      <div className="relative flex-1 w-full h-full">
+      <div ref={canvasWrapperRef} className="relative flex-1 w-full h-full">
         {/* Layer 1: Base Persistent Canvas (Solid white background, committed strokes) */}
         <canvas
           ref={mainCanvasRef}
