@@ -120,6 +120,9 @@ export type SignallingIncomingMessage =
         isVideoMuted: boolean;
       }>;
       whiteboardState?: any[];
+      allowStudentBoardDraw?: boolean;
+      studentBoardPermissions?: Record<string, boolean>;
+      canDrawWhiteboard?: boolean;
       chatHistory?: ClassroomChatMessage[];
       activeAssessments?: InMeetingAssessment[];
     }
@@ -195,6 +198,13 @@ export type SignallingIncomingMessage =
       type: 'whiteboard:sync-state' | 'whiteboard-sync';
       senderId?: string;
       elements: any[];
+    }
+  | {
+      type: 'whiteboard:permission' | 'board-permission-changed';
+      allowStudentBoardDraw?: boolean;
+      studentBoardPermissions?: Record<string, boolean>;
+      targetStudentId?: string;
+      allowed?: boolean;
     }
   | {
       type: 'assessment:published';

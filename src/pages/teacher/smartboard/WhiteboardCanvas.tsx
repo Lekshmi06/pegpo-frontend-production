@@ -16,6 +16,7 @@ import {
   Download,
   Highlighter,
   MousePointer2,
+  Lock,
 } from 'lucide-react';
 
 export type ToolType = 'select' | 'pen' | 'highlighter' | 'eraser' | 'text' | 'rect' | 'circle' | 'line' | 'arrow';
@@ -239,6 +240,9 @@ export interface WhiteboardCanvasProps {
   onClearBoard?: () => void;
   onUndoBoard?: (remainingElements: CanvasElement[]) => void;
   onSyncState?: (elements: CanvasElement[]) => void;
+  canDraw?: boolean;
+  drawPermissionNotice?: string;
+  onRequestSync?: () => void;
 }
 
 const COLOR_PALETTE = [
@@ -260,7 +264,22 @@ const STROKE_WIDTHS = [
 ];
 
 export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvasProps>(
-  ({ className, onSave, initialElements, remoteElements, onDrawStroke, onClearBoard, onUndoBoard, onSyncState }, ref) => {
+  (
+    {
+      className,
+      onSave,
+      initialElements,
+      remoteElements,
+      onDrawStroke,
+      onClearBoard,
+      onUndoBoard,
+      onSyncState,
+      canDraw = true,
+      drawPermissionNotice,
+      onRequestSync,
+    },
+    ref
+  ) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mainCanvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -538,6 +557,11 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
   }));
 
   // Sync initialElements when provided by parent
+  // Request fresh board synchronization on mount
+  useEffect(() => {
+    onRequestSync?.();
+  }, [onRequestSync]);
+
   useEffect(() => {
     if (initialElements && initialElements.length > 0) {
       setElements(initialElements);
@@ -729,6 +753,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
 
   // 1. Pointer Down: Selection or start stroke/shape
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (canDraw === false) return;
+
     // If text input is open, commit first
     if (textInput) {
       commitText();
@@ -898,6 +924,8 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
 
   // 2. Pointer Move: Select drag/resize or drawing stroke
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (canDraw === false) return;
+
     const { x, y } = getCanvasCoords(e);
 
     if (activeTool === 'select') {
@@ -1461,185 +1489,207 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
     >
       {/* Top Floating Whiteboard Toolbar */}
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1.5 p-1.5 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-lg transition-all flex-wrap max-w-[95%]">
-        {/* Drawing & Selection Tools */}
-        <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
-          <button
-            onClick={() => handleSelectTool('select')}
-            title="Select & Move (V)"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'select' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <MousePointer2 className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('pen')}
-            title="Pen Tool (P)"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'pen' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Pen className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('highlighter')}
-            title="Highlighter Tool"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'highlighter' ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Highlighter className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('eraser')}
-            title="Eraser Tool"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'eraser' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Eraser className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('text')}
-            title="Text Tool"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'text' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Type className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Shapes */}
-        <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
-          <button
-            onClick={() => handleSelectTool('rect')}
-            title="Rectangle"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'rect' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Square className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('circle')}
-            title="Circle"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'circle' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Circle className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('line')}
-            title="Line"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'line' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => handleSelectTool('arrow')}
-            title="Arrow"
-            className={`p-2 rounded-xl transition-all cursor-pointer ${
-              activeTool === 'arrow' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <MoveRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Color Palette */}
-        <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
-          {COLOR_PALETTE.map((c) => (
+        {canDraw === false ? (
+          <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-xs font-semibold">
+            <Lock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+            <span className="truncate max-w-[240px] sm:max-w-none">
+              {drawPermissionNotice || "View Only — Teacher drawing mode"}
+            </span>
             <button
-              key={c}
-              onClick={() => setSelectedColor(c)}
-              title={`Select color: ${c}`}
-              className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
-                selectedColor === c ? 'scale-125 ring-2 ring-[#0091ff] ring-offset-1 border-slate-400' : 'border-slate-300 hover:scale-110'
-              }`}
-              style={{ backgroundColor: c }}
-            />
-          ))}
-        </div>
-
-        {/* Stroke Width Selector */}
-        <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
-          {STROKE_WIDTHS.map((s) => (
-            <button
-              key={s.label}
-              onClick={() => setStrokeWidth(s.width)}
-              title={`Line width: ${s.width}px`}
-              className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
-                strokeWidth === s.width ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
-              }`}
+              onClick={() => onRequestSync?.()}
+              title="Refresh board state"
+              className="ml-1 text-amber-700 hover:text-amber-900 underline text-xs font-medium cursor-pointer"
             >
-              {s.label}
+              Sync
             </button>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <>
+            {/* Drawing & Selection Tools */}
+            <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
+              <button
+                onClick={() => handleSelectTool('select')}
+                title="Select & Move (V)"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'select' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <MousePointer2 className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('pen')}
+                title="Pen Tool (P)"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'pen' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Pen className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('highlighter')}
+                title="Highlighter Tool"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'highlighter' ? 'bg-amber-500 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Highlighter className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('eraser')}
+                title="Eraser Tool"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'eraser' ? 'bg-rose-600 text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Eraser className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('text')}
+                title="Text Tool"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'text' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Type className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Shapes */}
+            <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
+              <button
+                onClick={() => handleSelectTool('rect')}
+                title="Rectangle"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'rect' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Square className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('circle')}
+                title="Circle"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'circle' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Circle className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('line')}
+                title="Line"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'line' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => handleSelectTool('arrow')}
+                title="Arrow"
+                className={`p-2 rounded-xl transition-all cursor-pointer ${
+                  activeTool === 'arrow' ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                <MoveRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Color Palette */}
+            <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => setSelectedColor(c)}
+                  title={`Select color: ${c}`}
+                  className={`w-5 h-5 rounded-full border transition-all cursor-pointer ${
+                    selectedColor === c ? 'scale-125 ring-2 ring-[#0091ff] ring-offset-1 border-slate-400' : 'border-slate-300 hover:scale-110'
+                  }`}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+
+            {/* Stroke Width Selector */}
+            <div className="flex items-center gap-1 border-r border-slate-200 pr-1.5">
+              {STROKE_WIDTHS.map((s) => (
+                <button
+                  key={s.label}
+                  onClick={() => setStrokeWidth(s.width)}
+                  title={`Line width: ${s.width}px`}
+                  className={`w-7 h-7 rounded-lg text-[10px] font-black transition-all cursor-pointer ${
+                    strokeWidth === s.width ? 'bg-[#214d7d] text-white shadow-2xs' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* Actions: Delete Selected, Undo, Redo, Image, Clear, Export, Fullscreen */}
         <div className="flex items-center gap-1">
-          {selectedElementId && (
-            <button
-              onClick={handleDeleteSelected}
-              title="Delete Selected Object (Del / Backspace)"
-              className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 bg-rose-50/70 border border-rose-200 transition-all cursor-pointer animate-in fade-in"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+          {canDraw !== false && (
+            <>
+              {selectedElementId && (
+                <button
+                  onClick={handleDeleteSelected}
+                  title="Delete Selected Object (Del / Backspace)"
+                  className="p-2 rounded-xl text-rose-600 hover:bg-rose-50 bg-rose-50/70 border border-rose-200 transition-all cursor-pointer animate-in fade-in"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+
+              <button
+                onClick={handleUndo}
+                disabled={undoStack.length === 0 && elements.length === 0}
+                title="Undo"
+                className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={handleRedo}
+                disabled={redoStack.length === 0}
+                title="Redo"
+                className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
+              >
+                <RotateCw className="w-4 h-4" />
+              </button>
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title="Insert Image"
+                className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <ImageIcon className="w-4 h-4" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+
+              <button
+                onClick={handleClear}
+                title="Clear Whiteboard"
+                className="p-2 rounded-xl text-slate-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
           )}
-
-          <button
-            onClick={handleUndo}
-            disabled={undoStack.length === 0 && elements.length === 0}
-            title="Undo"
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={handleRedo}
-            disabled={redoStack.length === 0}
-            title="Redo"
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer"
-          >
-            <RotateCw className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            title="Insert Image"
-            className="p-2 rounded-xl text-slate-600 hover:bg-slate-100 cursor-pointer"
-          >
-            <ImageIcon className="w-4 h-4" />
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            className="hidden"
-          />
-
-          <button
-            onClick={handleClear}
-            title="Clear Whiteboard"
-            className="p-2 rounded-xl text-slate-600 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
 
           <button
             onClick={handleExport}
@@ -1668,7 +1718,7 @@ export const WhiteboardCanvas = forwardRef<WhiteboardCanvasRef, WhiteboardCanvas
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
-          style={{ cursor: canvasCursor }}
+          style={{ cursor: canDraw === false ? 'default' : canvasCursor }}
           className="absolute inset-0 w-full h-full touch-none"
         />
 

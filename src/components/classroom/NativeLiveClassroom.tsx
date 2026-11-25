@@ -358,6 +358,12 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     broadcastWhiteboardDraw,
     broadcastWhiteboardClear,
     broadcastWhiteboardUndo,
+    retryMedia,
+    allowStudentBoardDraw,
+    studentBoardPermissions,
+    canDrawWhiteboard,
+    setBoardDrawingPermission,
+    requestWhiteboardSync,
     activeAssessments,
     studentSubmissions,
     publishAssessment,
@@ -556,7 +562,9 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
           <button
             onClick={() => {
               if (expandedWindow) setExpandedWindow(null);
-              setSmartboardState(smartboardState === 'open' ? 'closed' : 'open');
+              const nextState = smartboardState === 'open' ? 'closed' : 'open';
+              setSmartboardState(nextState);
+              if (nextState === 'open') requestWhiteboardSync();
             }}
             className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
               smartboardState === 'open'
@@ -656,7 +664,11 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
             smartboardState={smartboardState}
             onToggleSmartboard={() => {
               if (expandedWindow) setExpandedWindow(null);
-              setSmartboardState((prev) => (prev === 'open' ? 'closed' : 'open'));
+              setSmartboardState((prev) => {
+                const nextState = prev === 'open' ? 'closed' : 'open';
+                if (nextState === 'open') requestWhiteboardSync();
+                return nextState;
+              });
             }}
             teacherLmsState={teacherLmsState}
             onToggleTeacherLms={() => {
@@ -711,6 +723,31 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
               <span className="text-xs font-bold text-amber-300 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
                 Focused Window: {expandedWindow.replace('_', ' ').toUpperCase()}
+                {expandedWindow === 'smartboard' && (
+                  isHost ? (
+                    <button
+                      onClick={() => setBoardDrawingPermission(!allowStudentBoardDraw)}
+                      className={`ml-2 px-2 py-0.5 rounded text-[10px] font-bold transition-all border cursor-pointer ${
+                        allowStudentBoardDraw
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                      }`}
+                      title={allowStudentBoardDraw ? 'Click to disable student drawing' : 'Click to allow students to draw on SmartBoard'}
+                    >
+                      {allowStudentBoardDraw ? '✏️ Student Draw: ON' : '🔒 Student Draw: OFF'}
+                    </button>
+                  ) : (
+                    <span
+                      className={`ml-2 px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        canDrawWhiteboard
+                          ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                          : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                      }`}
+                    >
+                      {canDrawWhiteboard ? '✏️ Drawing Enabled' : '🔒 View Only'}
+                    </span>
+                  )
+                )}
               </span>
               <button
                 onClick={() => setExpandedWindow(null)}
@@ -731,6 +768,15 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                     onClearBoard={() => broadcastWhiteboardClear()}
                     onUndoBoard={(remaining) => broadcastWhiteboardUndo(remaining)}
                     onSyncState={(allEls) => broadcastWhiteboardData(allEls)}
+                    canDraw={canDrawWhiteboard}
+                    drawPermissionNotice={
+                      isHost
+                        ? undefined
+                        : canDrawWhiteboard
+                        ? 'Drawing Enabled by Teacher'
+                        : "View Only — Teacher drawing mode"
+                    }
+                    onRequestSync={requestWhiteboardSync}
                   />
                 </div>
               )}
@@ -780,6 +826,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                       participant={teacherParticipant}
                       isLocal={isHost}
                       className="w-full h-full"
+                      onRetryMedia={() => retryMedia(teacherParticipant?.peerId)}
                     />
                   )}
 
@@ -802,6 +849,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                           participant={studentParticipant}
                           isLocal={!isHost}
                           className="w-full h-full"
+                          onRetryMedia={() => retryMedia(studentParticipant?.peerId)}
                         />
                       </div>
                     </div>
@@ -832,6 +880,29 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                       <div className="flex items-center gap-2">
                         <Presentation className="w-4 h-4 text-amber-400" />
                         <span className="font-bold">Interactive SmartBoard</span>
+                        {isHost ? (
+                          <button
+                            onClick={() => setBoardDrawingPermission(!allowStudentBoardDraw)}
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all border cursor-pointer ${
+                              allowStudentBoardDraw
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30'
+                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                            }`}
+                            title={allowStudentBoardDraw ? 'Click to disable student drawing' : 'Click to allow students to draw on SmartBoard'}
+                          >
+                            {allowStudentBoardDraw ? '✏️ Student Draw: ON' : '🔒 Student Draw: OFF'}
+                          </button>
+                        ) : (
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              canDrawWhiteboard
+                                ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                            }`}
+                          >
+                            {canDrawWhiteboard ? '✏️ Drawing Enabled' : '🔒 View Only'}
+                          </span>
+                        )}
                         <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/10 text-amber-300 border border-amber-500/20">
                           Dual-Dock
                         </span>
@@ -871,6 +942,15 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                           onClearBoard={() => broadcastWhiteboardClear()}
                           onUndoBoard={(remaining) => broadcastWhiteboardUndo(remaining)}
                           onSyncState={(allEls) => broadcastWhiteboardData(allEls)}
+                          canDraw={canDrawWhiteboard}
+                          drawPermissionNotice={
+                            isHost
+                              ? undefined
+                              : canDrawWhiteboard
+                              ? 'Drawing Enabled by Teacher'
+                              : "View Only — Teacher drawing mode"
+                          }
+                          onRequestSync={requestWhiteboardSync}
                         />
                       </div>
                     )}
@@ -1049,6 +1129,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                           participant={teacherParticipant}
                           isLocal={isHost}
                           className="w-full h-full"
+                          onRetryMedia={() => retryMedia(teacherParticipant?.peerId)}
                         />
                       )}
 
@@ -1072,6 +1153,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
                               participant={studentParticipant}
                               isLocal={!isHost}
                               className="w-full h-full"
+                              onRetryMedia={() => retryMedia(studentParticipant?.peerId)}
                             />
                           </div>
                         </div>
@@ -1140,6 +1222,10 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
           onClose={() => setIsParticipantsOpen(false)}
           participants={participants}
           localParticipant={localParticipant}
+          isHost={Boolean(isHost)}
+          allowStudentBoardDraw={allowStudentBoardDraw}
+          studentBoardPermissions={studentBoardPermissions}
+          onToggleStudentDraw={(studentId, allowed) => setBoardDrawingPermission(allowed, studentId)}
         />
 
         {/* Class Brief & People Drawer */}

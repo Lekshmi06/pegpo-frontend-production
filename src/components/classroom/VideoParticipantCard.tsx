@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Mic, MicOff, VideoOff, ShieldCheck, User, VolumeX } from 'lucide-react';
+import { Mic, MicOff, VideoOff, ShieldCheck, User, VolumeX, RotateCcw, AlertCircle } from 'lucide-react';
 import { ICallParticipant } from '../../types/webrtc';
 
 interface VideoParticipantCardProps {
@@ -7,6 +7,7 @@ interface VideoParticipantCardProps {
   isLocal?: boolean;
   className?: string;
   isSpeaking?: boolean;
+  onRetryMedia?: () => void;
 }
 
 export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
@@ -14,6 +15,7 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
   isLocal = false,
   className = '',
   isSpeaking = false,
+  onRetryMedia,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -39,6 +41,19 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
             }
           });
       }
+
+      // Re-trigger play on dynamic track additions/removals
+      const handleTrackChange = () => {
+        if (videoRef.current && videoRef.current.paused) {
+          videoRef.current.play().catch(() => {});
+        }
+      };
+      participant.stream.addEventListener('addtrack', handleTrackChange);
+      participant.stream.addEventListener('removetrack', handleTrackChange);
+      return () => {
+        participant.stream?.removeEventListener('addtrack', handleTrackChange);
+        participant.stream?.removeEventListener('removetrack', handleTrackChange);
+      };
     } else {
       videoEl.srcObject = null;
     }
@@ -148,6 +163,20 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
             </span>
           )}
 
+          {participant.connectionState === 'failed' && onRetryMedia && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetryMedia();
+              }}
+              className="pointer-events-auto px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white flex items-center gap-1 hover:bg-rose-500 shadow-md cursor-pointer transition-colors"
+              title="Click to restart WebRTC media connection"
+            >
+              <RotateCcw className="w-2.5 h-2.5" />
+              <span>Retry Media</span>
+            </button>
+          )}
+
           {participant.connectionState === 'connected' && !hasLiveVideoTrack && (
             <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-600/80 text-white backdrop-blur-xs flex items-center gap-1">
               <Mic className="w-2.5 h-2.5" />
@@ -162,6 +191,31 @@ export const VideoParticipantCard: React.FC<VideoParticipantCardProps> = ({
           )}
         </div>
       </div>
+
+      {/* Failed Media Connection Full Overlay & Retry Button */}
+      {participant.connectionState === 'failed' && !isLocal && (
+        <div className="absolute inset-0 z-30 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center select-none">
+          <div className="w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mb-2 border border-rose-500/30">
+            <AlertCircle className="w-6 h-6 animate-pulse" />
+          </div>
+          <span className="text-white text-xs font-bold mb-1">Media Connection Failed</span>
+          <p className="text-[11px] text-slate-300 mb-3 max-w-[210px] leading-relaxed">
+            Direct audio/video channel timed out. Click below to re-negotiate media.
+          </p>
+          {onRetryMedia && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onRetryMedia();
+              }}
+              className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold shadow-lg transition-transform hover:scale-105 cursor-pointer flex items-center gap-1.5 pointer-events-auto"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retry Media</span>
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Bottom overlay bar: Name & Mic status */}
       <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2.5 flex items-center justify-between text-white z-20">

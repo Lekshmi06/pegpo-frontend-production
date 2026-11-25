@@ -21,17 +21,26 @@ export function getClientWebRTCConfig(): WebRTCConfiguration {
   const turnUsername = import.meta.env.VITE_TURN_USERNAME;
   const turnCredential = import.meta.env.VITE_TURN_CREDENTIAL;
 
-  if (turnUrl) {
+  if (turnUrl && typeof turnUrl === 'string') {
     const urls = turnUrl
       .split(/[,\s]+/)
       .map((u: string) => u.trim())
       .filter(Boolean);
 
     if (urls.length > 0) {
+      // Add grouped config for modern clients
       const turnConfig: RTCIceServerConfig = { urls };
       if (turnUsername) turnConfig.username = turnUsername;
       if (turnCredential) turnConfig.credential = turnCredential;
       iceServers.push(turnConfig);
+
+      // Add individual server configs to maximize compatibility across WebRTC stacks
+      urls.forEach((singleUrl) => {
+        const singleConfig: RTCIceServerConfig = { urls: singleUrl };
+        if (turnUsername) singleConfig.username = turnUsername;
+        if (turnCredential) singleConfig.credential = turnCredential;
+        iceServers.push(singleConfig);
+      });
     }
   }
 

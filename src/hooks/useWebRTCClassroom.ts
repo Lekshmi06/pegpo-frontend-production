@@ -63,6 +63,7 @@ export interface UseWebRTCClassroomOptions {
   onAssessmentGraded?: (assessmentId: string, submission: InMeetingSubmission) => void;
   onAssessmentResults?: (assessmentId: string, submissions: InMeetingSubmission[]) => void;
   onAssessmentClosed?: (assessmentId: string) => void;
+  onBoardPermissionChanged?: (allowStudentBoardDraw: boolean, studentBoardPermissions: Record<string, boolean>) => void;
 }
 
 export function useWebRTCClassroom({
@@ -80,6 +81,7 @@ export function useWebRTCClassroom({
   onAssessmentGraded,
   onAssessmentResults,
   onAssessmentClosed,
+  onBoardPermissionChanged,
 }: UseWebRTCClassroomOptions) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [screenStream, setScreenStream] = useState<MediaStream | null>(null);
@@ -93,6 +95,8 @@ export function useWebRTCClassroom({
   const [chatMessages, setChatMessages] = useState<ClassroomChatMessage[]>([]);
   const [activeAssessments, setActiveAssessments] = useState<InMeetingAssessment[]>([]);
   const [studentSubmissions, setStudentSubmissions] = useState<Map<string, InMeetingSubmission>>(new Map());
+  const [allowStudentBoardDraw, setAllowStudentBoardDraw] = useState<boolean>(false);
+  const [studentBoardPermissions, setStudentBoardPermissions] = useState<Record<string, boolean>>({});
   const [connectionStatus, setConnectionStatus] = useState<
     'idle' | 'connecting' | 'connected' | 'reconnecting' | 'failed' | 'disconnected'
   >('idle');
@@ -132,6 +136,16 @@ export function useWebRTCClassroom({
   onAssessmentResultsRef.current = onAssessmentResults;
   const onAssessmentClosedRef = useRef(onAssessmentClosed);
   onAssessmentClosedRef.current = onAssessmentClosed;
+  const onBoardPermissionChangedRef = useRef(onBoardPermissionChanged);
+  onBoardPermissionChangedRef.current = onBoardPermissionChanged;
+
+  const canDrawWhiteboard =
+    role === 'host' ||
+    Boolean(
+      (myPeerIdRef.current && studentBoardPermissions[myPeerIdRef.current] !== undefined)
+        ? studentBoardPermissions[myPeerIdRef.current]
+        : allowStudentBoardDraw
+    );
 
   // 1. Initialise local media stream with graceful degradation
   const initLocalMedia = useCallback(async (): Promise<MediaStream | null> => {
@@ -229,6 +243,31 @@ export function useWebRTCClassroom({
     }
   }, []);
 
+  // Helper for immediate/watchdog-triggered ICE restart negotiation
+  const triggerIceRestart = useCallback(
+    async (targetPeerId: string, peerConn: RTCPeerConnection) => {
+      try {
+        console.warn(`[WebRTC Auto-Recovery] Triggering ICE restart for ${targetPeerId}...`);
+        if (typeof peerConn.restartIce === 'function') {
+          peerConn.restartIce();
+        }
+        makingOfferRef.current.set(targetPeerId, true);
+        const restartOffer = await peerConn.createOffer({ iceRestart: true });
+        await peerConn.setLocalDescription(restartOffer);
+        sendSignalling({
+          type: 'offer',
+          to: targetPeerId,
+          offer: peerConn.localDescription,
+        });
+      } catch (err) {
+        console.warn(`[WebRTC Auto-Recovery] ICE restart failed for ${targetPeerId}:`, err);
+      } finally {
+        makingOfferRef.current.set(targetPeerId, false);
+      }
+    },
+    [sendSignalling]
+  );
+
   // 3. Create or get RTCPeerConnection for a remote peer
   const getOrCreatePeerConnection = useCallback(
     (remotePeerId: string, remotePeerName: string, remotePeerRole: LiveClassRole): RTCPeerConnection => {
@@ -316,7 +355,7 @@ export function useWebRTCClassroom({
         }
       };
 
-      // Monitor connection state
+      // Monitor connection state: auto-restart on 'failed' or if 'disconnected' persists > 4s
       pc.onconnectionstatechange = () => {
         const state = pc?.connectionState;
         setParticipants((prev) => {
@@ -329,22 +368,33 @@ export function useWebRTCClassroom({
         });
 
         if (state === 'failed') {
-          console.warn(`[WebRTC] Peer ${remotePeerId} connection failed, attempting ICE restart`);
-          try {
-            pc?.restartIce?.();
-          } catch (err) {
-            console.warn(`[WebRTC] restartIce error for ${remotePeerId}:`, err);
+          console.warn(`[WebRTC] Peer ${remotePeerId} connectionState failed, triggering immediate ICE restart`);
+          triggerIceRestart(remotePeerId, pc);
+        } else if (state === 'disconnected') {
+          if (!iceWatchdogsRef.current.has(remotePeerId)) {
+            const timer = setTimeout(() => {
+              iceWatchdogsRef.current.delete(remotePeerId);
+              if (pc.connectionState === 'disconnected' || pc.iceConnectionState === 'disconnected') {
+                console.warn(`[WebRTC] Peer ${remotePeerId} connectionState disconnected > 4s, triggering ICE restart`);
+                triggerIceRestart(remotePeerId, pc);
+              }
+            }, 4000);
+            iceWatchdogsRef.current.set(remotePeerId, timer);
+          }
+        } else if (state === 'connected') {
+          if (iceWatchdogsRef.current.has(remotePeerId)) {
+            clearTimeout(iceWatchdogsRef.current.get(remotePeerId));
+            iceWatchdogsRef.current.delete(remotePeerId);
           }
         }
       };
 
-      // Monitor ICE connection state with automatic restartIce watchdog for mobile/Wi-Fi handover and checking hangs
+      // Monitor ICE connection state: auto-restart on 'failed' or if 'disconnected'/'checking' persists > 4s
       pc.oniceconnectionstatechange = async () => {
         const iceState = pc.iceConnectionState;
         console.log(`[WebRTC ICE] Peer ${remotePeerId} iceConnectionState: ${iceState}`);
 
         if (iceState === 'connected' || iceState === 'completed') {
-          // Clear watchdog timer once connected
           if (iceWatchdogsRef.current.has(remotePeerId)) {
             clearTimeout(iceWatchdogsRef.current.get(remotePeerId));
             iceWatchdogsRef.current.delete(remotePeerId);
@@ -357,37 +407,7 @@ export function useWebRTCClassroom({
             }
             return next;
           });
-        } else if (iceState === 'checking') {
-          // If stuck in checking for > 6 seconds, initiate auto-recovery
-          if (!iceWatchdogsRef.current.has(remotePeerId)) {
-            const timer = setTimeout(async () => {
-              iceWatchdogsRef.current.delete(remotePeerId);
-              if (pc.iceConnectionState === 'checking') {
-                console.warn(`[WebRTC ICE Watchdog] Peer ${remotePeerId} stuck in checking > 6s, restarting ICE...`);
-                try {
-                  if (typeof pc.restartIce === 'function') {
-                    pc.restartIce();
-                  }
-                  if (pc.signalingState === 'stable') {
-                    makingOfferRef.current.set(remotePeerId, true);
-                    const restartOffer = await pc.createOffer({ iceRestart: true });
-                    await pc.setLocalDescription(restartOffer);
-                    sendSignalling({
-                      type: 'offer',
-                      to: remotePeerId,
-                      offer: pc.localDescription,
-                    });
-                  }
-                } catch (recErr) {
-                  console.warn(`[WebRTC ICE Watchdog] Restart failed for ${remotePeerId}:`, recErr);
-                } finally {
-                  makingOfferRef.current.set(remotePeerId, false);
-                }
-              }
-            }, 6000);
-            iceWatchdogsRef.current.set(remotePeerId, timer);
-          }
-        } else if (iceState === 'disconnected' || iceState === 'failed') {
+        } else if (iceState === 'failed') {
           if (iceWatchdogsRef.current.has(remotePeerId)) {
             clearTimeout(iceWatchdogsRef.current.get(remotePeerId));
             iceWatchdogsRef.current.delete(remotePeerId);
@@ -396,37 +416,47 @@ export function useWebRTCClassroom({
             const next = new Map(prev);
             const current = next.get(remotePeerId);
             if (current) {
-              next.set(remotePeerId, { ...current, connectionState: 'disconnected' });
+              next.set(remotePeerId, { ...current, connectionState: 'failed' });
+            }
+            return next;
+          });
+          console.warn(`[WebRTC ICE] Peer ${remotePeerId} iceConnectionState failed, triggering immediate ICE restart`);
+          triggerIceRestart(remotePeerId, pc);
+        } else if (iceState === 'disconnected' || iceState === 'checking') {
+          setParticipants((prev) => {
+            const next = new Map(prev);
+            const current = next.get(remotePeerId);
+            if (current && current.connectionState !== 'connected') {
+              next.set(remotePeerId, {
+                ...current,
+                connectionState: iceState === 'checking' ? 'connecting' : 'disconnected',
+              });
             }
             return next;
           });
 
-          console.warn(`[WebRTC ICE] Peer ${remotePeerId} entered ${iceState}, attempting ICE restart...`);
-          try {
-            if (typeof pc.restartIce === 'function') {
-              pc.restartIce();
-            }
-            if (pc.signalingState === 'stable') {
-              makingOfferRef.current.set(remotePeerId, true);
-              const restartOffer = await pc.createOffer({ iceRestart: true });
-              await pc.setLocalDescription(restartOffer);
-              sendSignalling({
-                type: 'offer',
-                to: remotePeerId,
-                offer: pc.localDescription,
-              });
-            }
-          } catch (restartErr) {
-            console.warn(`[WebRTC ICE] Restart attempt for ${remotePeerId} failed:`, restartErr);
-          } finally {
-            makingOfferRef.current.set(remotePeerId, false);
+          if (!iceWatchdogsRef.current.has(remotePeerId)) {
+            const timer = setTimeout(() => {
+              iceWatchdogsRef.current.delete(remotePeerId);
+              if (
+                pc.iceConnectionState === 'disconnected' ||
+                pc.iceConnectionState === 'checking' ||
+                pc.iceConnectionState === 'failed'
+              ) {
+                console.warn(
+                  `[WebRTC ICE Watchdog] Peer ${remotePeerId} in ${pc.iceConnectionState} > 4s, restarting ICE...`
+                );
+                triggerIceRestart(remotePeerId, pc);
+              }
+            }, 4000);
+            iceWatchdogsRef.current.set(remotePeerId, timer);
           }
         }
       };
 
       return pc;
     },
-    [sendSignalling]
+    [sendSignalling, triggerIceRestart]
   );
 
   // Helper to drain queued ICE candidates after setRemoteDescription
@@ -557,6 +587,13 @@ export function useWebRTCClassroom({
               // Hydrate active assessments in session
               if ((data as any).activeAssessments && Array.isArray((data as any).activeAssessments)) {
                 setActiveAssessments((data as any).activeAssessments);
+              }
+              // Hydrate SmartBoard draw permissions from room state
+              if (typeof (data as any).allowStudentBoardDraw === 'boolean') {
+                setAllowStudentBoardDraw((data as any).allowStudentBoardDraw);
+              }
+              if ((data as any).studentBoardPermissions && typeof (data as any).studentBoardPermissions === 'object') {
+                setStudentBoardPermissions((data as any).studentBoardPermissions);
               }
               break;
             }
@@ -795,6 +832,19 @@ export function useWebRTCClassroom({
               break;
             }
 
+            case 'board-permission-changed':
+            case 'whiteboard:permission': {
+              const { allowStudentBoardDraw: newAllow, studentBoardPermissions: newStudentPerms } = data as any;
+              if (typeof newAllow === 'boolean') {
+                setAllowStudentBoardDraw(newAllow);
+              }
+              if (newStudentPerms && typeof newStudentPerms === 'object') {
+                setStudentBoardPermissions(newStudentPerms);
+              }
+              onBoardPermissionChangedRef.current?.(newAllow, newStudentPerms || {});
+              break;
+            }
+
             case 'session-ended': {
               setIsClassEnded(true);
               setEndReason(data.reason || 'Live classroom has concluded.');
@@ -984,6 +1034,48 @@ export function useWebRTCClassroom({
     [sendSignalling]
   );
 
+  const retryMedia = useCallback(
+    (peerId?: string) => {
+      if (peerId) {
+        const pc = peerConnectionsRef.current.get(peerId);
+        if (pc) {
+          triggerIceRestart(peerId, pc);
+        } else {
+          const p = participants.get(peerId);
+          const newPc = getOrCreatePeerConnection(peerId, p?.name || 'Participant', p?.role || 'student');
+          triggerIceRestart(peerId, newPc);
+        }
+      } else {
+        peerConnectionsRef.current.forEach((pc, targetId) => {
+          triggerIceRestart(targetId, pc);
+        });
+      }
+    },
+    [triggerIceRestart, participants, getOrCreatePeerConnection]
+  );
+
+  const setBoardDrawingPermission = useCallback(
+    (allowed: boolean, studentId?: string) => {
+      sendSignalling({
+        type: 'whiteboard:set-permission',
+        allowStudentBoardDraw: allowed,
+        studentId,
+      });
+      if (!studentId) {
+        setAllowStudentBoardDraw(allowed);
+      } else {
+        setStudentBoardPermissions((prev) => ({ ...prev, [studentId]: allowed }));
+      }
+    },
+    [sendSignalling]
+  );
+
+  const requestWhiteboardSync = useCallback(() => {
+    sendSignalling({
+      type: 'whiteboard:request-sync',
+    });
+  }, [sendSignalling]);
+
   const leaveClass = useCallback(() => {
     // Stop all local tracks
     if (localStreamRef.current) {
@@ -1076,6 +1168,12 @@ export function useWebRTCClassroom({
     broadcastWhiteboardUndo,
     activeAssessments,
     studentSubmissions,
+    retryMedia,
+    allowStudentBoardDraw,
+    studentBoardPermissions,
+    canDrawWhiteboard,
+    setBoardDrawingPermission,
+    requestWhiteboardSync,
     publishAssessment: (assessment: any) => {
       sendSignalling({
         type: 'assessment:publish',
