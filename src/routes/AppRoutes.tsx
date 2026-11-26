@@ -65,6 +65,7 @@ const TeacherClasses = lazy(() => import('../pages/teacher/classes/TeacherClasse
 const TeacherEnrolledStudents = lazy(() => import('../pages/teacher/enrolled-students/TeacherEnrolledStudents'));
 const TeacherUpload = lazy(() => import('../pages/teacher/Upload'));
 const TeacherAssignments = lazy(() => import('../pages/teacher/assignments/TeacherAssignments'));
+const TeacherLiveClasses = lazy(() => import('../pages/teacher/live/TeacherLiveClasses'));
 
 // Research Layout & Pages
 const ResearchLayout = lazy(() => import('../layouts/ResearchLayout'));
@@ -243,7 +244,7 @@ export default function AppRoutes() {
           <Route path="library" element={<GenericTeacherPage title="Teacher Library" desc="Reference materials, textbook sources, and answer keys." />} />
           <Route path="notebook" element={<GenericTeacherPage title="Teacher Notebook" desc="Lesson drafts, planning templates, and sync logs." />} />
           <Route path="upload" element={<TeacherUpload />} />
-          <Route path="live-classes" element={<GenericTeacherPage title="Live Classes Workspace" desc="Launch live Zoom/Teams lectures and track attendee counts." />} />
+          <Route path="live-classes" element={<TeacherLiveClasses />} />
           <Route path="ask" element={<GenericTeacherPage title="AI Teacher Help" desc="Chat with syllabus guidelines or generate quiz questions." />} />
           <Route path="test" element={<AssessmentStudio />} />
           <Route path="examination" element={<GenericTeacherPage title="Term Examinations" desc="Manage midterm/final examination schedules." />} />

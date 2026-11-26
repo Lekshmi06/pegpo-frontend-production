@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   GraduationCap,
@@ -18,6 +19,7 @@ import {
   Loader2,
   Trash2,
   Sparkles,
+  Video,
 } from 'lucide-react';
 import { classSectionService } from '../../../services/classSectionService';
 import { recognitionService } from '../../../services/recognitionService';
@@ -30,6 +32,7 @@ import { useToast } from '../../../hooks/useToast';
 import defaultAvatar from '../../../assets/user.png';
 
 export default function TeacherClasses() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [classes, setClasses] = useState<TeacherClassGroup[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -444,6 +447,16 @@ export default function TeacherClasses() {
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Enroll
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/live/class-${encodeURIComponent(selectedGroup.classSectionId)}`)}
+                  className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 text-xs font-bold px-3 py-1.5 rounded-xl shadow-xs"
+                  title="Launch live classroom stage for this class section"
+                >
+                  <Video className="w-3.5 h-3.5 mr-1" />
+                  Launch Live Class
                 </Button>
               </div>
             </div>

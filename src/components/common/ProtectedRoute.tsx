@@ -62,6 +62,24 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, ch
     if (!isAuthorized) {
       return <AccessDenied requiredRoles={allowedRoles} currentRole={userRole} />;
     }
+
+    // Block Standard/Institution Teachers from Tuition Mode routes
+    if (location.pathname.startsWith('/tuition-mode')) {
+      const isTeacherRole =
+        userRole === 'teacher' ||
+        (effectiveUser as any).userType === 'teacher' ||
+        (Array.isArray((effectiveUser as any).roles) && (effectiveUser as any).roles.includes('teacher'));
+      const isTuitionAuthorized = Boolean(
+        (effectiveUser as any).isTuitionTeacher ||
+        (effectiveUser as any).teachingGoal === 'tuition' ||
+        effectiveUser.teacherCode ||
+        effectiveUser.role === 'tuition_provider' ||
+        effectiveUser.activeRole === 'tuition_provider'
+      );
+      if (isTeacherRole && !isTuitionAuthorized) {
+        return <Navigate to="/teacher/classes" replace />;
+      }
+    }
   }
 
   return children ? <>{children}</> : <Outlet />;

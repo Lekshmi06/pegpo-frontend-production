@@ -100,6 +100,8 @@ export interface UserSession {
   researcherDetails?: any;
   studentCode?: string;
   teacherCode?: string;
+  isTuitionTeacher?: boolean;
+  teachingGoal?: string;
   tuitionApprovalStatus?: 'none' | 'pending' | 'approved' | 'rejected' | 'revoked' | 'suspended';
   token?: string;
   createdAt?: string;

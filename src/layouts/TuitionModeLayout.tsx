@@ -25,6 +25,31 @@ export const TuitionModeLayout: React.FC = () => {
   const { token, programContext } = tuitionService.getTuitionModeSession();
   const [isIdCardOpen, setIsIdCardOpen] = React.useState(false);
 
+  // Guard against standard institution teachers entering Tuition Mode routes directly
+  React.useEffect(() => {
+    if (currentUser) {
+      const isTeacherRole =
+        currentUser.role === 'teacher' ||
+        currentUser.activeRole === 'teacher' ||
+        (Array.isArray(currentUser.roles) && currentUser.roles.includes('teacher'));
+      const isTuitionAuthorized = Boolean(
+        currentUser.isTuitionTeacher ||
+        currentUser.teachingGoal === 'tuition' ||
+        currentUser.teacherCode ||
+        currentUser.role === 'tuition_provider' ||
+        currentUser.activeRole === 'tuition_provider'
+      );
+      if (isTeacherRole && !isTuitionAuthorized) {
+        navigate('/teacher/classes', {
+          replace: true,
+          state: {
+            message: 'Tuition Mode is only available for registered Tuition Teachers. You have been redirected to your Institution Teacher portal.',
+          },
+        });
+      }
+    }
+  }, [currentUser, navigate]);
+
   // Default to Light Mode on mount if no explicit tuition_theme preference is set
   React.useEffect(() => {
     const saved = localStorage.getItem('tuition_theme');

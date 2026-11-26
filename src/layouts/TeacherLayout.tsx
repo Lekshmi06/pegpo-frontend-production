@@ -293,8 +293,21 @@ export default function TeacherLayout() {
               <Trophy className="h-5 w-5 text-[#1c3352] stroke-[2]" />
             </button>
 
-            {/* Consolidated Tuition Control */}
+            {/* Consolidated Tuition Control - Only visible for verified Tuition Teachers */}
             {(() => {
+              const isTuitionAuthorized = Boolean(
+                currentUser?.isTuitionTeacher ||
+                currentUser?.teachingGoal === 'tuition' ||
+                currentUser?.teacherCode ||
+                currentUser?.role === 'tuition_provider' ||
+                currentUser?.activeRole === 'tuition_provider'
+              );
+
+              // Completely hide Tuition Mode controls for Standard / Institution LMS teachers
+              if (!isTuitionAuthorized) {
+                return null;
+              }
+
               const approvalStatus = currentUser?.tuitionApprovalStatus || (currentUser?.teacherCode ? 'approved' : 'none');
               if (approvalStatus === 'approved' && currentUser?.teacherCode) {
                 return (
@@ -331,17 +344,8 @@ export default function TeacherLayout() {
                     </span>
                   </div>
                 );
-              } else {
-                return (
-                  <button
-                    onClick={() => navigate('/teacher/profile')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-semibold transition-colors cursor-pointer shadow-xs"
-                    title="Request Tuition Mode Access"
-                  >
-                    Request Tuition Access
-                  </button>
-                );
               }
+              return null;
             })()}
 
             <div className="relative">
@@ -398,7 +402,16 @@ export default function TeacherLayout() {
                     if (card.id === 'smartboard') {
                       handleTeacherNav('/teacher/smartboard');
                     } else if (card.id === 'combine') {
-                      handleTeacherNav('/tuition-mode');
+                      const isTuitionAuthorized = Boolean(
+                        currentUser?.isTuitionTeacher ||
+                        currentUser?.teachingGoal === 'tuition' ||
+                        currentUser?.teacherCode
+                      );
+                      if (isTuitionAuthorized) {
+                        handleTeacherNav('/tuition-mode');
+                      } else {
+                        handleTeacherNav('/teacher/live-classes');
+                      }
                     }
                   }}
                   className="flex items-center justify-between p-3 bg-[#d6e8f6] hover:bg-[#c5dff2] rounded-2xl cursor-pointer transition-all group shadow-2xs"

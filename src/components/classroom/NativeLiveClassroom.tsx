@@ -122,18 +122,43 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     Boolean(currentUser?.teacherCode)
   );
 
-  // Tuition Mode Authorization Gate: Enforce active session or code verification
+  // Determine return URL when exiting classroom
+  const isTuitionContext =
+    location.pathname.startsWith('/tuition-mode') ||
+    Boolean(sessionStorage.getItem('tuition_mode_token')) ||
+    (session?.sessionType === 'tuition');
+
+  const returnUrl = isTuitionContext
+    ? '/tuition-mode'
+    : isTeacherRole
+    ? '/teacher/live-classes'
+    : '/student/live-classes';
+
+  // Tuition Mode Authorization Gate: Enforce active session or code verification ONLY for Tuition sessions
   useEffect(() => {
+    // If standard LMS live session, authenticated LMS users are authorized immediately
+    const isStandardLmsSession =
+      !location.pathname.startsWith('/tuition-mode') &&
+      session?.sessionType !== 'tuition';
+
+    const hasAuth = Boolean(currentUser || authToken || authService.getToken());
+
+    if (isStandardLmsSession && hasAuth) {
+      return; // Standard LMS teacher or student bypasses Tuition Mode Code gate completely!
+    }
+
     const hasUser = Boolean(currentUser);
     const hasTuitionToken = Boolean(tuitionToken);
     const hasAuthToken = Boolean(authToken);
 
     if (!hasUser && !hasTuitionToken && !hasAuthToken) {
-      navigate('/tuition-mode', {
+      navigate(isStandardLmsSession ? '/login' : '/tuition-mode', {
         replace: true,
         state: {
-          message:
-            'Tuition Mode authorization required. Please select your program and enter your Student or Teacher Code.',
+          returnUrl: location.pathname,
+          message: isStandardLmsSession
+            ? 'Please log in to join this live classroom.'
+            : 'Tuition Mode authorization required. Please select your program and enter your Student or Teacher Code.',
         },
       });
       return;
@@ -182,6 +207,8 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     activeSessionId,
     explicitProgramId,
     explicitProgramCode,
+    session?.sessionType,
+    location.pathname,
     navigate,
   ]);
 
@@ -456,7 +483,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     if (onExit) {
       onExit();
     } else {
-      navigate('/tuition-mode');
+      navigate(returnUrl);
     }
   };
 
@@ -499,10 +526,10 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
             <span>Connecting automatically when teacher joins...</span>
           </div>
           <button
-            onClick={() => navigate('/tuition-mode')}
+            onClick={() => navigate(returnUrl)}
             className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition cursor-pointer"
           >
-            Back to Programs
+            {returnUrl === '/tuition-mode' ? 'Back to Programs' : 'Back to Live Classes'}
           </button>
         </div>
       </div>
@@ -1368,7 +1395,7 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
             <button
               onClick={() => {
                 setShowSummaryModal(false);
-                navigate('/tuition-mode');
+                navigate(returnUrl);
               }}
               className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer"
             >
