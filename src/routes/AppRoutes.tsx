@@ -140,6 +140,7 @@ const CookieSettings = lazy(() => import('../pages/public/CookieSettings'));
 
 // Native Live Classroom (WebRTC)
 const NativeLiveClassroom = lazy(() => import('../components/classroom/NativeLiveClassroom'));
+const DemoRoomJoinPage = lazy(() => import('../pages/demo/DemoRoomJoinPage'));
 
 // Security & Authorization Route Guard
 import ProtectedRoute from '../components/common/ProtectedRoute';
@@ -284,6 +285,10 @@ export default function AppRoutes() {
             </ProtectedRoute>
           }
         />
+
+        {/* Trial Demo Classroom (Public Token Access - No Login Required) */}
+        <Route path="/demo-room" element={<DemoRoomJoinPage />} />
+        <Route path="/demo-room/:token" element={<DemoRoomJoinPage />} />
 
         {/* Native Live Classroom (WebRTC Real-Time) */}
         <Route

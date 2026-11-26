@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Home, Library, BookOpen, Upload, CalendarDays, HelpCircle, ClipboardList, FileText, FolderPlus,
@@ -100,6 +100,19 @@ const quickLinks: QuickLink[] = [
   { id: 'infographics', title: 'Info Graphics', img: cardInfographics },
 ];
 
+const HIDDEN_TUITION_ITEMS = new Set([
+  'Assignments',
+  'Test',
+  'Examination',
+  'Collaboration',
+  'Class Sections',
+  'Students Enrolled',
+  'Projects',
+  '3 D Lab',
+  'Edu Game',
+  'Edu Shop',
+]);
+
 export default function TeacherLayout() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -108,6 +121,28 @@ export default function TeacherLayout() {
   const [department, setDepartment] = useState('Department');
   const [subject, setSubject] = useState('Subject');
   const [currentUser, setCurrentUser] = useState(authService.getCurrentUser());
+
+  // Determine if the current teacher is registered as a Tuition Teacher / assigned a tutor profile
+  const isTuitionTeacher = Boolean(
+    currentUser?.isTuitionTeacher ||
+    currentUser?.teachingGoal === 'tuition' ||
+    currentUser?.teacherCode ||
+    currentUser?.role === 'tuition_provider' ||
+    currentUser?.activeRole === 'tuition_provider'
+  );
+
+  // Filter sidebar navigation items for Tuition Teachers while keeping the full list for standard/institution teachers
+  const visibleMenuGroups = useMemo(() => {
+    if (!isTuitionTeacher) {
+      return menuGroups;
+    }
+    return menuGroups
+      .map((group) => ({
+        ...group,
+        items: group.items.filter((item) => !HIDDEN_TUITION_ITEMS.has(item.label)),
+      }))
+      .filter((group) => group.items.length > 0);
+  }, [isTuitionTeacher]);
 
   // Embedded LMS check (via query param ?embeddedLms=1 or in an iframe)
   const isEmbedded =
@@ -201,7 +236,7 @@ export default function TeacherLayout() {
           </div>
 
           <div className="space-y-px overflow-hidden rounded-xl">
-            {menuGroups.map((group, groupIndex) => (
+            {visibleMenuGroups.map((group, groupIndex) => (
               <div key={`group-${groupIndex}`} className="space-y-px py-0.5" style={{ backgroundColor: group.color }}>
                 {group.items.map((item) => {
                   const Icon = item.icon;

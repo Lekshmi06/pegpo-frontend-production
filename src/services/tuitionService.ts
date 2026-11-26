@@ -1268,5 +1268,9 @@ export const tuitionService = {
       }
     );
   },
+
+  getDemoSessions: (): Promise<{ success: boolean; count: number; demoSessions: any[] }> => {
+    return apiRequest<{ success: boolean; count: number; demoSessions: any[] }>("/tuition/demo-sessions");
+  },
 };
 

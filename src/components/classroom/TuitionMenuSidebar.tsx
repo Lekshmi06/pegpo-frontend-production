@@ -7,7 +7,6 @@ import {
   ClipboardList,
   HelpCircle,
   MessageSquare,
-  Sparkles,
   ChevronLeft,
 } from 'lucide-react';
 
@@ -77,20 +76,6 @@ export const TuitionMenuSidebar: React.FC<TuitionMenuSidebarProps> = ({
       aria-label="Tuition Workspace Menu"
       className="w-14 sm:w-16 bg-slate-950 border-r border-slate-800/90 flex flex-col items-center py-3 select-none shrink-0 z-30 shadow-xl"
     >
-      {/* Top Brand / Stage Glyph with quick collapse */}
-      <div className="mb-3">
-        <button
-          type="button"
-          onClick={onClose}
-          title={onClose ? "Tuition Mode (Click to collapse)" : "EduPye Tuition Mode"}
-          className={`w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-slate-950 font-black shadow-md shadow-amber-500/20 transition-transform ${
-            onClose ? 'cursor-pointer hover:scale-105 active:scale-95' : ''
-          }`}
-        >
-          <Sparkles className="w-5 h-5 text-white" />
-        </button>
-      </div>
-
       {/* Main Workspace Tools Rail */}
       <div className="flex-1 w-full flex flex-col items-center gap-2">
         {/* 1. Smart Board */}

@@ -23,7 +23,6 @@ import {
   ChevronRight,
   ClipboardList,
   LayoutGrid,
-  Sparkles,
 } from 'lucide-react';
 import { useWebRTCClassroom } from '../../hooks/useWebRTCClassroom';
 import { liveClassService } from '../../services/liveClassService';
@@ -43,12 +42,18 @@ import { WhiteboardCanvas } from '../../pages/teacher/smartboard/WhiteboardCanva
 interface NativeLiveClassroomProps {
   sessionId?: string;
   forcedRole?: LiveClassRole;
+  isDemoSession?: boolean;
+  demoParticipantName?: string;
+  demoRole?: 'teacher' | 'student';
   onExit?: () => void;
 }
 
 export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
   sessionId: propSessionId,
   forcedRole,
+  isDemoSession = false,
+  demoParticipantName,
+  demoRole,
   onExit,
 }) => {
   const navigate = useNavigate();
@@ -114,12 +119,17 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
 
   const userRole = (currentUser?.role || currentUser?.activeRole || (currentUser as any)?.userType || '').toLowerCase();
   const isTeacherRole = Boolean(
-    userRole === 'teacher' ||
-    userRole === 'tuition_provider' ||
-    userRole === 'institution' ||
-    userRole === 'admin' ||
-    userRole === 'super_admin' ||
-    Boolean(currentUser?.teacherCode)
+    isDemoSession
+      ? demoRole === 'teacher' || forcedRole === 'host'
+      : (
+          userRole === 'teacher' ||
+          userRole === 'tuition_provider' ||
+          userRole === 'institution' ||
+          userRole === 'admin' ||
+          userRole === 'super_admin' ||
+          Boolean(currentUser?.teacherCode) ||
+          forcedRole === 'host'
+        )
   );
 
   // Determine return URL when exiting classroom
@@ -128,7 +138,9 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     Boolean(sessionStorage.getItem('tuition_mode_token')) ||
     (session?.sessionType === 'tuition');
 
-  const returnUrl = isTuitionContext
+  const returnUrl = isDemoSession
+    ? '/demo-room'
+    : isTuitionContext
     ? '/tuition-mode'
     : isTeacherRole
     ? '/teacher/live-classes'
@@ -136,6 +148,11 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
 
   // Tuition Mode Authorization Gate: Enforce active session or code verification ONLY for Tuition sessions
   useEffect(() => {
+    // Demo Trial Class bypasses student/teacher permanent login gate completely
+    if (isDemoSession || activeSessionId.startsWith('demo-')) {
+      return;
+    }
+
     // If standard LMS live session, authenticated LMS users are authorized immediately
     const isStandardLmsSession =
       !location.pathname.startsWith('/tuition-mode') &&
@@ -214,6 +231,10 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
 
   // Periodic 15-Minute Idle Heartbeat Check
   useEffect(() => {
+    if (isDemoSession || activeSessionId.startsWith('demo-')) {
+      return; // Bypassed for Demo Trial Classrooms
+    }
+
     const IDLE_CHECK_INTERVAL_MS = 60 * 1000;
     const interval = setInterval(() => {
       try {
@@ -230,10 +251,12 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     }, IDLE_CHECK_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isDemoSession, activeSessionId]);
 
   const currentUserId = (currentUser as any)?.id || (currentUser as any)?._id || (currentUser as any)?.userId || '';
-  const currentUserName = (currentUser as any)?.name || (currentUser as any)?.displayName || (isTeacherRole ? 'Teacher' : 'Student');
+  const currentUserName = isDemoSession
+    ? (demoParticipantName || (isTeacherRole ? 'Demo Tutor' : 'Prospective Student'))
+    : ((currentUser as any)?.name || (currentUser as any)?.displayName || (isTeacherRole ? 'Teacher' : 'Student'));
 
   // Load Session Info & Roster
   useEffect(() => {
@@ -354,12 +377,15 @@ export const NativeLiveClassroom: React.FC<NativeLiveClassroomProps> = ({
     return () => clearInterval(interval);
   }, [isWaitingForTeacher, isTeacherRole, activeSessionId]);
 
-  const isHost =
-    isTeacherRole &&
-    (forcedRole === 'host' ||
-      (session && typeof session.hostId === 'string'
-        ? session.hostId === currentUserId
-        : (session?.hostId as any)?._id === currentUserId));
+  const isHost = isDemoSession
+    ? demoRole === 'teacher' || forcedRole === 'host'
+    : (
+        isTeacherRole &&
+        (forcedRole === 'host' ||
+          (session && typeof session.hostId === 'string'
+            ? session.hostId === currentUserId
+            : (session?.hostId as any)?._id === currentUserId))
+      );
 
   const {
     localStream,

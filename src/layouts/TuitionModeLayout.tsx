@@ -3,7 +3,6 @@ import { Outlet, useNavigate, Link } from 'react-router-dom';
 import {
   GraduationCap,
   ArrowLeft,
-  Sparkles,
   LogOut,
   User,
   ShieldCheck,
