@@ -52,17 +52,18 @@ export default function DemoRoomJoinPage() {
 
   const [inputToken, setInputToken] = useState(initialToken);
   const [activeToken, setActiveToken] = useState(initialToken);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(Boolean(initialToken));
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [sessionData, setSessionData] = useState<DemoVerifiedSession | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [inClassroom, setInClassroom] = useState(false);
 
-  // Verification helper
-  const verifyToken = useCallback(async (tokenToVerify: string) => {
+  // Verification helper - immediately transitions into meeting room on success
+  const verifyToken = useCallback(async (tokenToVerify: string, autoEnter: boolean = true) => {
     const clean = tokenToVerify.trim();
     if (!clean) {
       setErrorMsg('Please enter a valid demo session token.');
+      setIsVerifying(false);
       return;
     }
 
@@ -80,7 +81,8 @@ export default function DemoRoomJoinPage() {
       }
 
       setSessionData(data);
-      setDisplayName(data.participantName || (data.role === 'teacher' ? 'Demo Tutor' : 'Guest Student'));
+      const resolvedName = data.participantName || (data.role === 'teacher' ? 'Demo Tutor' : 'Guest Student');
+      setDisplayName(resolvedName);
 
       // If authToken returned and guest does not have auth token, save for guest requests
       if (data.authToken) {
@@ -88,6 +90,11 @@ export default function DemoRoomJoinPage() {
           localStorage.setItem('token', data.authToken);
         }
         localStorage.setItem('demo_guest_token', data.authToken);
+      }
+
+      // Immediate auto-entry into classroom
+      if (autoEnter) {
+        setInClassroom(true);
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to verify demo token. Please check and try again.');
@@ -97,12 +104,12 @@ export default function DemoRoomJoinPage() {
     }
   }, []);
 
-  // Trigger verification if initialToken exists
+  // Trigger auto-verification on initial load if token exists
   useEffect(() => {
     if (initialToken) {
       setActiveToken(initialToken);
       setInputToken(initialToken);
-      verifyToken(initialToken);
+      verifyToken(initialToken, true);
     }
   }, [initialToken, verifyToken]);
 
@@ -110,7 +117,7 @@ export default function DemoRoomJoinPage() {
     e.preventDefault();
     if (!inputToken.trim()) return;
     setActiveToken(inputToken.trim());
-    verifyToken(inputToken.trim());
+    verifyToken(inputToken.trim(), true);
   };
 
   const handleJoinClassroom = () => {
@@ -125,6 +132,37 @@ export default function DemoRoomJoinPage() {
     setActiveToken('');
     navigate('/demo-room', { replace: true });
   };
+
+  // Full-screen loading screen while verifying valid token on link click
+  if (isVerifying && !sessionData && !errorMsg) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0c192c] via-[#10223d] to-[#0a1424] text-slate-100 flex flex-col items-center justify-center p-6 select-none">
+        <div className="flex flex-col items-center max-w-sm text-center space-y-6 animate-in fade-in duration-300">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-amber-500 flex items-center justify-center text-slate-950 font-black shadow-xl relative">
+            <span className="text-xl">EP</span>
+            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500" />
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              Connecting to Live Demo Classroom
+            </h2>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Verifying your trial access token and setting up WebRTC audio/video stage...
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-amber-300">
+            <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+            <span>Entering Meeting Room</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // If in live classroom, render NativeLiveClassroom in full screen
   if (inClassroom && sessionData) {
@@ -272,7 +310,7 @@ export default function DemoRoomJoinPage() {
                 className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-base shadow-lg transition hover:scale-[1.01] cursor-pointer flex items-center justify-center gap-2"
               >
                 <Video className="w-5 h-5 fill-slate-950" />
-                <span>Enter Live Demo Classroom</span>
+                <span>Re-enter Live Demo Classroom</span>
                 <ArrowRight className="w-5 h-5" />
               </button>
 
