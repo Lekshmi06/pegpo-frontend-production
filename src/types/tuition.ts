@@ -472,6 +472,7 @@ export interface CombinedStudyMessage {
   _id: string;
   programId: string;
   senderId: string | { _id: string; name?: string; email?: string; studentCode?: string; teacherCode?: string };
+  senderName?: string;
   senderRole: "teacher" | "student" | "institution";
   messageType: "text" | "pdf" | "image" | "video";
   content?: string;

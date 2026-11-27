@@ -685,6 +685,16 @@ export const tuitionService = {
     });
   },
 
+  updateProgramSchedule: async (
+    programId: string,
+    schedule: Array<{ day: string; startTime: string; endTime: string }>
+  ): Promise<{ success: boolean; message: string; schedule: Array<{ day: string; startTime: string; endTime: string }>; program: TuitionProgram }> => {
+    return await apiRequest(`/tuition/programs/${programId}/schedule`, {
+      method: "PATCH",
+      body: JSON.stringify({ schedule }),
+    });
+  },
+
   getTeacherEnrolledStudents: async (): Promise<{
     success: boolean;
     totalPrograms: number;

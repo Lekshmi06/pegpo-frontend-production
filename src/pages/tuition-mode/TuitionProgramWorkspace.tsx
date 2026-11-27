@@ -41,6 +41,7 @@ import {
   Volume2,
   Loader2,
   QrCode,
+  Trash2,
 } from 'lucide-react';
 import {
   tuitionService,
@@ -101,6 +102,11 @@ export const TuitionProgramWorkspace: React.FC = () => {
     syllabusTopics: '',
   });
   const [savingOverview, setSavingOverview] = useState(false);
+
+  // Edit Program Schedule / Timetable state (Teachers/Admins)
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scheduleSlots, setScheduleSlots] = useState<Array<{ day: string; startTime: string; endTime: string }>>([]);
+  const [savingSchedule, setSavingSchedule] = useState(false);
 
   // Past Classes & 1-Year Recordings state
   const [recordings, setRecordings] = useState<any[]>([]);
@@ -200,7 +206,8 @@ export const TuitionProgramWorkspace: React.FC = () => {
   // Keep activeTab aligned with role permissions
   useEffect(() => {
     if (isTeacher) {
-      if (activeTab === 'study' || activeTab === 'teachers') {
+      // Only redirect teachers from 'teachers' tab if there are no co-faculty members
+      if (activeTab === 'teachers' && allTeachers.length <= 1) {
         setActiveTab('students');
       }
     } else {
@@ -208,7 +215,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
         setActiveTab('study');
       }
     }
-  }, [isTeacher, activeTab]);
+  }, [isTeacher, activeTab, allTeachers.length]);
 
   const getStudentAttendanceCount = (studentId: string, studentName?: string) => {
     let count = 0;
@@ -262,6 +269,22 @@ export const TuitionProgramWorkspace: React.FC = () => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, activeTab]);
+
+  // 10-second polling for Combined Study / Batch Discussions while on the tab
+  useEffect(() => {
+    if (activeTab !== 'study' || !programId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await tuitionService.getCombinedStudyMessages(programId);
+        if (res.success && Array.isArray(res.messages)) {
+          setMessages(res.messages);
+        }
+      } catch {
+        // silent poll
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [activeTab, programId]);
 
   const upcomingSessions = useMemo(() => {
     if (!program?.schedule || !Array.isArray(program.schedule) || program.schedule.length === 0) return [];
@@ -403,6 +426,56 @@ export const TuitionProgramWorkspace: React.FC = () => {
       console.error('Failed to update overview:', err);
     } finally {
       setSavingOverview(false);
+    }
+  };
+
+  const handleOpenScheduleModal = () => {
+    if (program?.schedule && program.schedule.length > 0) {
+      setScheduleSlots(program.schedule.map((s) => ({ day: s.day, startTime: s.startTime, endTime: s.endTime })));
+    } else {
+      setScheduleSlots([{ day: 'Monday', startTime: '17:00', endTime: '18:30' }]);
+    }
+    setIsScheduleModalOpen(true);
+  };
+
+  const handleAddScheduleSlot = () => {
+    const VALID_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const usedDays = new Set(scheduleSlots.map((s) => s.day));
+    const nextDay = VALID_DAYS.find((d) => !usedDays.has(d)) || 'Monday';
+    setScheduleSlots((prev) => [...prev, { day: nextDay, startTime: '17:00', endTime: '18:30' }]);
+  };
+
+  const handleRemoveScheduleSlot = (index: number) => {
+    setScheduleSlots((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleUpdateScheduleSlot = (index: number, field: 'day' | 'startTime' | 'endTime', value: string) => {
+    setScheduleSlots((prev) =>
+      prev.map((slot, i) => (i === index ? { ...slot, [field]: value } : slot))
+    );
+  };
+
+  const handleSaveSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!programId) return;
+    if (scheduleSlots.length === 0) {
+      alert('Please configure at least one schedule slot or cancel.');
+      return;
+    }
+    try {
+      setSavingSchedule(true);
+      const res = await tuitionService.updateProgramSchedule(programId, scheduleSlots);
+      if (res.success && res.program) {
+        setProgram((prev) => (prev ? { ...prev, ...res.program } : res.program));
+        setIsScheduleModalOpen(false);
+      } else {
+        alert(res.message || 'Failed to update schedule.');
+      }
+    } catch (err: any) {
+      console.error('Failed to update program schedule:', err);
+      alert(err.message || 'Error updating schedule.');
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -820,38 +893,45 @@ export const TuitionProgramWorkspace: React.FC = () => {
             </button>
           )}
 
-          {/* Program Teachers & Faculty Tab (Both Teachers & Students) */}
-          <button
-            onClick={() => setActiveTab('teachers')}
-            className={`pb-2.5 px-3 text-xs font-bold transition-colors cursor-pointer flex items-center gap-2 border-b-2 shrink-0 ${
-              activeTab === 'teachers'
-                ? 'border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400'
-                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
-            }`}
-          >
-            <GraduationCap className="w-4 h-4" />
-            <span>{isTeacher ? 'Program Faculty' : 'My Program Teachers'}</span>
-            {roster?.teachers && roster.teachers.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-500/20 text-blue-600 dark:text-blue-300 font-mono">
-                {roster.teachers.length}
-              </span>
-            )}
-          </button>
-
-          {/* STUDENT ONLY: Co-Students & Combined Study Tab */}
-          {!isTeacher && (
+          {/* Program Teachers & Faculty Tab:
+              For Students: Always visible as "My Program Teachers"
+              For Teachers: Visible only if allTeachers.length > 1 as "Co-Faculty & Subject Partners" */}
+          {(!isTeacher || (isTeacher && allTeachers.length > 1)) && (
             <button
-              onClick={() => setActiveTab('study')}
+              onClick={() => setActiveTab('teachers')}
               className={`pb-2.5 px-3 text-xs font-bold transition-colors cursor-pointer flex items-center gap-2 border-b-2 shrink-0 ${
-                activeTab === 'study'
+                activeTab === 'teachers'
                   ? 'border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400'
                   : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>Co-Students &amp; Combined Study</span>
+              <GraduationCap className="w-4 h-4" />
+              <span>{isTeacher ? 'Co-Faculty & Subject Partners' : 'My Program Teachers'}</span>
+              {allTeachers.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-500/20 text-blue-600 dark:text-blue-300 font-mono">
+                  {allTeachers.length}
+                </span>
+              )}
             </button>
           )}
+
+          {/* Batch Discussions & Doubt Clearing Tab (Both Teachers & Students) */}
+          <button
+            onClick={() => setActiveTab('study')}
+            className={`pb-2.5 px-3 text-xs font-bold transition-colors cursor-pointer flex items-center gap-2 border-b-2 shrink-0 ${
+              activeTab === 'study'
+                ? 'border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400'
+                : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Batch Discussions &amp; Doubt Clearing</span>
+            {messages.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-300 font-mono">
+                {messages.length}
+              </span>
+            )}
+          </button>
 
           {/* Homework & Tasks (Both) */}
           <button
@@ -909,6 +989,59 @@ export const TuitionProgramWorkspace: React.FC = () => {
         {/* Tab 0: Program Overview & Instructor Bio */}
         {activeTab === 'overview' && (
           <div className="space-y-6 animate-fadeIn">
+            {/* Recent Tutor Notices & Announcements Alert Board */}
+            {(() => {
+              const teacherNotices = messages.filter((m) => m.content?.startsWith('[Teacher Notice'));
+              if (teacherNotices.length === 0) return null;
+              return (
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-slate-900 dark:text-white space-y-3 shadow-md">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                        <Bell className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300">
+                          Recent Tutor Notices &amp; Announcements
+                        </h3>
+                        <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
+                          Important updates from your course instructors
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('study')}
+                      className="text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>View All Discussions</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {teacherNotices.slice(-3).reverse().map((ntc) => (
+                      <div
+                        key={ntc._id}
+                        className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+                            {ntc.content}
+                          </p>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            By {ntc.senderName || 'Assigned Instructor'} &bull;{' '}
+                            {new Date(ntc.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}{' '}
+                            at{' '}
+                            {new Date(ntc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Top Grid: Instructor Spotlight + Next Live Class Brief */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Instructor Spotlight Card (5 cols) */}
@@ -1453,10 +1586,12 @@ export const TuitionProgramWorkspace: React.FC = () => {
               <div>
                 <h2 className="text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-blue-500 dark:text-blue-400" />
-                  <span>{isTeacher ? 'Program Teaching Faculty' : 'My Program Teachers'}</span>
+                  <span>{isTeacher ? 'Co-Faculty & Subject Partners' : 'My Program Teachers'}</span>
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Instructors assigned to lead live SmartBoard sessions and supervise assignments for this program.
+                  {isTeacher
+                    ? 'Co-instructors and subject specialists assigned to collaborate on this program.'
+                    : 'Instructors assigned to lead live SmartBoard sessions and supervise assignments for this program.'}
                 </p>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 font-mono">
@@ -1553,8 +1688,8 @@ export const TuitionProgramWorkspace: React.FC = () => {
           </div>
         )}
 
-        {/* Tab 3: Co-Students & Combined Study (Student Only) */}
-        {activeTab === 'study' && !isTeacher && (
+        {/* Tab 3: Batch Discussions & Doubt Clearing (Both Students & Teachers) */}
+        {activeTab === 'study' && (
           <div className="space-y-4 animate-fadeIn">
             {/* Top: Co-Students Enrolled Bar */}
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-lg">
@@ -1611,11 +1746,11 @@ export const TuitionProgramWorkspace: React.FC = () => {
               <div className="flex items-center gap-2">
                 <VideoOff className="w-4 h-4 text-amber-500 dark:text-amber-400 shrink-0" />
                 <span className="font-semibold">
-                  Peer chat &amp; document sharing only; supervised live video coming in a future update
+                  Discussion stream &amp; document sharing active; live classroom audio/video conducted inside Live SmartBoard
                 </span>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30 hidden sm:inline">
-                Live Video Restricted
+                Live Video in SmartBoard
               </span>
             </div>
 
@@ -1625,7 +1760,7 @@ export const TuitionProgramWorkspace: React.FC = () => {
               <div className="bg-slate-100 dark:bg-slate-950/80 px-4 py-2 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
-                  Combined Study Stream &bull; Chat, PDF, image, and video exchange enabled
+                  Batch Discussions &amp; Doubt Clearing &bull; Two-way discussion, PDF, image, and voice exchange enabled
                 </span>
                 <span className="flex items-center gap-1 text-slate-400">
                   <ShieldCheck className="w-3 h-3 text-emerald-500" />
@@ -1638,33 +1773,48 @@ export const TuitionProgramWorkspace: React.FC = () => {
                 {messages.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-slate-500 text-xs py-12">
                     <MessageSquare className="w-8 h-8 text-slate-600 mb-2" />
-                    <p>No messages yet in this Combined Study stream.</p>
+                    <p>No messages yet in this discussion stream.</p>
                     <p className="text-[11px] text-slate-600 mt-0.5">
-                      Start collaborating with fellow students and sharing documents below.
+                      Start collaborating with course instructors and fellow students below.
                     </p>
                   </div>
                 ) : (
                   messages.map((msg) => {
                     const senderName =
-                      typeof msg.senderId === 'object' && msg.senderId?.name
+                      msg.senderName ||
+                      (typeof msg.senderId === 'object' && msg.senderId?.name
                         ? msg.senderId.name
-                        : 'User';
+                        : '') ||
+                      (msg.senderRole === 'teacher' ? 'Tutor' : 'Student');
                     const isMsgTeacher = msg.senderRole === 'teacher';
+                    const isTeacherNotice = msg.content?.startsWith('[Teacher Notice');
 
                     return (
-                      <div key={msg._id} className="flex flex-col space-y-1">
+                      <div
+                        key={msg._id}
+                        className={`flex flex-col space-y-1 ${
+                          isTeacherNotice
+                            ? 'p-3 rounded-2xl bg-amber-500/10 border border-amber-500/40 shadow-sm'
+                            : ''
+                        }`}
+                      >
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white">{senderName}</span>
+                          {isTeacherNotice && (
+                            <Bell className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                          )}
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{senderName}</span>
                           <span
                             className={`text-[10px] font-bold px-1.5 py-0.2 rounded uppercase ${
-                              isMsgTeacher
-                                ? 'bg-blue-500/20 text-blue-300'
-                                : 'bg-amber-500/20 text-amber-300'
+                              isTeacherNotice
+                                ? 'bg-amber-500/30 text-amber-700 dark:text-amber-300 font-extrabold border border-amber-500/40'
+                                : isMsgTeacher
+                                ? 'bg-blue-500/20 text-blue-600 dark:text-blue-300'
+                                : 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
                             }`}
                           >
-                            {msg.senderRole}
+                            {isTeacherNotice ? 'Tutor Notice' : msg.senderRole}
                           </span>
-                          <span className="text-[10px] text-slate-500">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400">
                             {new Date(msg.createdAt).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -1673,7 +1823,13 @@ export const TuitionProgramWorkspace: React.FC = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-800 dark:text-slate-200 max-w-2xl">
+                        <div
+                          className={`p-3 rounded-xl border text-xs text-slate-800 dark:text-slate-200 max-w-2xl ${
+                            isTeacherNotice
+                              ? 'bg-white/95 dark:bg-slate-950 border-amber-500/40 shadow-sm'
+                              : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                          }`}
+                        >
                           {msg.content && <p className="whitespace-pre-wrap mb-1">{msg.content}</p>}
 
                               {msg.fileUrl && (
@@ -1861,10 +2017,21 @@ export const TuitionProgramWorkspace: React.FC = () => {
             </div>
 
             <div className="p-6 rounded-2xl bg-white dark:bg-[#0d1424] border border-slate-200 dark:border-slate-800 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-                Weekly Class Schedule
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Calendar className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+                  Weekly Class Schedule
+                </h2>
+                {isTeacher && (
+                  <button
+                    onClick={handleOpenScheduleModal}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 text-xs font-bold transition cursor-pointer"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span>Edit Class Timetable</span>
+                  </button>
+                )}
+              </div>
 
               {program?.schedule && program.schedule.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -3111,6 +3278,122 @@ export const TuitionProgramWorkspace: React.FC = () => {
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-bold text-xs transition shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {savingOverview ? 'Saving Changes...' : 'Save Program Brief'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Teacher Class Timetable / Schedule Modal */}
+      {isScheduleModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl relative space-y-5">
+            <button
+              onClick={() => setIsScheduleModalOpen(false)}
+              className="absolute top-5 right-5 text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-500 dark:text-amber-400 flex items-center justify-center border border-amber-500/30">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">Edit Program Class Timetable</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{program?.title || 'Weekly Schedule'}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSaveSchedule} className="space-y-4">
+              <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                {scheduleSlots.map((slot, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center gap-2.5"
+                  >
+                    <div className="flex-1 min-w-[110px]">
+                      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                        Day of Week
+                      </label>
+                      <select
+                        value={slot.day}
+                        onChange={(e) => handleUpdateScheduleSlot(idx, 'day', e.target.value)}
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-semibold focus:outline-none focus:border-amber-400"
+                      >
+                        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((d) => (
+                          <option key={d} value={d}>
+                            {d}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="w-24">
+                      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                        Start
+                      </label>
+                      <input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) => handleUpdateScheduleSlot(idx, 'startTime', e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-amber-400"
+                        required
+                      />
+                    </div>
+
+                    <div className="w-24">
+                      <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                        End
+                      </label>
+                      <input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) => handleUpdateScheduleSlot(idx, 'endTime', e.target.value)}
+                        className="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-amber-400"
+                        required
+                      />
+                    </div>
+
+                    <div className="pt-4">
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveScheduleSlot(idx)}
+                        disabled={scheduleSlots.length <= 1}
+                        className="p-1.5 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Remove Slot"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddScheduleSlot}
+                className="w-full py-2 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-amber-500 text-amber-600 dark:text-amber-400 hover:bg-amber-500/5 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Class Day Slot</span>
+              </button>
+
+              <div className="flex items-center gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-300 font-bold text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingSchedule}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs transition shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {savingSchedule ? 'Saving Timetable...' : 'Save Timetable'}
                 </button>
               </div>
             </form>
